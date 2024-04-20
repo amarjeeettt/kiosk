@@ -1,11 +1,10 @@
 import cups
-import sys
 import sqlite3
 import time
 from threading import Thread
 from gpiozero import Button
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QMainWindow, QFrame, QSpacerItem, QSizePolicy
-from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QObject, QThread
+from PyQt5.QtCore import Qt, pyqtSignal, QObject, QThread
 
 class PrintFormWindow(QMainWindow):
     print_preview_backbt_clicked = pyqtSignal()
@@ -137,27 +136,27 @@ class PrintFormWindow(QMainWindow):
 
     # Modify the print_document method
     def print_document(self, form_label, number_of_copy):
-            # Connect to the local CUPS server
-            conn = cups.Connection()
+        # Connect to the local CUPS server
+        conn = cups.Connection()
 
-            # Get a list of available printers
-            printers = conn.getPrinters()
+        # Get a list of available printers
+        printers = conn.getPrinters()
 
-            # Get the first printer in the list
-            printer_name = list(printers.keys())[0]
+        # Get the first printer in the list
+        printer_name = list(printers.keys())[0]
 
-            # Specify the file you want to print
-            file_path = f"{form_label}.pdf"
+        # Specify the file you want to print
+        file_path = f"{form_label}.pdf"
 
-            # Print the file
-            for _ in range(number_of_copy):
-                job_id = conn.printFile(printer_name, file_path, "Print Job", {})
-                print("Print job submitted with ID:", job_id)
+        # Print the file
+        for _ in range(number_of_copy):
+            job_id = conn.printFile(printer_name, file_path, "Print Job", {})
+            print("Print job submitted with ID:", job_id)
 
-                # After successful print, decrement bondpaper_quantity in kiosk_setting table
-                try:
-                    # Connect to the SQLite database
-                    conn_sqlite = sqlite3.connect('kiosk.db')
+            # After successful print, decrement bondpaper_quantity in kiosk_setting table
+            try:
+                # Connect to the SQLite database
+                with sqlite3.connect('kiosk.db') as conn_sqlite:
                     cursor = conn_sqlite.cursor()
 
                     # Execute the SQL UPDATE query
@@ -169,9 +168,8 @@ class PrintFormWindow(QMainWindow):
             
                     print(self.bondpaper_quantity)
                     
-                    conn_sqlite.close()  # Close the database connection
-                except sqlite3.Error as e:
-                    print("SQLite error:", e)
+            except sqlite3.Error as e:
+                print("SQLite error:", e)
         
 
     def go_back(self):
