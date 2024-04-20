@@ -1,36 +1,65 @@
+import sys
 import time
+from threading import Thread
+from PyQt5.QtCore import QObject, pyqtSignal, QTimer, QThread
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QLabel
+
 from gpiozero import Button
-import cups
 
-coinslot = Button(22)
+class CoinCounter(QWidget):
+    def __init__(self):
+        super().__init__()
 
-# Connect to the local CUPS server
-conn = cups.Connection()
+        self.counter = 0
 
-# Get a list of available printers
-printers = conn.getPrinters()
+        self.init_ui()
 
-# Get the first printer in the list
-printer_name = list(printers.keys())[0]
+    def init_ui(self):
+        self.setWindowTitle("Coin Counter")
+        layout = QVBoxLayout()
 
-# Specify the file you want to print
-file_path = "HATDOG.pdf"  # Change this to the path of your document file
+        self.label = QLabel("Coins inserted: 0")
+        layout.addWidget(self.label)
 
-# Wait for the button to be pressed before starting
-while not coinslot.is_pressed:
-    pass
+        self.button = QPushButton("Exit")
+        self.button.clicked.connect(self.close)
+        layout.addWidget(self.button)
 
-# Button is pressed, start counting coins
-counter = 0
-while True:
-    if coinslot.is_pressed:
-        counter += 1
-        time.sleep(0.05)
-        print(counter)
-        
-        # Check if the counter is equal to 10
-        if counter == 10:
-            # Print the file
-            job_id = conn.printFile(printer_name, file_path, "Print Job", {})
-            print("Print job submitted with ID:", job_id)
-            counter = 0  # Reset counter after printing
+        self.setLayout(layout)
+
+        self.counter_thread = CounterThread()
+        self.counter_thread.counter_changed.connect(self.update_counter)
+        self.counter_thread.start()
+
+    def update_counter(self, counter):
+        self.counter = counter
+        self.label.setText(f"Coins inserted: {self.counter}")
+
+class CounterThread(QThread):
+    counter_changed = pyqtSignal(int)
+
+    def __init__(self):
+        super().__init__()
+
+        self.coinslot = None
+        self.coinslotState = True
+
+    def run(self):
+        self.coinslot = Button(22)  # Initialize the Button object here
+        counter = 0
+        while True:
+            while self.coinslotState:
+                try:
+                    if self.coinslot.is_pressed:
+                        counter += 1
+                        time.sleep(0.05)
+                        self.counter_changed.emit(counter)
+                except Exception as e:
+                    print(f"Error reading button state: {e}")
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = CoinCounter()
+    window.show()
+    sys.exit(app.exec_())
+

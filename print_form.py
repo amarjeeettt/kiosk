@@ -1,8 +1,11 @@
+import cups
 import sys
+import sqlite3
 import time
+from threading import Thread
 from gpiozero import Button
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QMainWindow, QFrame, QSpacerItem, QSizePolicy
-from PyQt5.QtCore import Qt, pyqtSignal, QTimer
+from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QObject, QThread
 
 class PrintFormWindow(QMainWindow):
     print_preview_backbt_clicked = pyqtSignal()
@@ -12,7 +15,10 @@ class PrintFormWindow(QMainWindow):
 
         self.setWindowTitle("PyQt Example")
         self.showMaximized()
-
+        
+        form_label = label
+        number_of_copy = value
+        
         # Initialize counter
         self.counter = 0
 
@@ -56,7 +62,7 @@ class PrintFormWindow(QMainWindow):
         squares_layout.addSpacerItem(QSpacerItem(20, 20, QSizePolicy.Preferred, QSizePolicy.Minimum))
 
         # Create second square
-        self.square2_label = QLabel("0")
+        self.square2_label = QLabel(str(self.counter))
         self.square2_label.setAlignment(Qt.AlignCenter)
         self.square2_label.setStyleSheet("QLabel { font-size: 16px; }")
         square2 = QWidget()
@@ -102,22 +108,24 @@ class PrintFormWindow(QMainWindow):
         self.button = QPushButton("Button")
         self.button.setStyleSheet("QPushButton { font-size: 16px; }")
         rectangle_inner_layout.addWidget(self.button)
-
+        
+        # Connect button clicked signal to print function
+        self.button.clicked.connect(lambda: self.print_document(form_label, number_of_copy))
+        
         # Disable the button initially
         self.button.setEnabled(False)
+        
+        self.counter_thread = CounterThread()
+        self.counter_thread.counter_changed.connect(lambda counter: self.update_counter(counter, total))
+        self.counter_thread.start()
 
-        # Create coin slot and start monitoring
-        self.coinslot = Button(22)
-        self.coinslot.when_pressed = self.coin_detected
 
-        # Start a timer to periodically check if total and counter match
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(lambda: self.check_total_counter_match(total))
-        self.timer.start(1000)  # Check every second
-
-    def coin_detected(self):
-        self.counter += 1
+    def update_counter(self, counter, total):  
+        self.counter = counter
         self.square2_label.setText(str(self.counter))
+        # Check if total and counter match
+        self.check_total_counter_match(total)
+
 
     def check_total_counter_match(self, total):
         # Check if total and counter match
@@ -126,6 +134,69 @@ class PrintFormWindow(QMainWindow):
         else:
             self.button.setEnabled(False)
 
+
+    # Modify the print_document method
+    def print_document(self, form_label, number_of_copy):
+            # Connect to the local CUPS server
+            conn = cups.Connection()
+
+            # Get a list of available printers
+            printers = conn.getPrinters()
+
+            # Get the first printer in the list
+            printer_name = list(printers.keys())[0]
+
+            # Specify the file you want to print
+            file_path = f"{form_label}.pdf"
+
+            # Print the file
+            for _ in range(number_of_copy):
+                job_id = conn.printFile(printer_name, file_path, "Print Job", {})
+                print("Print job submitted with ID:", job_id)
+
+                # After successful print, decrement bondpaper_quantity in kiosk_setting table
+                try:
+                    # Connect to the SQLite database
+                    conn_sqlite = sqlite3.connect('kiosk.db')
+                    cursor = conn_sqlite.cursor()
+
+                    # Execute the SQL UPDATE query
+                    cursor.execute("UPDATE kiosk_settings SET bondpaper_quantity = bondpaper_quantity - 1")
+                    conn_sqlite.commit()  # Commit the transaction
+                    
+                    cursor.execute("SELECT bondpaper_quantity FROM kiosk_settings LIMIT 1")
+                    self.bondpaper_quantity = cursor.fetchone()[0]
+            
+                    print(self.bondpaper_quantity)
+                    
+                    conn_sqlite.close()  # Close the database connection
+                except sqlite3.Error as e:
+                    print("SQLite error:", e)
+        
+
     def go_back(self):
         self.close()
         self.print_preview_backbt_clicked.emit()
+
+
+class CounterThread(QThread):
+    counter_changed = pyqtSignal(int)
+
+    def __init__(self):
+        super().__init__()
+
+        self.coinslot = None
+        self.coinslotState = True
+
+    def run(self):
+        self.coinslot = Button(22)  # Initialize the Button object here
+        counter = 0
+        while True:
+            while self.coinslotState:
+                try:
+                    if self.coinslot.is_pressed:
+                        counter += 1
+                        time.sleep(0.05)
+                        self.counter_changed.emit(counter)
+                except Exception as e:
+                    print(f"Error reading button state: {e}")
