@@ -107,7 +107,7 @@ class AdminScreenWindow(QMainWindow):
             # Your SQL script
             sql_script = """
             UPDATE kiosk_settings
-            SET bondpaper_quantity = 5
+            SET bondpaper_quantity = 45
             WHERE ROWID = (
                 SELECT ROWID
                 FROM kiosk_settings
