@@ -113,7 +113,7 @@ class PrintFormWindow(QMainWindow):
             conn = cups.Connection()
             printers = conn.getPrinters()
             printer_name = list(printers.keys())[0]
-            file_path = f"{form_label}.pdf"
+            file_path = f"./forms/{form_label}.pdf"
 
             for _ in range(number_of_copy):
                 job_id = conn.printFile(printer_name, file_path, "Print Job", {})
