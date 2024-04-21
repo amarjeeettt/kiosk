@@ -1,4 +1,4 @@
-import sys
+import sqlite3
 from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -52,9 +52,24 @@ class ViewFormWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Main Window")
         self.showMaximized()  # Increased width to accommodate more buttons
+        
+        # connect database
+        conn = sqlite3.connect("kiosk.db")
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT coins_left FROM kiosk_settings LIMIT 1")
+        self.coins_left = cursor.fetchone()[0]
+
+        cursor.execute("SELECT bondpaper_quantity FROM kiosk_settings LIMIT 1")
+        self.bondpaper_quantity = cursor.fetchone()[0]
+
+        conn.close()
 
         main_layout = QVBoxLayout()
 
+        # Adding back button and labels in top right corner
+        top_layout = QHBoxLayout()
+        
         # Add back button to the layout
         back_button_layout = QHBoxLayout()
         self.back_bt = QPushButton("Back")
@@ -80,7 +95,19 @@ class ViewFormWindow(QMainWindow):
         self.back_bt.setFocusPolicy(Qt.NoFocus)
         self.back_bt.clicked.connect(self.go_back)
         back_button_layout.addWidget(self.back_bt, alignment=Qt.AlignLeft)
-        main_layout.addLayout(back_button_layout)
+        top_layout.addLayout(back_button_layout)
+        
+        # Adding labels in top right corner
+        top_right_layout = QHBoxLayout()
+        label1 = QLabel(f"Bondpaper Left: {self.bondpaper_quantity}")
+        label2 = QLabel(f"Coins Left: {self.coins_left}")
+        top_right_layout.addWidget(label1, alignment=Qt.AlignRight)
+        top_right_layout.addWidget(label2, alignment=Qt.AlignRight)
+        top_right_layout.setSpacing(0)
+        top_right_layout.setContentsMargins(0, 0, 130, 0)  
+        top_layout.addLayout(top_right_layout)
+
+        main_layout.addLayout(top_layout)
 
         button_labels = {
             "form_names": [

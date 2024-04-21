@@ -22,23 +22,22 @@ class ViewProcessUncontrolledWindow(QMainWindow):
         label = QLabel(label)
         label.setAlignment(Qt.AlignCenter)  # Align text to the center
         
-        self.back_bt = QPushButton("Back", self)
-        self.back_bt.setGeometry(0, 40, 120, 95)  # (x, y, width, height)
+        # Add back button to the layout
+        back_button_layout = QHBoxLayout()
+        self.back_bt = QPushButton("Back")
         self.back_bt.setStyleSheet(
             """
             QPushButton {
                 background-color: #A93F55; 
                 color: #F3F7F0; 
                 font-family: Montserrat;
-                font-size: 24px; 
+                font-size: 16px; 
                 font-weight: bold; 
-                letter-spacing: 3px;
-                border-top-right-radius: 40px;
-                border-bottom-right-radius: 40px;
-                border-top-left-radius: 0px;
-                border-bottom-left-radius: 0px;
+                border-radius: 10px;
                 border: none;
-                padding-right: 15px;
+                margin-left: 35px;
+                min-width: 150px;
+                min-height: 80px;
             }
             QPushButton:pressed {
                 color: #D8C995;
@@ -47,7 +46,8 @@ class ViewProcessUncontrolledWindow(QMainWindow):
         )
         self.back_bt.setFocusPolicy(Qt.NoFocus)
         self.back_bt.clicked.connect(self.go_back)
-        self.back_bt.show()
+        back_button_layout.addWidget(self.back_bt, alignment=Qt.AlignLeft)
+        layout.addLayout(back_button_layout)
         
         layout.addWidget(label)
         
