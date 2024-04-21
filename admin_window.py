@@ -54,6 +54,27 @@ class AdminScreenWindow(QMainWindow):
 
         # Fetch data from database and populate table
         self.populate_table()
+        
+        # Set modern styling for the table
+        self.tableWidget.setStyleSheet(
+            """
+            QTableWidget {
+                background-color: #F3F7F0;
+                color: #404040;
+                font-family: Montserrat;
+                font-size: 14px;
+                border: 1px solid #D8C995;
+            }
+            QHeaderView::section {
+                background-color: #A93F55;
+                color: #F3F7F0;
+                font-weight: bold;
+                font-size: 14px;
+                padding: 5px;
+                border: none;
+            }
+            """
+        )
 
         # Create buttons below the table
         button1 = QPushButton("Refill Bondpaper")

@@ -1,65 +1,22 @@
-import sys
-import time
-from threading import Thread
-from PyQt5.QtCore import QObject, pyqtSignal, QTimer, QThread
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QLabel
+button_labels = {
+    'form_names': ['Individual Request of Petition Subject', 'Consolidated Requests of Petition Subject', 'Request on Shifting of Course',
+                   'Thesis Distribution Form', 'Application for Subject Accreditation', 'Evaluation of Graduating Student with Academic Honors',
+                   'List of Graduating Students with Academic Honors', 'List of Graduating Students with Loyalty Award', 'List of Graduating Students with Recognition Award',
+                   'Form 1', 'Form 2', 'Form 3', 'Form 4', 'Form 5', 'Form 6', 'Form 7', 'Form 8', 'Form 9'
+                   ],
+    'form_types': ['Uncontrolled', 'Uncontrolled', 'Uncontrolled', 'Uncontrolled', 'Uncontrolled', 'Uncontrolled', 'Unctrolled', 'Uncontrolled', 'Uncontrolled',
+                   'Controlled', 'Controlled', 'Controlled', 'Controlled', 'Controlled', 'Controlled', 'Controlled', 'Controlled', 'Controlled',
+                   ],
+    'num_of_page': [2, 1, 1, 1, 1, 3, 2, 2, 2, 1, 1, 1, 2, 2, 2, 1, 2, 3],
+}
 
-from gpiozero import Button
-
-class CoinCounter(QWidget):
-    def __init__(self):
-        super().__init__()
-
-        self.counter = 0
-
-        self.init_ui()
-
-    def init_ui(self):
-        self.setWindowTitle("Coin Counter")
-        layout = QVBoxLayout()
-
-        self.label = QLabel("Coins inserted: 0")
-        layout.addWidget(self.label)
-
-        self.button = QPushButton("Exit")
-        self.button.clicked.connect(self.close)
-        layout.addWidget(self.button)
-
-        self.setLayout(layout)
-
-        self.counter_thread = CounterThread()
-        self.counter_thread.counter_changed.connect(self.update_counter)
-        self.counter_thread.start()
-
-    def update_counter(self, counter):
-        self.counter = counter
-        self.label.setText(f"Coins inserted: {self.counter}")
-
-class CounterThread(QThread):
-    counter_changed = pyqtSignal(int)
-
-    def __init__(self):
-        super().__init__()
-
-        self.coinslot = None
-        self.coinslotState = True
-
-    def run(self):
-        self.coinslot = Button(22)  # Initialize the Button object here
-        counter = 0
-        while True:
-            while self.coinslotState:
-                try:
-                    if self.coinslot.is_pressed:
-                        counter += 1
-                        time.sleep(0.05)
-                        self.counter_changed.emit(counter)
-                except Exception as e:
-                    print(f"Error reading button state: {e}")
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = CoinCounter()
-    window.show()
-    sys.exit(app.exec_())
-
+index = int(input("Enter the index: "))
+if 0 <= index < len(button_labels['form_names']):
+    form_name = button_labels['form_names'][index]
+    form_type = button_labels['form_types'][index]
+    num_of_pages = button_labels['num_of_page'][index]
+    print(f"Form Name: {form_name}")
+    print(f"Form Type: {form_type}")
+    print(f"Number of Pages: {num_of_pages}")
+else:
+    print("Invalid index.")

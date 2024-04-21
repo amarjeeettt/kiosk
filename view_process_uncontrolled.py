@@ -1,8 +1,7 @@
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QLabel, QHBoxLayout, QMainWindow
 from PyQt5.QtCore import Qt, pyqtSignal
 
-class ViewProcessWindow(QMainWindow):
-    view_form_backbt_clicked = pyqtSignal()
+class ViewProcessUncontrolledWindow(QMainWindow):
     print_preview_backbt_clicked = pyqtSignal()
     
     def __init__(self, label):
@@ -54,4 +53,4 @@ class ViewProcessWindow(QMainWindow):
         
     def go_back(self):
         self.close()
-        self.view_form_backbt_clicked.emit()
+        self.print_preview_backbt_clicked.emit()
