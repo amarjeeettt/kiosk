@@ -4,8 +4,20 @@ import time
 from datetime import datetime
 from threading import Thread, Event
 from gpiozero import Button
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QMainWindow, QFrame, QSpacerItem, QSizePolicy
+from PyQt5.QtWidgets import (
+    QApplication,
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QPushButton,
+    QLabel,
+    QMainWindow,
+    QFrame,
+    QSpacerItem,
+    QSizePolicy,
+)
 from PyQt5.QtCore import Qt, pyqtSignal, QObject, QThread
+
 
 class PrintFormWindow(QMainWindow):
     print_preview_backbt_clicked = pyqtSignal()
@@ -35,7 +47,9 @@ class PrintFormWindow(QMainWindow):
         self.top_button.setMinimumWidth(200)
         main_layout.addWidget(self.top_button, alignment=Qt.AlignHCenter)
 
-        main_layout.addSpacerItem(QSpacerItem(40, 40, QSizePolicy.Minimum, QSizePolicy.Preferred))
+        main_layout.addSpacerItem(
+            QSpacerItem(40, 40, QSizePolicy.Minimum, QSizePolicy.Preferred)
+        )
 
         squares_layout = QHBoxLayout()
         main_layout.addLayout(squares_layout)
@@ -51,7 +65,9 @@ class PrintFormWindow(QMainWindow):
         square1.setFixedSize(550, 550)
         squares_layout.addWidget(square1)
 
-        squares_layout.addSpacerItem(QSpacerItem(20, 20, QSizePolicy.Preferred, QSizePolicy.Minimum))
+        squares_layout.addSpacerItem(
+            QSpacerItem(20, 20, QSizePolicy.Preferred, QSizePolicy.Minimum)
+        )
 
         self.square2_label = QLabel(str(self.counter))
         self.square2_label.setAlignment(Qt.AlignCenter)
@@ -64,7 +80,9 @@ class PrintFormWindow(QMainWindow):
         square2.setFixedSize(550, 550)
         squares_layout.addWidget(square2)
 
-        main_layout.addSpacerItem(QSpacerItem(40, 40, QSizePolicy.Minimum, QSizePolicy.Preferred))
+        main_layout.addSpacerItem(
+            QSpacerItem(40, 40, QSizePolicy.Minimum, QSizePolicy.Preferred)
+        )
 
         rectangle_layout = QHBoxLayout()
         main_layout.addLayout(rectangle_layout)
@@ -90,11 +108,15 @@ class PrintFormWindow(QMainWindow):
         self.button.setStyleSheet("QPushButton { font-size: 16px; }")
         rectangle_inner_layout.addWidget(self.button)
 
-        self.button.clicked.connect(lambda: self.print_document(form_label, number_of_copy, total))
+        self.button.clicked.connect(
+            lambda: self.print_document(form_label, number_of_copy, total)
+        )
         self.button.setEnabled(False)
 
         self.counter_thread = CounterThread()
-        self.counter_thread.counter_changed.connect(lambda counter: self.update_counter(counter, total))
+        self.counter_thread.counter_changed.connect(
+            lambda counter: self.update_counter(counter, total)
+        )
         self.counter_thread.start()
 
     def update_counter(self, counter, total):
@@ -124,17 +146,29 @@ class PrintFormWindow(QMainWindow):
                 else:
                     print_result = "Failed"
 
-                with sqlite3.connect('kiosk.db') as conn_sqlite:
+                with sqlite3.connect("kiosk.db") as conn_sqlite:
                     cursor = conn_sqlite.cursor()
 
                     if print_result == "Success":
-                        cursor.execute("UPDATE kiosk_settings SET bondpaper_quantity = bondpaper_quantity - 1")
+                        cursor.execute(
+                            "UPDATE kiosk_settings SET bondpaper_quantity = bondpaper_quantity - 1"
+                        )
 
-                    cursor.execute("INSERT INTO kiosk_print_results (date_printed, form_name, quantity, total_price, result) VALUES (?, ?, ?, ?, ?)",
-                                   (datetime.now(), form_label, number_of_copy, total, print_result))
+                    cursor.execute(
+                        "INSERT INTO kiosk_print_results (date_printed, form_name, quantity, total_price, result) VALUES (?, ?, ?, ?, ?)",
+                        (
+                            datetime.now(),
+                            form_label,
+                            number_of_copy,
+                            total,
+                            print_result,
+                        ),
+                    )
 
                     conn_sqlite.commit()
-                    cursor.execute("SELECT bondpaper_quantity FROM kiosk_settings LIMIT 1")
+                    cursor.execute(
+                        "SELECT bondpaper_quantity FROM kiosk_settings LIMIT 1"
+                    )
                     self.bondpaper_quantity = cursor.fetchone()[0]
 
                     print(self.bondpaper_quantity)

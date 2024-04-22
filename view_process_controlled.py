@@ -1,9 +1,18 @@
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QLabel, QHBoxLayout, QMainWindow
+from PyQt5.QtWidgets import (
+    QApplication,
+    QWidget,
+    QVBoxLayout,
+    QPushButton,
+    QLabel,
+    QHBoxLayout,
+    QMainWindow,
+)
 from PyQt5.QtCore import Qt, pyqtSignal
+
 
 class ViewProcessControlledWindow(QMainWindow):
     view_form_backbt_clicked = pyqtSignal()
-    
+
     def __init__(self, label):
         super().__init__()
 
@@ -21,8 +30,8 @@ class ViewProcessControlledWindow(QMainWindow):
         # Create a label to display some text in the window
         label = QLabel(label)
         label.setAlignment(Qt.AlignCenter)  # Align text to the center
-        
-         # Add back button to the layout
+
+        # Add back button to the layout
         back_button_layout = QHBoxLayout()
         self.back_bt = QPushButton("Back")
         self.back_bt.setStyleSheet(
@@ -48,9 +57,9 @@ class ViewProcessControlledWindow(QMainWindow):
         self.back_bt.clicked.connect(self.go_back)
         back_button_layout.addWidget(self.back_bt, alignment=Qt.AlignLeft)
         layout.addLayout(back_button_layout)
-        
+
         layout.addWidget(label)
-        
+
     def go_back(self):
         self.close()
         self.view_form_backbt_clicked.emit()

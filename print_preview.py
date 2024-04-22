@@ -343,7 +343,7 @@ class PrintPreviewWindow(QMainWindow):
         self.close()
         self.new_window = ViewProcessUncontrolledWindow(form_label)
         self.new_window.show()
-        
+
         self.new_window.print_preview_backbt_clicked.connect(
             self.go_back_to_print_preview
         )

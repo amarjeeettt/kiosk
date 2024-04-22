@@ -1,9 +1,22 @@
-from PyQt5.QtWidgets import QApplication, QMainWindow, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget, QPushButton, QHeaderView, QHBoxLayout, QInputDialog
+from PyQt5.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
+    QPushButton,
+    QHeaderView,
+    QHBoxLayout,
+    QInputDialog,
+)
 from PyQt5.QtCore import Qt, pyqtSignal
 import sqlite3
 
+
 class AdminScreenWindow(QMainWindow):
     home_screen_backbt_clicked = pyqtSignal()
+
     def __init__(self):
         super().__init__()
 
@@ -54,7 +67,7 @@ class AdminScreenWindow(QMainWindow):
 
         # Fetch data from database and populate table
         self.populate_table()
-        
+
         # Set modern styling for the table
         self.tableWidget.setStyleSheet(
             """
@@ -88,11 +101,11 @@ class AdminScreenWindow(QMainWindow):
 
     def populate_table(self):
         # Connect to SQLite database
-        connection = sqlite3.connect('kiosk.db')
+        connection = sqlite3.connect("kiosk.db")
         cursor = connection.cursor()
 
         # Fetch data from the database
-        cursor.execute('''SELECT * FROM kiosk_print_results''')
+        cursor.execute("""SELECT * FROM kiosk_print_results""")
         data = cursor.fetchall()
 
         # Get column names
@@ -122,7 +135,7 @@ class AdminScreenWindow(QMainWindow):
 
     def refill_bondpaper(self):
         try:
-            connection = sqlite3.connect('kiosk.db')
+            connection = sqlite3.connect("kiosk.db")
             cursor = connection.cursor()
 
             # Your SQL script
@@ -136,13 +149,13 @@ class AdminScreenWindow(QMainWindow):
                 LIMIT 1
             );
             """
-            
+
             cursor.execute(sql_script)
             connection.commit()
-            
+
             cursor.execute("SELECT bondpaper_quantity FROM kiosk_settings LIMIT 1")
             self.bondpaper_quantity = cursor.fetchone()[0]
-            
+
             print(self.bondpaper_quantity)
             print("SQL script executed successfully.")
 
@@ -155,11 +168,13 @@ class AdminScreenWindow(QMainWindow):
 
     def change_price(self):
         # Create an input dialog to get the new price from the user
-        new_price, ok = QInputDialog.getDouble(self, "Change Price", "Enter the new price:")
+        new_price, ok = QInputDialog.getDouble(
+            self, "Change Price", "Enter the new price:"
+        )
         if ok:
             print("New Price:", new_price)
             try:
-                connection = sqlite3.connect('kiosk.db')
+                connection = sqlite3.connect("kiosk.db")
                 cursor = connection.cursor()
 
                 # Your SQL script
@@ -173,13 +188,13 @@ class AdminScreenWindow(QMainWindow):
                     LIMIT 1
                 );
                 """
-                
+
                 cursor.execute(sql_script, (new_price,))
                 connection.commit()
-                
+
                 cursor.execute("SELECT base_price FROM kiosk_settings LIMIT 1")
                 self.base_price = cursor.fetchone()[0]
-                
+
                 print(self.base_price)
                 print("SQL script executed successfully.")
 
