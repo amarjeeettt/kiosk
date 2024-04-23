@@ -52,7 +52,7 @@ class ViewFormWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Main Window")
+ 
         self.set_background_image()
         self.showMaximized()  # Increased width to accommodate more buttons
 

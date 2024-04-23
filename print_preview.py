@@ -25,7 +25,6 @@ class PrintPreviewWindow(QMainWindow):
     def __init__(self, label, num_of_pages):
         super().__init__()
 
-        self.setWindowTitle("Print Preview")
         self.set_background_image()
         self.showMaximized()
 

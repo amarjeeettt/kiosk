@@ -17,7 +17,6 @@ class HomeScreenWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("")
         self.set_background_image()
         self.showMaximized()  # Set window to be maximized
 

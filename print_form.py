@@ -15,8 +15,10 @@ from PyQt5.QtWidgets import (
     QFrame,
     QSpacerItem,
     QSizePolicy,
+    QDesktopWidget,
 )
-from PyQt5.QtCore import Qt, pyqtSignal, QObject, QThread
+from PyQt5.QtGui import QFont, QPixmap
+from PyQt5.QtCore import Qt, pyqtSignal, QObject, QThread, QSize
 
 
 class PrintFormWindow(QMainWindow):
@@ -24,8 +26,7 @@ class PrintFormWindow(QMainWindow):
 
     def __init__(self, label, value, total):
         super().__init__()
-
-        self.setWindowTitle("PyQt Example")
+        self.set_background_image()
         self.showMaximized()
 
         form_label = label
@@ -34,19 +35,31 @@ class PrintFormWindow(QMainWindow):
         self.counter = 0
         self.bondpaper_quantity = None
 
-        main_widget = QWidget()
+        main_widget = QWidget(self)
         self.setCentralWidget(main_widget)
 
         main_layout = QVBoxLayout()
         main_widget.setLayout(main_layout)
 
-        self.top_button = QPushButton("Top Button")
-        self.top_button.clicked.connect(self.go_back)
-        self.top_button.setStyleSheet("QPushButton { background-color: #A93F55; color: #F3F7F0; font-family: Montserrat;font-size: 20px; border-bottom-left-radius: 10px; border-bottom-right-radius: 10px; }")
-        self.top_button.setMinimumHeight(100)
-        self.top_button.setMaximumWidth(100)
-        self.top_button.setMinimumWidth(100)
-        main_layout.addWidget(self.top_button, alignment=Qt.AlignHCenter)
+        top_button = QPushButton(self)
+        top_button.setText("Cancel")
+        top_button.clicked.connect(self.go_back)
+        top_button.setStyleSheet(
+            """
+            QPushButton { 
+                background-color: #A93F55; 
+                color: #F3F7F0; 
+                font-family: Montserrat;
+                font-size: 24px; 
+                padding-bottom: 10px;
+                border-bottom-left-radius: 50px; 
+                border-bottom-right-radius: 50px; 
+            }
+            """
+        )
+        top_button.setGeometry(778, 0, 125, 90)
+        top_button.setFocusPolicy(Qt.NoFocus)  # Adjust the position here
+        top_button.show()
 
         main_layout.addSpacerItem(
             QSpacerItem(40, 40, QSizePolicy.Minimum, QSizePolicy.Preferred)
@@ -56,29 +69,86 @@ class PrintFormWindow(QMainWindow):
         main_layout.addLayout(squares_layout)
 
         square1 = QWidget()
-        square1.setStyleSheet("background-color: lightblue; border-radius: 45px;")
+        square1.setStyleSheet("background-color: #FDFDFD; border-radius: 85px;")
         square1_layout = QVBoxLayout()
         square1.setLayout(square1_layout)
-        total_label = QLabel(f"Total: {total:0.2f}")
+
+        top_total_label = QLabel("Total")
+        top_total_label.setStyleSheet(
+            """
+            QLabel { 
+                font-family: Roboto;
+                font-size: 22px; 
+                margin-top: 185px;
+            }
+            """
+        )
+        top_total_label.setAlignment(Qt.AlignCenter)
+
+        total_label = QLabel(f"₱{total:0.2f}")
         total_label.setAlignment(Qt.AlignCenter)
-        total_label.setStyleSheet("QLabel { font-size: 16px; }")
-        square1_layout.addWidget(total_label)
+        total_label.setStyleSheet(
+            """
+            QLabel { 
+                font-family: Monterrat;
+                font-weight: bold;
+                font-size: 82px; 
+                letter-spacing: 5px;
+                color: #7B0323;
+                margin-bottom: 200px;
+            }
+            """
+        )
+
         square1.setFixedSize(550, 550)
         squares_layout.addWidget(square1)
+
+        # Adjust the spacing and alignment
+        square1_layout.addWidget(top_total_label, alignment=Qt.AlignCenter)
+        square1_layout.addWidget(total_label, alignment=Qt.AlignCenter)
+        square1_layout.setSpacing(0)
 
         squares_layout.addSpacerItem(
             QSpacerItem(20, 20, QSizePolicy.Preferred, QSizePolicy.Minimum)
         )
 
-        self.square2_label = QLabel(str(self.counter))
-        self.square2_label.setAlignment(Qt.AlignCenter)
-        self.square2_label.setStyleSheet("QLabel { font-size: 16px; }")
+        top_amount_label = QLabel("Amount Paid")
+        top_amount_label.setAlignment(Qt.AlignCenter)
+        top_amount_label.setStyleSheet(
+            """
+            QLabel { 
+                font-family: Roboto;
+                font-size: 22px; 
+                margin-top: 185px;
+            }
+            """
+        )
+
+        self.amount_label = QLabel(f"₱{self.counter:0.2f}")
+        self.amount_label.setAlignment(Qt.AlignCenter)
+        self.amount_label.setStyleSheet(
+            """
+            QLabel { 
+                font-family: Monterrat;
+                font-weight: bold;
+                font-size: 82px; 
+                letter-spacing: 5px;
+                color: #7B0323;
+                margin-bottom: 200px;
+            }
+            """
+        )
+
         square2 = QWidget()
-        square2.setStyleSheet("background-color: lightgreen; border-radius: 45px;")
+        square2.setStyleSheet("background-color: #FDFDFD; border-radius: 85px;")
+
         square2_layout = QVBoxLayout()
         square2.setLayout(square2_layout)
-        square2_layout.addWidget(self.square2_label)
+
+        square2_layout.addWidget(top_amount_label, alignment=Qt.AlignCenter)
+        square2_layout.addWidget(self.amount_label, alignment=Qt.AlignCenter)
         square2.setFixedSize(550, 550)
+
         squares_layout.addWidget(square2)
 
         main_layout.addSpacerItem(
@@ -92,20 +162,35 @@ class PrintFormWindow(QMainWindow):
         rectangle.setFrameShape(QFrame.StyledPanel)
         rectangle.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         rectangle.setFixedSize(850, 150)
+        rectangle.setStyleSheet(
+            "QFrame { background-color: #FDFDFD; border-radius: 30px; }"
+        )
         rectangle_layout.addWidget(rectangle)
 
         rectangle_inner_layout = QHBoxLayout()
         rectangle.setLayout(rectangle_inner_layout)
 
-        text_label = QLabel("Text Label")
-        text_label.setStyleSheet("QLabel { font-size: 16px; }")
+        text_label = QLabel("Please Pay\nExact Amount")
+        text_label.setWordWrap(True)
+        text_label.setStyleSheet(
+            """
+                QLabel { 
+                    font-family: Roboto; 
+                    padding-left: 105px; 
+                    font-size: 24px; 
+                }
+            """
+        )
         rectangle_inner_layout.addWidget(text_label)
 
         line = QFrame()
         line.setFrameShape(QFrame.VLine)
+
+        # Set stylesheet only for the vertical line
+        line.setStyleSheet("QFrame { background-color: black; }")
         rectangle_inner_layout.addWidget(line)
 
-        self.button = QPushButton("Button")
+        self.button = QPushButton("Print")
         self.button.setStyleSheet("QPushButton { font-size: 16px; }")
         rectangle_inner_layout.addWidget(self.button)
 
@@ -122,7 +207,7 @@ class PrintFormWindow(QMainWindow):
 
     def update_counter(self, counter, total):
         self.counter = counter
-        self.square2_label.setText(str(self.counter))
+        self.amount_label.setText(f"₱{self.counter:0.2f}")
         self.check_total_counter_match(total)
 
     def check_total_counter_match(self, total):
@@ -180,6 +265,24 @@ class PrintFormWindow(QMainWindow):
     def go_back(self):
         self.close()
         self.print_preview_backbt_clicked.emit()
+
+    def set_background_image(self):
+        # Get screen resolution
+        screen_resolution = QDesktopWidget().screenGeometry()
+
+        # Load the background image
+        pixmap = QPixmap("./img/background.jpg")
+
+        # Resize the background image to fit the screen resolution
+        pixmap = pixmap.scaled(screen_resolution.width(), screen_resolution.height())
+
+        # Create a label to display the background image
+        background_label = QLabel(self)
+        background_label.setPixmap(pixmap)
+        background_label.setGeometry(
+            0, 0, screen_resolution.width(), screen_resolution.height()
+        )  # Set label size to screen resolution
+        background_label.setScaledContents(True)
 
 
 class CounterThread(QThread):

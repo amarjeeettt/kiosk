@@ -21,7 +21,7 @@ class AdminScreenWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Database Table")
+
         self.showMaximized()
         
         # connect database
