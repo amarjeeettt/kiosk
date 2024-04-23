@@ -9,7 +9,9 @@ from PyQt5.QtWidgets import (
     QLabel,
     QWidget,
     QHBoxLayout,
+    QDesktopWidget,
 )
+from PyQt5.QtGui import QFont, QPixmap, QIcon
 from PyQt5.QtCore import Qt, QSize, pyqtSignal
 from print_preview import PrintPreviewWindow
 from view_process_controlled import ViewProcessControlledWindow
@@ -51,6 +53,7 @@ class ViewFormWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Main Window")
+        self.set_background_image()
         self.showMaximized()  # Increased width to accommodate more buttons
 
         # connect database
@@ -76,8 +79,8 @@ class ViewFormWindow(QMainWindow):
         self.back_bt.setStyleSheet(
             """
             QPushButton {
-                background-color: #A93F55; 
-                color: #F3F7F0; 
+                background-color: #7C2F3E; 
+                color: #FAEBD7; 
                 font-family: Montserrat;
                 font-size: 16px; 
                 font-weight: bold; 
@@ -88,7 +91,7 @@ class ViewFormWindow(QMainWindow):
                 min-height: 80px;
             }
             QPushButton:pressed {
-                color: #D8C995;
+                background-color: #D8973C;
             }
             """
         )
@@ -162,6 +165,7 @@ class ViewFormWindow(QMainWindow):
         scroll_area = SmoothScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_widget = QWidget()
+        scroll_widget.setStyleSheet("background-color: transparent;")
         scroll_layout = QGridLayout(scroll_widget)
 
         # Set spacing between buttons
@@ -177,19 +181,14 @@ class ViewFormWindow(QMainWindow):
             button.setStyleSheet(
                 """
                 QPushButton {
-                    border: 3px solid #19323C;
                     border-radius: 45px;
-                    background-color: #4CAF50;
-                    color: white;
+                    background-color: #7C2F3E;
+                    color: #F3F7F0;
                     padding-bottom: 50px;
                     text-align: bottom;  /* Align text to the bottom */
                 }
-                QPushButton:hover {
-                    background-color: #45a049;
-                }
                 QPushButton:pressed {
-                    background-color: #1C6EA4;;
-                    border: 2px solid #1C6EA4;
+                    background-color: #D8973C;
                 }
                 """
             )
@@ -200,15 +199,29 @@ class ViewFormWindow(QMainWindow):
                 )
             )
 
+            # Create QLabel for the image
+            image_label = QLabel()
+            icon = QIcon("./img/view_forms_icon.svg")
+            pixmap = icon.pixmap(QSize(200, 200))
+            pixmap = pixmap.scaled(QSize(100, 100), Qt.KeepAspectRatio, Qt.SmoothTransformation)  # Adjust size as needed
+            image_label.setPixmap(pixmap)
+            image_label.setAlignment(Qt.AlignCenter)
+            image_label.setStyleSheet("margin-top: 45px;")
+            button_layout.addWidget(image_label)
+
             label = QLabel(label_text)
             label.setAlignment(Qt.AlignCenter)
             label.setWordWrap(True)
             label.setStyleSheet(
                 """
                 QLabel {
+                    font-family: Montserrat;
+                    font-size: 11px; 
+                    font-weight: bold; 
                     padding: 0px 25px 0px 25px; /* Adjust padding as needed */
                     background-color: transparent;
-                    color: white;
+                    margin-bottom: 25px;
+                    color: #FAEBD7;
                     }
                 """
             )
@@ -234,12 +247,12 @@ class ViewFormWindow(QMainWindow):
                 width: 10px;
             }
             QScrollBar::handle:vertical {
-                background-color: #A93F55;
+                background-color: #7B0323;
                 min-height: 20px;
                 border-radius: 5px;
             }
             QScrollBar::handle:vertical:hover {
-                background-color: #A93F55;
+                background-color: #7B0323;
             }
             QScrollBar::sub-line:vertical {
                 border: none;
@@ -254,10 +267,27 @@ class ViewFormWindow(QMainWindow):
         main_layout.addWidget(scroll_area)
 
         # Set window layout
-        central_widget = QWidget()
+        central_widget = QWidget(self)
         central_widget.setLayout(main_layout)
         self.setCentralWidget(central_widget)
-        self.setStyleSheet("background-color: #F3F7F0;")
+
+    def set_background_image(self):
+        # Get screen resolution
+        screen_resolution = QDesktopWidget().screenGeometry()
+
+        # Load the background image
+        pixmap = QPixmap("./img/background.jpg")
+
+        # Resize the background image to fit the screen resolution
+        pixmap = pixmap.scaled(screen_resolution.width(), screen_resolution.height())
+
+        # Create a label to display the background image
+        background_label = QLabel(self)
+        background_label.setPixmap(pixmap)
+        background_label.setGeometry(
+            0, 0, screen_resolution.width(), screen_resolution.height()
+        )  # Set label size to screen resolution
+        background_label.setScaledContents(True)
 
     # Slot to handle going back to the main window
     def go_back(self):

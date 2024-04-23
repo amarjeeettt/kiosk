@@ -2,59 +2,53 @@ import sys
 from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
-    QLabel,
     QVBoxLayout,
     QWidget,
     QPushButton,
+    QLabel,
+    QDesktopWidget,
 )
-from PyQt5.QtGui import QFont  # Import QFont for setting font
+from PyQt5.QtGui import QFont, QPixmap  
 from PyQt5.QtCore import Qt, QSize
 from view_form import ViewFormWindow
 from admin_window import AdminScreenWindow
-
 
 class HomeScreenWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Main Window")
+        self.setWindowTitle("")
+        self.set_background_image()
+        self.showMaximized()  # Set window to be maximized
 
-        # Set window size
-        self.showMaximized()
-
-        # Create central widget and layout
-        central_widget = QWidget()
+        # Create a central widget to hold the background image
+        central_widget = QWidget(self)
         self.setCentralWidget(central_widget)
 
-        # Set background color of the central widget
-        central_widget.setStyleSheet("background-color: #A93F55;")
-
+        # Create a layout for the central widget
         layout = QVBoxLayout(central_widget)
+        layout.setAlignment(Qt.AlignVCenter)  # Align the layout vertically
 
-        # Create first label and add it to the layout
-        label = QLabel(
-            "Pay-per Print: Lorem ipsum dolor sit amet", alignment=Qt.AlignCenter
-        )
-        label.setFont(QFont("Montserrat", 64, weight=QFont.Bold))
-        label.setWordWrap(True)
-        label.setStyleSheet(
-            "color: #D8C995; padding-top: 450px; letter-spacing: 4px; "
-        )  # Adding stylesheet
-        layout.addWidget(
-            label, alignment=Qt.AlignVCenter
-        )  # Align label vertically center
+        # Load image for the label
+        image_label = QLabel()
+        pixmap = QPixmap("./img/logo.png")
+        pixmap = pixmap.scaledToWidth(500, Qt.SmoothTransformation)  # Scale the image width to fit the label
+        image_label.setPixmap(pixmap)
+        image_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(image_label)
+        layout.setContentsMargins(0, 165, 0, 0)
+
+        # Add spacing between image_label and sub_label
+        layout.addSpacing(170)
 
         # Create second label and add it to the layout
-        sub_label = QLabel("Tap anywhere to continue", alignment=Qt.AlignCenter)
-        sub_label.setFont(QFont("Roboto", 14, weight=QFont.Bold))
-        sub_label.setStyleSheet("color: #F3F7F0; padding-bottom: 320px; ")
-        layout.addWidget(
-            sub_label, alignment=Qt.AlignVCenter
-        )  # Align label vertically center
+        sub_label = QLabel("Touch Anywhere to Continue", alignment=Qt.AlignCenter)
+        sub_label.setStyleSheet("color: #A93F55; font-family: Roboto; font-size: 20px; font-weight: bold; letter-spacing: 3px; ")
+        layout.addWidget(sub_label)  
 
         admin_bt = QPushButton(self)
-        admin_bt.setGeometry(1450, 780, 200, 65)  # (x, y, width, height)
-        admin_bt.setIconSize(QSize(65, 65))  # Set the size of the icon
+        admin_bt.setGeometry(1380, 765, 200, 65)  
+        admin_bt.setIconSize(QSize(65, 65))  
         admin_bt.setFocusPolicy(Qt.NoFocus)
         self.button = admin_bt
         admin_bt.show()
@@ -70,7 +64,6 @@ class HomeScreenWindow(QMainWindow):
         central_widget.mousePressEvent = self.switch_window
 
     def switch_window(self, event):
-        # Close the current window
         self.close()
         self.new_window = ViewFormWindow()
         self.new_window.show()
@@ -85,12 +78,28 @@ class HomeScreenWindow(QMainWindow):
 
         # Connect the back button clicked signal from AdminScreenWindow to go_back_to_home slot
         self.admin_window.home_screen_backbt_clicked.connect(self.go_back_to_home)
+        
+    def set_background_image(self):
+        # Get screen resolution
+        screen_resolution = QDesktopWidget().screenGeometry()
+
+        # Load the background image
+        pixmap = QPixmap("./img/background.jpg")
+
+        # Resize the background image to fit the screen resolution
+        pixmap = pixmap.scaled(screen_resolution.width(), screen_resolution.height())
+
+        # Create a label to display the background image
+        background_label = QLabel(self)
+        background_label.setPixmap(pixmap)
+        background_label.setGeometry(0, 0, screen_resolution.width(), screen_resolution.height())  # Set label size to screen resolution
+        background_label.setScaledContents(True)
+        
 
     # Slot to handle going back to the main window
     def go_back_to_home(self):
-        # Create an instance of the HomeScreenWindow class and show it
         self.close()
-        self.show()
+        self.showMaximized()  # Show maximized window
 
 
 if __name__ == "__main__":

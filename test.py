@@ -1,22 +1,68 @@
-button_labels = {
-    'form_names': ['Individual Request of Petition Subject', 'Consolidated Requests of Petition Subject', 'Request on Shifting of Course',
-                   'Thesis Distribution Form', 'Application for Subject Accreditation', 'Evaluation of Graduating Student with Academic Honors',
-                   'List of Graduating Students with Academic Honors', 'List of Graduating Students with Loyalty Award', 'List of Graduating Students with Recognition Award',
-                   'Form 1', 'Form 2', 'Form 3', 'Form 4', 'Form 5', 'Form 6', 'Form 7', 'Form 8', 'Form 9'
-                   ],
-    'form_types': ['Uncontrolled', 'Uncontrolled', 'Uncontrolled', 'Uncontrolled', 'Uncontrolled', 'Uncontrolled', 'Unctrolled', 'Uncontrolled', 'Uncontrolled',
-                   'Controlled', 'Controlled', 'Controlled', 'Controlled', 'Controlled', 'Controlled', 'Controlled', 'Controlled', 'Controlled',
-                   ],
-    'num_of_page': [2, 1, 1, 1, 1, 3, 2, 2, 2, 1, 1, 1, 2, 2, 2, 1, 2, 3],
-}
+from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QFrame, QLabel, QWidget, QHBoxLayout, QStackedWidget
+from PyQt5.QtGui import QPainter, QColor, QBrush, QPen, QLinearGradient, QPainterPath
+from PyQt5.QtCore import Qt, QSize,  QRectF
 
-index = int(input("Enter the index: "))
-if 0 <= index < len(button_labels['form_names']):
-    form_name = button_labels['form_names'][index]
-    form_type = button_labels['form_types'][index]
-    num_of_pages = button_labels['num_of_page'][index]
-    print(f"Form Name: {form_name}")
-    print(f"Form Type: {form_type}")
-    print(f"Number of Pages: {num_of_pages}")
-else:
-    print("Invalid index.")
+class InnerShadowFrame(QFrame):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setStyleSheet("background-color: transparent;")
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+
+        # Define shadow properties
+        shadow_color = QColor(0, 0, 0, 50)
+        shadow_radius = 10
+
+        # Draw inner shadow
+        path = QPainterPath()
+        path.addRoundedRect(QRectF(self.rect()).adjusted(0, 0, -shadow_radius, -shadow_radius), self.cornerRadius(), self.cornerRadius())
+        painter.fillPath(path, QBrush(shadow_color))
+        painter.setPen(QPen(shadow_color, shadow_radius))
+        painter.drawRoundedRect(QRectF(self.rect()).adjusted(shadow_radius // 2, shadow_radius // 2, -shadow_radius, -shadow_radius), self.cornerRadius(), self.cornerRadius())
+
+        # Draw content
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QColor("#FDFDFD"))  # Content color
+        painter.drawRoundedRect(QRectF(self.rect()).adjusted(shadow_radius, shadow_radius, -shadow_radius, -shadow_radius), self.cornerRadius(), self.cornerRadius())
+
+
+        # Draw content
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QColor("#FDFDFD"))  # Content color
+        painter.drawRoundedRect(self.rect().adjusted(shadow_radius, shadow_radius, -shadow_radius, -shadow_radius), self.cornerRadius(), self.cornerRadius())
+
+    def cornerRadius(self):
+        return 45  # Adjust as needed
+
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Inner Shadow Frame Example")
+        self.setGeometry(100, 100, 600, 400)
+
+        main_widget = QWidget()
+        self.setCentralWidget(main_widget)
+
+        layout = QVBoxLayout(main_widget)
+
+        # Add the inner shadow frame to the layout
+        inner_shadow_frame = InnerShadowFrame()
+        inner_shadow_frame.setObjectName("inner_shadow_frame")  # To apply specific style
+        layout.addWidget(inner_shadow_frame, alignment=Qt.AlignCenter)
+
+        # Add content inside the inner shadow frame
+        content_layout = QVBoxLayout()
+        inner_shadow_frame.setLayout(content_layout)
+
+        label = QLabel("Inner Shadow Frame")
+        label.setAlignment(Qt.AlignCenter)
+        content_layout.addWidget(label)
+
+if __name__ == "__main__":
+    app = QApplication([])
+    window = MainWindow()
+    window.show()
+    app.exec_()

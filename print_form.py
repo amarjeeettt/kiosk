@@ -42,9 +42,10 @@ class PrintFormWindow(QMainWindow):
 
         self.top_button = QPushButton("Top Button")
         self.top_button.clicked.connect(self.go_back)
-        self.top_button.setStyleSheet("QPushButton { font-size: 20px; }")
-        self.top_button.setMaximumWidth(200)
-        self.top_button.setMinimumWidth(200)
+        self.top_button.setStyleSheet("QPushButton { background-color: #A93F55; color: #F3F7F0; font-family: Montserrat;font-size: 20px; border-bottom-left-radius: 10px; border-bottom-right-radius: 10px; }")
+        self.top_button.setMinimumHeight(100)
+        self.top_button.setMaximumWidth(100)
+        self.top_button.setMinimumWidth(100)
         main_layout.addWidget(self.top_button, alignment=Qt.AlignHCenter)
 
         main_layout.addSpacerItem(
@@ -113,11 +114,11 @@ class PrintFormWindow(QMainWindow):
         )
         self.button.setEnabled(False)
 
-        self.counter_thread = CounterThread()
-        self.counter_thread.counter_changed.connect(
-            lambda counter: self.update_counter(counter, total)
-        )
-        self.counter_thread.start()
+        # self.counter_thread = CounterThread()
+        # self.counter_thread.counter_changed.connect(
+        #    lambda counter: self.update_counter(counter, total)
+        # )
+        # self.counter_thread.start()
 
     def update_counter(self, counter, total):
         self.counter = counter

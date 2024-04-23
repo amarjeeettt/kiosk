@@ -1,3 +1,4 @@
+import sys
 import sqlite3
 from PyQt5.QtWidgets import (
     QApplication,
@@ -10,9 +11,10 @@ from PyQt5.QtWidgets import (
     QFrame,
     QSpacerItem,
     QSizePolicy,
+    QDesktopWidget
 )
-from PyQt5.QtGui import QPixmap, QImage, QPainter, QBrush, QColor
-from PyQt5.QtCore import Qt, pyqtSignal, QPoint
+from PyQt5.QtGui import QPixmap, QImage, QPainter, QBrush, QColor, QIcon
+from PyQt5.QtCore import Qt, pyqtSignal, QPoint, QPropertyAnimation, QSize
 from view_process_uncontrolled import ViewProcessUncontrolledWindow
 from print_form import PrintFormWindow
 
@@ -24,6 +26,7 @@ class PrintPreviewWindow(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("Print Preview")
+        self.set_background_image()
         self.showMaximized()
 
         # connect database
@@ -45,11 +48,31 @@ class PrintPreviewWindow(QMainWindow):
         left_window.setFixedWidth(200)  # Set fixed width
         left_layout = QVBoxLayout(left_window)  # Use QVBoxLayout
         left_layout.setAlignment(Qt.AlignTop)  # Align top
-        back_bt = QPushButton("Back Button")
+        back_bt = QPushButton("Back")
         back_bt.setFixedSize(200, 100)  # Set fixed size
+        back_bt.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #7C2F3E; 
+                color: #FAEBD7; 
+                font-family: Montserrat;
+                font-size: 16px; 
+                font-weight: bold; 
+                border-radius: 10px;
+                border: none;
+                margin-left: 35px;
+                margin-top: 20px;
+                min-width: 150px;
+                min-height: 80px;
+            }
+            QPushButton:pressed {
+                background-color: #D8973C;
+            }
+            """
+        )
+        back_bt.setFocusPolicy(Qt.NoFocus)
         back_bt.clicked.connect(self.go_back)
         # Apply margin to the left button
-        back_bt.setStyleSheet("margin-top: 20px;")
         left_layout.addWidget(back_bt)
 
         # Center image
@@ -88,7 +111,19 @@ class PrintPreviewWindow(QMainWindow):
         # Right label
         form_label = label
         right_label = QLabel(form_label)
-        right_label.setStyleSheet("margin-top: 80px; margin-bottom: 60px")
+        right_label.setFixedSize(380, 150)
+        right_label.setAlignment(Qt.AlignCenter)
+        right_label.setWordWrap(True)
+        right_label.setStyleSheet(
+            """
+                QLabel {
+                    font-family: Montserrat;
+                    font-size: 24px; 
+                    font-weight: bold; 
+                    color: #19323C;
+                    }
+            """
+        )
         right_layout = QVBoxLayout()
         right_layout.addWidget(
             right_label, alignment=Qt.AlignCenter
@@ -96,20 +131,43 @@ class PrintPreviewWindow(QMainWindow):
 
         # Bottom square inside right_label layout
         square_frame = QFrame()
-        square_frame.setStyleSheet("background-color: #FFFFFF; border-radius: 45px;")
+        square_frame.setStyleSheet("background-color: #FDFDFD; border-radius: 45px;")
         # Set the size of the square frame
         square_frame.setFixedSize(420, 360)
         square_frame.setFrameStyle(QFrame.Box)
         square_frame_layout = QVBoxLayout(square_frame)
-        square_label = QLabel("Square Label")
+        square_label = QLabel("Total:")
+        square_label.setStyleSheet(
+            """
+                QLabel {
+                    font-family: Roboto;
+                    font-size: 16px; 
+                    color: #19323C;
+                    letter-spacing: 3px;
+                    }
+            """
+        )
+        square_frame_layout.setContentsMargins(0, 90, 0, 0)
         square_frame_layout.addWidget(
             square_label, alignment=Qt.AlignCenter
         )  # Align label in center
 
         self.total = self.base_price * self.num_of_pages
         self.total_label = QLabel(
-            f"Total: {self.total:0.2f}"
+            f"₱{self.total:0.2f}"
         )  # Initialize total label with base price
+        self.total_label.setStyleSheet(
+            """
+                QLabel {
+                    font-family: Montserrat;
+                    font-size: 64px; 
+                    font-weight: bold;
+                    margin-top: 15px; 
+                    color: #7C2F3E;
+                    letter-spacing: 3px;
+                    }
+            """
+        )
         square_frame_layout.addWidget(
             self.total_label, alignment=Qt.AlignCenter
         )  # Align label in center
@@ -118,65 +176,78 @@ class PrintPreviewWindow(QMainWindow):
         square_button1.setStyleSheet(
             """
             QPushButton {
-                background-color: #7B0323;
+                background-color: #7C2F3E;
                 border: none;
-                color: white;
-                padding: 15px 32px;
+                color: #FAEBD7;
                 text-align: center;
                 text-decoration: none;
                 font-size: 16px;
-                margin: 4px 2px;
+                font-weight: bold;
                 border-radius: 12px;
             }
-            QPushButton:hover {
-                background-color: #45a049;
-                color: white;
+            QPushButton:pressed {
+                background-color: #D8C995;
+                color: #7C2F3E;
             }
             """
         )
+        square_button1.setFixedSize(65, 65)
+        
         square_button2 = QPushButton("+")
         square_button2.setStyleSheet(
             """
             QPushButton {
-                background-color: #7B0323;
+                background-color: #7C2F3E;
                 border: none;
-                color: white;
-                padding: 15px 32px;
+                color: #FAEBD7;
                 text-align: center;
                 text-decoration: none;
                 font-size: 16px;
-                margin: 4px 2px;
+                font-weight: bold;
                 border-radius: 12px;
             }
-            QPushButton:hover {
-                background-color: #007BAA;
-                color: white;
+            QPushButton:pressed {
+                background-color: #D8C995;
+                color: #7C2F3E;
             }
             """
         )
+        square_button2.setFixedSize(65, 65)
+        
         self.value = 1
         self.label_between_buttons = QLabel(str(self.value))
+        self.label_between_buttons.setStyleSheet(
+            """
+                QLabel {
+                    margin-top: 12px;
+                    font-family: Montserrat;
+                    font-size: 24px; 
+                    font-weight: bold;
+                    color: #19323C;
+                    }
+            """
+        )
         square_button1.clicked.connect(self.decrement_value)
         square_button2.clicked.connect(self.increment_value)
 
         # Set margin for the square layout
-        square_layout.setContentsMargins(80, 80, 80, 30)  # right, top, left, bottom
+        square_layout.setContentsMargins(100, 40, 100, 40)  # right, top, left, bottom
 
-        square_layout.addWidget(square_button1)
+        square_layout.addWidget(square_button1, alignment=Qt.AlignCenter)
         square_layout.addWidget(
             self.label_between_buttons, alignment=Qt.AlignCenter
         )  # Align label at center
-        square_layout.addWidget(square_button2)
+        square_layout.addWidget(square_button2, alignment=Qt.AlignCenter)
         square_frame_layout.addLayout(square_layout)
         right_layout.addWidget(square_frame)
 
         # Outer buttons
-        view_process_bt = QPushButton("View Process")
+        view_process_bt = QPushButton()
         view_process_bt.setFixedSize(250, 150)  # Set fixed size
         view_process_bt.setStyleSheet(
             """
             QPushButton {
-                background-color: #4CAF50;
+                background-color: #D8C995;
                 border: none;
                 color: white;
                 padding: 15px 32px;
@@ -186,20 +257,51 @@ class PrintPreviewWindow(QMainWindow):
                 margin: 4px 2px;
                 border-radius: 12px;
             }
-            QPushButton:hover {
-                background-color: #45a049;
-                color: white;
+            QPushButton:pressed {
+                background-color: #F3F7F0;
             }
             """
         )
         view_process_bt.clicked.connect(lambda: self.view_process_window(form_label))
+        
+        # Create layout for button
+        process_button_layout = QVBoxLayout()
 
-        print_bt = QPushButton("Print")
+        # Add image to button
+        process_image_label = QLabel()
+        icon = QIcon("./img/view_process_icon.svg")
+        pixmap = icon.pixmap(QSize(200, 200))
+        pixmap = pixmap.scaled(QSize(50, 50), Qt.KeepAspectRatio, Qt.SmoothTransformation)  # Adjust size as needed
+        process_image_label.setPixmap(pixmap)
+        process_image_label.setContentsMargins(0, 25, 0, 0)
+        process_image_label.setAlignment(Qt.AlignCenter)
+        process_button_layout.addWidget(process_image_label)
+
+        # Add label to button
+        process_label = QLabel("View Process")
+        process_label.setStyleSheet(
+            """
+                QLabel {
+                font-family: Montserrat;
+                font-size: 16px; 
+                font-weight: bold;
+                margin-bottom: 10px;
+                color: #19323C;
+                }
+            """
+        )
+        process_label.setAlignment(Qt.AlignBottom | Qt.AlignCenter)
+        process_button_layout.addWidget(process_label)
+
+        # Set button layout
+        view_process_bt.setLayout(process_button_layout)
+
+        print_bt = QPushButton()
         print_bt.setFixedSize(250, 150)  # Set fixed size
         print_bt.setStyleSheet(
             """
             QPushButton {
-                background-color: #008CBA;
+                background-color: #7C2F3E;
                 border: none;
                 color: white;
                 padding: 15px 32px;
@@ -209,13 +311,45 @@ class PrintPreviewWindow(QMainWindow):
                 margin: 4px 2px;
                 border-radius: 12px;
             }
-            QPushButton:hover {
-                background-color: #007BAA;
-                color: white;
+            QPushButton:pressed {
+                background-color: #D8973C;
             }
             """
         )
         print_bt.clicked.connect(lambda: self.print_form_window(form_label))
+        
+        # Create layout for button
+        print_button_layout = QVBoxLayout()
+
+        # Add image to button
+        print_image_label = QLabel()
+        icon = QIcon("./img/print_forms_icon.svg")
+        pixmap = icon.pixmap(QSize(200, 200))
+        pixmap = pixmap.scaled(QSize(50, 50), Qt.KeepAspectRatio, Qt.SmoothTransformation)  # Adjust size as needed
+        print_image_label.setPixmap(pixmap)
+        print_image_label.setContentsMargins(0, 25, 0, 0)
+        print_image_label.setAlignment(Qt.AlignCenter)
+        print_button_layout.addWidget(print_image_label)
+
+        # Add label to button
+        print_label = QLabel("Print Forms")
+        print_label.setStyleSheet(
+            """
+                QLabel {
+                font-family: Montserrat;
+                font-size: 16px; 
+                font-weight: bold;
+                margin-bottom: 10px;
+                color: #FAEBD7;
+                }
+            """
+        )
+        print_label.setAlignment(Qt.AlignBottom | Qt.AlignCenter)
+        print_button_layout.addWidget(print_label)
+
+        # Set button layout
+        print_bt.setLayout(print_button_layout)
+        
         # Add vertical spacer item between square frame and outer buttons
         spacer_vertical = QSpacerItem(
             20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding
@@ -247,7 +381,7 @@ class PrintPreviewWindow(QMainWindow):
 
         main_layout.addItem(spacer)
 
-        central_widget = QWidget()
+        central_widget = QWidget(self)
         central_widget.setLayout(main_layout)
         self.setCentralWidget(central_widget)
 
@@ -259,6 +393,24 @@ class PrintPreviewWindow(QMainWindow):
         if self.num_of_pages <= 1:
             self.center_image.mousePressEvent = lambda event: None
             self.center_image.mouseReleaseEvent = lambda event: None
+    
+    def set_background_image(self):
+        # Get screen resolution
+        screen_resolution = QDesktopWidget().screenGeometry()
+
+        # Load the background image
+        pixmap = QPixmap("./img/background.jpg")
+
+        # Resize the background image to fit the screen resolution
+        pixmap = pixmap.scaled(screen_resolution.width(), screen_resolution.height())
+
+        # Create a label to display the background image
+        background_label = QLabel(self)
+        background_label.setPixmap(pixmap)
+        background_label.setGeometry(
+            0, 0, screen_resolution.width(), screen_resolution.height()
+        )  # Set label size to screen resolution
+        background_label.setScaledContents(True)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
@@ -272,9 +424,31 @@ class PrintPreviewWindow(QMainWindow):
     def detect_swipe(self):
         delta_x = self.end_pos.x() - self.start_pos.x()
         if delta_x > 100:
-            self.previous_image()
+            self.slide_left()
         elif delta_x < -100:
-            self.next_image()
+            self.slide_right()
+
+    def slide_left(self):
+        animation = QPropertyAnimation(self.center_image, b"geometry")
+        animation.setDuration(500)
+        animation.setStartValue(self.center_image.geometry())
+        new_geometry = self.center_image.geometry()
+        new_geometry.moveLeft(-self.width())
+        animation.setEndValue(new_geometry)
+        animation.start()
+
+        self.previous_image()
+
+    def slide_right(self):
+        animation = QPropertyAnimation(self.center_image, b"geometry")
+        animation.setDuration(500)
+        animation.setStartValue(self.center_image.geometry())
+        new_geometry = self.center_image.geometry()
+        new_geometry.moveLeft(self.width())
+        animation.setEndValue(new_geometry)
+        animation.start()
+
+        self.next_image()
 
     def next_image(self):
         if self.index < self.num_of_pages:
@@ -314,14 +488,14 @@ class PrintPreviewWindow(QMainWindow):
             self.update_total_label()
 
     def decrement_value(self):
-        if self.value > 0:
+        if self.value > 1:
             self.value -= 1
             self.label_between_buttons.setText(str(self.value))
             self.update_total_label()
 
     def update_total_label(self):
         self.total = (self.base_price * self.num_of_pages) * self.value
-        self.total_label.setText(f"Total: {self.total:0.2f}")
+        self.total_label.setText(f"₱{self.total:0.2f}")
 
     def apply_border_radius(self):
         # Create a mask image with the desired border radius
@@ -363,3 +537,10 @@ class PrintPreviewWindow(QMainWindow):
     def go_back_to_print_preview(self):
         self.close()
         self.show()
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = PrintPreviewWindow("form_label", 5)  # You can change the label and number of pages
+    window.show()
+    sys.exit(app.exec_())
