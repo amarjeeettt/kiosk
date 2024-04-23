@@ -42,7 +42,7 @@ class PrintFormWindow(QMainWindow):
         main_widget.setLayout(main_layout)
 
         top_button = QPushButton(self)
-        top_button.setText("Cancel")
+        top_button.setText("Back button")
         top_button.clicked.connect(self.go_back)
         top_button.setStyleSheet(
             """
@@ -199,11 +199,11 @@ class PrintFormWindow(QMainWindow):
         )
         self.button.setEnabled(False)
 
-        # self.counter_thread = CounterThread()
-        # self.counter_thread.counter_changed.connect(
-        #    lambda counter: self.update_counter(counter, total)
-        # )
-        # self.counter_thread.start()
+        self.counter_thread = CounterThread()
+        self.counter_thread.counter_changed.connect(
+            lambda counter: self.update_counter(counter, total)
+        )
+        self.counter_thread.start()
 
     def update_counter(self, counter, total):
         self.counter = counter
@@ -263,6 +263,8 @@ class PrintFormWindow(QMainWindow):
             print("Error during printing:", e)
 
     def go_back(self):
+        # Stop the thread and close coinslot connection
+        self.counter_thread.stop()
         self.close()
         self.print_preview_backbt_clicked.emit()
 
@@ -290,7 +292,7 @@ class CounterThread(QThread):
 
     def __init__(self):
         super().__init__()
-        self.coinslot = Button(22)
+        self.coinslot = Button(11)
         self.stop_event = Event()
 
     def run(self):
@@ -306,3 +308,5 @@ class CounterThread(QThread):
 
     def stop(self):
         self.stop_event.set()
+        # Close the coinslot connection
+        self.coinslot.close()
