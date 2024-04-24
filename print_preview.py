@@ -1,7 +1,5 @@
-import sys
 import sqlite3
 from PyQt5.QtWidgets import (
-    QApplication,
     QMainWindow,
     QLabel,
     QPushButton,
@@ -11,7 +9,7 @@ from PyQt5.QtWidgets import (
     QFrame,
     QSpacerItem,
     QSizePolicy,
-    QDesktopWidget
+    QDesktopWidget,
 )
 from PyQt5.QtGui import QPixmap, QImage, QPainter, QBrush, QColor, QIcon
 from PyQt5.QtCore import Qt, pyqtSignal, QPoint, QPropertyAnimation, QSize
@@ -99,6 +97,16 @@ class PrintPreviewWindow(QMainWindow):
 
         # Bottom label
         self.bottom_label = QLabel(f"{self.index}/{num_of_pages}")
+        self.bottom_label.setStyleSheet(
+            """
+                QLabel {
+                    font-family: Montserrat;
+                    font-size: 16px; 
+                    font-weight: bold;
+                    color: #19323C;
+                    }
+            """
+        )
         self.bottom_label.setAlignment(Qt.AlignCenter)
 
         # Create a layout for center image and bottom label
@@ -171,8 +179,8 @@ class PrintPreviewWindow(QMainWindow):
             self.total_label, alignment=Qt.AlignCenter
         )  # Align label in center
         square_layout = QHBoxLayout()  # Layout for buttons and label
-        square_button1 = QPushButton("-")
-        square_button1.setStyleSheet(
+        decrement_button = QPushButton("-")
+        decrement_button.setStyleSheet(
             """
             QPushButton {
                 background-color: #7C2F3E;
@@ -190,10 +198,10 @@ class PrintPreviewWindow(QMainWindow):
             }
             """
         )
-        square_button1.setFixedSize(65, 65)
-        
-        square_button2 = QPushButton("+")
-        square_button2.setStyleSheet(
+        decrement_button.setFixedSize(65, 65)
+
+        increment_button = QPushButton("+")
+        increment_button.setStyleSheet(
             """
             QPushButton {
                 background-color: #7C2F3E;
@@ -211,8 +219,8 @@ class PrintPreviewWindow(QMainWindow):
             }
             """
         )
-        square_button2.setFixedSize(65, 65)
-        
+        increment_button.setFixedSize(65, 65)
+
         self.value = 1
         self.label_between_buttons = QLabel(str(self.value))
         self.label_between_buttons.setStyleSheet(
@@ -226,17 +234,17 @@ class PrintPreviewWindow(QMainWindow):
                     }
             """
         )
-        square_button1.clicked.connect(self.decrement_value)
-        square_button2.clicked.connect(self.increment_value)
+        decrement_button.clicked.connect(self.decrement_value)
+        increment_button.clicked.connect(self.increment_value)
 
         # Set margin for the square layout
         square_layout.setContentsMargins(100, 40, 100, 40)  # right, top, left, bottom
 
-        square_layout.addWidget(square_button1, alignment=Qt.AlignCenter)
+        square_layout.addWidget(decrement_button, alignment=Qt.AlignCenter)
         square_layout.addWidget(
             self.label_between_buttons, alignment=Qt.AlignCenter
         )  # Align label at center
-        square_layout.addWidget(square_button2, alignment=Qt.AlignCenter)
+        square_layout.addWidget(increment_button, alignment=Qt.AlignCenter)
         square_frame_layout.addLayout(square_layout)
         right_layout.addWidget(square_frame)
 
@@ -262,7 +270,7 @@ class PrintPreviewWindow(QMainWindow):
             """
         )
         view_process_bt.clicked.connect(lambda: self.view_process_window(form_label))
-        
+
         # Create layout for button
         process_button_layout = QVBoxLayout()
 
@@ -270,7 +278,9 @@ class PrintPreviewWindow(QMainWindow):
         process_image_label = QLabel()
         icon = QIcon("./img/view_process_icon.svg")
         pixmap = icon.pixmap(QSize(200, 200))
-        pixmap = pixmap.scaled(QSize(50, 50), Qt.KeepAspectRatio, Qt.SmoothTransformation)  # Adjust size as needed
+        pixmap = pixmap.scaled(
+            QSize(50, 50), Qt.KeepAspectRatio, Qt.SmoothTransformation
+        )  # Adjust size as needed
         process_image_label.setPixmap(pixmap)
         process_image_label.setContentsMargins(0, 25, 0, 0)
         process_image_label.setAlignment(Qt.AlignCenter)
@@ -316,7 +326,7 @@ class PrintPreviewWindow(QMainWindow):
             """
         )
         print_bt.clicked.connect(lambda: self.print_form_window(form_label))
-        
+
         # Create layout for button
         print_button_layout = QVBoxLayout()
 
@@ -324,7 +334,9 @@ class PrintPreviewWindow(QMainWindow):
         print_image_label = QLabel()
         icon = QIcon("./img/print_forms_icon.svg")
         pixmap = icon.pixmap(QSize(200, 200))
-        pixmap = pixmap.scaled(QSize(50, 50), Qt.KeepAspectRatio, Qt.SmoothTransformation)  # Adjust size as needed
+        pixmap = pixmap.scaled(
+            QSize(50, 50), Qt.KeepAspectRatio, Qt.SmoothTransformation
+        )  # Adjust size as needed
         print_image_label.setPixmap(pixmap)
         print_image_label.setContentsMargins(0, 25, 0, 0)
         print_image_label.setAlignment(Qt.AlignCenter)
@@ -348,7 +360,7 @@ class PrintPreviewWindow(QMainWindow):
 
         # Set button layout
         print_bt.setLayout(print_button_layout)
-        
+
         # Add vertical spacer item between square frame and outer buttons
         spacer_vertical = QSpacerItem(
             20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding
@@ -392,7 +404,7 @@ class PrintPreviewWindow(QMainWindow):
         if self.num_of_pages <= 1:
             self.center_image.mousePressEvent = lambda event: None
             self.center_image.mouseReleaseEvent = lambda event: None
-    
+
     def set_background_image(self):
         # Get screen resolution
         screen_resolution = QDesktopWidget().screenGeometry()
@@ -513,33 +525,29 @@ class PrintPreviewWindow(QMainWindow):
         self.image.setAlphaChannel(mask)
 
     def view_process_window(self, form_label):
-        self.close()
         self.new_window = ViewProcessUncontrolledWindow(form_label)
-        self.new_window.show()
+        self.new_window.setVisible(True)
+        self.setVisible(False)
 
         self.new_window.print_preview_backbt_clicked.connect(
             self.go_back_to_print_preview
         )
 
     def print_form_window(self, form_label):
-        self.close()
-        self.new_window = PrintFormWindow(form_label, self.value, self.total)
-        self.new_window.show()
+        self.new_window = PrintFormWindow(
+            form_label, self.value, self.total, self.num_of_pages
+        )
+        self.new_window.setVisible(True)
+        self.setVisible(False)
+
         self.new_window.print_preview_backbt_clicked.connect(
             self.go_back_to_print_preview
         )
 
     def go_back(self):
-        self.close()
+        self.setVisible(False)
         self.view_form_backbt_clicked.emit()
 
     def go_back_to_print_preview(self):
-        self.close()
+        self.setVisible(False)
         self.show()
-
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = PrintPreviewWindow("form_label", 5)  # You can change the label and number of pages
-    window.show()
-    sys.exit(app.exec_())

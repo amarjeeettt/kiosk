@@ -1,6 +1,5 @@
 import sqlite3
 from PyQt5.QtWidgets import (
-    QApplication,
     QMainWindow,
     QTableWidget,
     QTableWidgetItem,
@@ -10,21 +9,26 @@ from PyQt5.QtWidgets import (
     QHeaderView,
     QHBoxLayout,
     QInputDialog,
-    QLabel
+    QLabel,
+    QSpacerItem,
+    QSizePolicy,
+    QMessageBox,
+    QDesktopWidget,
 )
 from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtGui import QPixmap
 
 
 class AdminScreenWindow(QMainWindow):
     home_screen_backbt_clicked = pyqtSignal()
 
+    # Define a signal for bondpaper quantity update
+    bondpaper_quantity_updated = pyqtSignal(int)
+
     def __init__(self):
         super().__init__()
 
-
-        self.showMaximized()
-        
-        # connect database
+        # Connect database
         conn = sqlite3.connect("kiosk.db")
         cursor = conn.cursor()
 
@@ -36,11 +40,15 @@ class AdminScreenWindow(QMainWindow):
 
         conn.close()
 
-        central_widget = QWidget()
+        self.set_background_image()
+        self.showMaximized()
+
+        central_widget = QWidget(self)
         self.setCentralWidget(central_widget)
 
         layout = QVBoxLayout(central_widget)
-        
+        layout.setContentsMargins(0, 35, 0, 0)
+
         # Adding back button and labels in top right corner
         top_layout = QHBoxLayout()
 
@@ -50,8 +58,8 @@ class AdminScreenWindow(QMainWindow):
         self.back_bt.setStyleSheet(
             """
             QPushButton {
-                background-color: #A93F55; 
-                color: #F3F7F0; 
+                background-color: #7C2F3E; 
+                color: #FAEBD7; 
                 font-family: Montserrat;
                 font-size: 16px; 
                 font-weight: bold; 
@@ -62,7 +70,7 @@ class AdminScreenWindow(QMainWindow):
                 min-height: 80px;
             }
             QPushButton:pressed {
-                color: #D8C995;
+                background-color: #D8973C;
             }
             """
         )
@@ -73,21 +81,31 @@ class AdminScreenWindow(QMainWindow):
 
         # Adding labels in top right corner
         top_right_layout = QHBoxLayout()
-        label1 = QLabel(f"Bondpaper Left: {self.bondpaper_quantity}")
+        self.label1 = QLabel(f"Bondpaper Left: {self.bondpaper_quantity}")
         label2 = QLabel(f"Coins Left: {self.coins_left}")
-        top_right_layout.addWidget(label1, alignment=Qt.AlignRight)
+        top_right_layout.addWidget(self.label1, alignment=Qt.AlignRight)
         top_right_layout.addWidget(label2, alignment=Qt.AlignRight)
         top_right_layout.setSpacing(0)
         top_right_layout.setContentsMargins(0, 0, 130, 0)
         top_layout.addLayout(top_right_layout)
-        
+
         layout.addLayout(top_layout)
 
+        # Add vertical spacer between top_layout and tableWidget
+        layout.addSpacerItem(
+            QSpacerItem(20, 20, QSizePolicy.Minimum, QSizePolicy.Minimum)
+        )
+
+        # Adjust the layout of the table widget to include margins on both sides
+        table_layout = QVBoxLayout()
+        table_layout.setContentsMargins(35, 0, 35, 0)
+
         self.tableWidget = QTableWidget()
-        layout.addWidget(self.tableWidget)
+        table_layout.addWidget(self.tableWidget)
+        layout.addLayout(table_layout)
 
         button_below_table_container = QWidget()
-        button_below_table_layout = QVBoxLayout(button_below_table_container)
+        button_below_table_layout = QHBoxLayout(button_below_table_container)
         layout.addWidget(button_below_table_container)
 
         self.populate_table()
@@ -102,7 +120,7 @@ class AdminScreenWindow(QMainWindow):
                 border: 1px solid #D8C995;
             }
             QHeaderView::section {
-                background-color: #A93F55;
+                background-color: #7C2F3E;
                 color: #F3F7F0;
                 font-weight: bold;
                 font-size: 14px;
@@ -114,12 +132,59 @@ class AdminScreenWindow(QMainWindow):
 
         button1 = QPushButton("Refill Bondpaper")
         button2 = QPushButton("Change Price")
+
+        button1.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #3498db;
+                color: #ffffff;
+                font-family: Montserrat;
+                font-size: 14px;
+                font-weight: bold;
+                border-radius: 10px;
+                border: none;
+                padding: 10px 20px;
+                margin-right: 20px;
+            }
+            QPushButton:pressed {
+                color: #dcdde1;
+            }
+            """
+        )
+
+        button2.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #e74c3c;
+                color: #ffffff;
+                font-family: Montserrat;
+                font-size: 14px;
+                font-weight: bold;
+                border-radius: 10px;
+                border: none;
+                padding: 10px 20px;
+            }
+            QPushButton:pressed {
+                color: #dcdde1;
+            }
+            """
+        )
+
+        button_below_table_layout.addStretch(1)
         button_below_table_layout.addWidget(button1)
         button_below_table_layout.addWidget(button2)
 
         button1.clicked.connect(self.refill_bondpaper)
         button2.clicked.connect(self.change_price)
 
+        # Add empty space below the buttons
+        spacer = QSpacerItem(40, 60, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        layout.addItem(spacer)
+
+        # Connect bondpaper_quantity_updated signal to update_label_slot
+        self.bondpaper_quantity_updated.connect(self.update_label_slot)
+
+    # Update the populate_table method
     def populate_table(self):
         try:
             connection = sqlite3.connect("kiosk.db")
@@ -128,7 +193,10 @@ class AdminScreenWindow(QMainWindow):
             cursor.execute("SELECT * FROM kiosk_print_results")
             data = cursor.fetchall()
 
-            column_names = [description[0] for description in cursor.description]
+            column_names = [
+                self.format_column_name(description[0])
+                for description in cursor.description
+            ]
 
             self.tableWidget.setColumnCount(len(column_names))
             self.tableWidget.setHorizontalHeaderLabels(column_names)
@@ -149,8 +217,16 @@ class AdminScreenWindow(QMainWindow):
             if connection:
                 connection.close()
 
+    def format_column_name(self, column_name):
+        # Split the column name by underscores
+        words = column_name.split("_")
+        # Capitalize the first letter of each word
+        words = [word.capitalize() for word in words]
+        # Join the words with spaces
+        return " ".join(words)
+
     def go_back(self):
-        self.close()
+        self.setVisible(False)
         self.home_screen_backbt_clicked.emit()
 
     def refill_bondpaper(self):
@@ -163,7 +239,7 @@ class AdminScreenWindow(QMainWindow):
             cursor.execute(
                 """
                 UPDATE kiosk_settings
-                SET bondpaper_quantity = 45
+                SET bondpaper_quantity = 100
                 WHERE ROWID = (
                     SELECT ROWID
                     FROM kiosk_settings
@@ -180,6 +256,15 @@ class AdminScreenWindow(QMainWindow):
 
             print(self.bondpaper_quantity)
             print("Bondpaper refilled successfully.")
+
+            # Emit signal to update label
+            self.bondpaper_quantity_updated.emit(self.bondpaper_quantity)
+
+            # Display dialog box indicating success
+            message_box = QMessageBox(self)
+            message_box.setWindowTitle("Success")
+            message_box.setText("<center>Bondpaper refilled successfully.</center>")
+            message_box.exec_()
 
         except sqlite3.Error as error:
             connection.rollback()
@@ -230,3 +315,25 @@ class AdminScreenWindow(QMainWindow):
             finally:
                 if connection:
                     connection.close()
+
+    # Slot to update the bondpaper label
+    def update_label_slot(self, new_quantity):
+        self.label1.setText(f"Bondpaper Left: {new_quantity}")
+
+    def set_background_image(self):
+        # Get screen resolution
+        screen_resolution = QDesktopWidget().screenGeometry()
+
+        # Load the background image
+        pixmap = QPixmap("./img/background.jpg")
+
+        # Resize the background image to fit the screen resolution
+        pixmap = pixmap.scaled(screen_resolution.width(), screen_resolution.height())
+
+        # Create a label to display the background image
+        background_label = QLabel(self)
+        background_label.setPixmap(pixmap)
+        background_label.setGeometry(
+            0, 0, screen_resolution.width(), screen_resolution.height()
+        )  # Set label size to screen resolution
+        background_label.setScaledContents(True)

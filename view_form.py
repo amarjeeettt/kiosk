@@ -1,6 +1,5 @@
 import sqlite3
 from PyQt5.QtWidgets import (
-    QApplication,
     QMainWindow,
     QPushButton,
     QGridLayout,
@@ -11,7 +10,7 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QDesktopWidget,
 )
-from PyQt5.QtGui import QFont, QPixmap, QIcon
+from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtCore import Qt, QSize, pyqtSignal
 from print_preview import PrintPreviewWindow
 from view_process_controlled import ViewProcessControlledWindow
@@ -52,7 +51,7 @@ class ViewFormWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
- 
+
         self.set_background_image()
         self.showMaximized()  # Increased width to accommodate more buttons
 
@@ -203,7 +202,9 @@ class ViewFormWindow(QMainWindow):
             image_label = QLabel()
             icon = QIcon("./img/view_forms_icon.svg")
             pixmap = icon.pixmap(QSize(200, 200))
-            pixmap = pixmap.scaled(QSize(100, 100), Qt.KeepAspectRatio, Qt.SmoothTransformation)  # Adjust size as needed
+            pixmap = pixmap.scaled(
+                QSize(100, 100), Qt.KeepAspectRatio, Qt.SmoothTransformation
+            )  # Adjust size as needed
             image_label.setPixmap(pixmap)
             image_label.setAlignment(Qt.AlignCenter)
             image_label.setStyleSheet("margin-top: 45px;")
@@ -291,7 +292,7 @@ class ViewFormWindow(QMainWindow):
 
     # Slot to handle going back to the main window
     def go_back(self):
-        self.close()
+        self.setVisible(False)
         self.home_screen_backbt_clicked.emit()
 
     def open_button_window(self, label, button_labels):
@@ -308,17 +309,17 @@ class ViewFormWindow(QMainWindow):
             )
 
             if form_type == "Uncontrolled":
-                self.close()
                 self.new_window = PrintPreviewWindow(label, num_of_pages)
-                self.new_window.show()
+                self.new_window.setVisible(True)
+                self.setVisible(False)
 
                 self.new_window.view_form_backbt_clicked.connect(
                     self.go_back_to_view_form
                 )
             else:
-                self.close()
                 self.new_window = ViewProcessControlledWindow(label)
-                self.new_window.show()
+                self.new_window.setVisible(True)
+                self.setVisible(False)
 
                 self.new_window.view_form_backbt_clicked.connect(
                     self.go_back_to_view_form
@@ -327,5 +328,5 @@ class ViewFormWindow(QMainWindow):
             print(f"Label '{label}' not found in the form names.")
 
     def go_back_to_view_form(self):
-        self.close()
+        self.setVisible(False)
         self.show()

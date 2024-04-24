@@ -2,10 +2,9 @@ import cups
 import sqlite3
 import time
 from datetime import datetime
-from threading import Thread, Event
+from threading import Event
 from gpiozero import Button
 from PyQt5.QtWidgets import (
-    QApplication,
     QWidget,
     QVBoxLayout,
     QHBoxLayout,
@@ -17,20 +16,21 @@ from PyQt5.QtWidgets import (
     QSizePolicy,
     QDesktopWidget,
 )
-from PyQt5.QtGui import QFont, QPixmap
-from PyQt5.QtCore import Qt, pyqtSignal, QObject, QThread, QSize
+from PyQt5.QtGui import QPixmap
+from PyQt5.QtCore import Qt, pyqtSignal, QThread
 
 
 class PrintFormWindow(QMainWindow):
     print_preview_backbt_clicked = pyqtSignal()
 
-    def __init__(self, label, value, total):
+    def __init__(self, label, value, total, num_of_pages):
         super().__init__()
         self.set_background_image()
         self.showMaximized()
 
         form_label = label
         number_of_copy = value
+        number_of_page = num_of_pages
 
         self.counter = 0
         self.bondpaper_quantity = None
@@ -47,7 +47,7 @@ class PrintFormWindow(QMainWindow):
         top_button.setStyleSheet(
             """
             QPushButton { 
-                background-color: #A93F55; 
+                background-color: #7C2F3E; 
                 color: #F3F7F0; 
                 font-family: Montserrat;
                 font-size: 24px; 
@@ -176,34 +176,66 @@ class PrintFormWindow(QMainWindow):
             """
                 QLabel { 
                     font-family: Roboto; 
-                    padding-left: 105px; 
-                    font-size: 24px; 
+                    padding-left: 115px; 
+                    font-size: 20px; 
                 }
             """
         )
-        rectangle_inner_layout.addWidget(text_label)
+        rectangle_inner_layout.addWidget(text_label, alignment=Qt.AlignVCenter)
 
         line = QFrame()
         line.setFrameShape(QFrame.VLine)
-
+        line.setFixedHeight(90)
         # Set stylesheet only for the vertical line
         line.setStyleSheet("QFrame { background-color: black; }")
-        rectangle_inner_layout.addWidget(line)
+        rectangle_inner_layout.addWidget(line, alignment=Qt.AlignCenter)
 
-        self.button = QPushButton("Print")
-        self.button.setStyleSheet("QPushButton { font-size: 16px; }")
-        rectangle_inner_layout.addWidget(self.button)
-
-        self.button.clicked.connect(
-            lambda: self.print_document(form_label, number_of_copy, total)
+        self.print_bt = QPushButton("Print")
+        self.print_bt.setFixedSize(250, 80)
+        self.print_bt.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #7C2F3E; 
+                color: #FAEBD7; 
+                font-family: Montserrat;
+                border: none;
+                text-align: center;
+                font-weight: bold;
+                font-size: 18px;
+                margin: 4px 2px;
+                border-radius: 12px;
+                padding: 20px 40px;
+                }
+            QPushButton:pressed {
+                background-color: #D8973C;
+            }
+            QPushButton:disabled {
+                background-color: #C0C0C0; /* Light Grey */
+                color: #808080; /* Dark Grey */
+            }
+            """
         )
-        self.button.setEnabled(False)
+        rectangle_inner_layout.addWidget(self.print_bt)
 
+        self.print_bt.clicked.connect(
+            lambda: self.print_document(
+                form_label, number_of_copy, total, number_of_page
+            )
+        )
+        self.print_bt.setEnabled(False)
+
+        # Add spacer item to push the line to the center
+        rectangle_inner_layout.addSpacerItem(
+            QSpacerItem(40, 20, QSizePolicy.Preferred, QSizePolicy.Minimum)
+        )
+
+        """
         self.counter_thread = CounterThread()
         self.counter_thread.counter_changed.connect(
             lambda counter: self.update_counter(counter, total)
         )
         self.counter_thread.start()
+        """
 
     def update_counter(self, counter, total):
         self.counter = counter
@@ -212,11 +244,13 @@ class PrintFormWindow(QMainWindow):
 
     def check_total_counter_match(self, total):
         if self.counter >= total:
-            self.button.setEnabled(True)
+            self.print_bt.setEnabled(True)
         else:
-            self.button.setEnabled(False)
+            self.print_bt.setEnabled(False)
 
-    def print_document(self, form_label, number_of_copy, total):
+    def print_document(self, form_label, number_of_copy, total, number_of_page):
+        bondpaper_left = number_of_copy * number_of_page
+
         try:
             conn = cups.Connection()
             printers = conn.getPrinters()
@@ -232,40 +266,39 @@ class PrintFormWindow(QMainWindow):
                 else:
                     print_result = "Failed"
 
-                with sqlite3.connect("kiosk.db") as conn_sqlite:
-                    cursor = conn_sqlite.cursor()
+            with sqlite3.connect("kiosk.db") as conn_sqlite:
+                cursor = conn_sqlite.cursor()
 
-                    if print_result == "Success":
-                        cursor.execute(
-                            "UPDATE kiosk_settings SET bondpaper_quantity = bondpaper_quantity - 1"
-                        )
-
+                if print_result == "Success":
                     cursor.execute(
-                        "INSERT INTO kiosk_print_results (date_printed, form_name, quantity, total_price, result) VALUES (?, ?, ?, ?, ?)",
-                        (
-                            datetime.now(),
-                            form_label,
-                            number_of_copy,
-                            total,
-                            print_result,
-                        ),
+                        "UPDATE kiosk_settings SET bondpaper_quantity = bondpaper_quantity - ?",
+                        (bondpaper_left),
                     )
 
-                    conn_sqlite.commit()
-                    cursor.execute(
-                        "SELECT bondpaper_quantity FROM kiosk_settings LIMIT 1"
-                    )
-                    self.bondpaper_quantity = cursor.fetchone()[0]
+                cursor.execute(
+                    "INSERT INTO kiosk_print_results (date_printed, form_name, quantity, total_price, result) VALUES (?, ?, ?, ?, ?)",
+                    (
+                        datetime.now(),
+                        form_label,
+                        number_of_copy,
+                        total,
+                        print_result,
+                    ),
+                )
 
-                    print(self.bondpaper_quantity)
+                conn_sqlite.commit()
+                cursor.execute("SELECT bondpaper_quantity FROM kiosk_settings LIMIT 1")
+                self.bondpaper_quantity = cursor.fetchone()[0]
+
+                print(self.bondpaper_quantity)
 
         except Exception as e:
             print("Error during printing:", e)
 
     def go_back(self):
         # Stop the thread and close coinslot connection
-        self.counter_thread.stop()
-        self.close()
+        # self.counter_thread.stop()
+        self.setVisible(False)
         self.print_preview_backbt_clicked.emit()
 
     def set_background_image(self):

@@ -1,13 +1,14 @@
 from PyQt5.QtWidgets import (
-    QApplication,
     QWidget,
     QVBoxLayout,
     QPushButton,
     QLabel,
     QHBoxLayout,
     QMainWindow,
+    QDesktopWidget,
 )
 from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtGui import QPixmap
 
 
 class ViewProcessControlledWindow(QMainWindow):
@@ -17,10 +18,11 @@ class ViewProcessControlledWindow(QMainWindow):
         super().__init__()
 
         # Set window size
+        self.set_background_image()
         self.showMaximized()
 
         # Create a central widget for the window
-        central_widget = QWidget()
+        central_widget = QWidget(self)
         self.setCentralWidget(central_widget)
 
         # Create a layout for the central widget
@@ -37,8 +39,8 @@ class ViewProcessControlledWindow(QMainWindow):
         self.back_bt.setStyleSheet(
             """
             QPushButton {
-                background-color: #A93F55; 
-                color: #F3F7F0; 
+                background-color: #7C2F3E; 
+                color: #FAEBD7; 
                 font-family: Montserrat;
                 font-size: 16px; 
                 font-weight: bold; 
@@ -47,9 +49,10 @@ class ViewProcessControlledWindow(QMainWindow):
                 margin-left: 35px;
                 min-width: 150px;
                 min-height: 80px;
+                margin-top: 35px;
             }
             QPushButton:pressed {
-                color: #D8C995;
+                background-color: #D8973C;
             }
             """
         )
@@ -61,5 +64,23 @@ class ViewProcessControlledWindow(QMainWindow):
         layout.addWidget(label)
 
     def go_back(self):
-        self.close()
+        self.setVisible(False)
         self.view_form_backbt_clicked.emit()
+
+    def set_background_image(self):
+        # Get screen resolution
+        screen_resolution = QDesktopWidget().screenGeometry()
+
+        # Load the background image
+        pixmap = QPixmap("./img/background.jpg")
+
+        # Resize the background image to fit the screen resolution
+        pixmap = pixmap.scaled(screen_resolution.width(), screen_resolution.height())
+
+        # Create a label to display the background image
+        background_label = QLabel(self)
+        background_label.setPixmap(pixmap)
+        background_label.setGeometry(
+            0, 0, screen_resolution.width(), screen_resolution.height()
+        )  # Set label size to screen resolution
+        background_label.setScaledContents(True)
