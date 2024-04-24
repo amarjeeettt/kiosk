@@ -15,6 +15,7 @@ from PyQt5.QtWidgets import (
     QSpacerItem,
     QSizePolicy,
     QDesktopWidget,
+    QGraphicsDropShadowEffect,
 )
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt, pyqtSignal, QThread
@@ -99,7 +100,16 @@ class PrintFormWindow(QMainWindow):
             }
             """
         )
+        
+        # Create a shadow effect for square1
+        shadow_effect1 = QGraphicsDropShadowEffect()
+        shadow_effect1.setBlurRadius(45)
+        shadow_effect1.setColor(Qt.gray)
+        shadow_effect1.setOffset(0, 15)
 
+        square1.setFixedSize(550, 550)
+        square1.setGraphicsEffect(shadow_effect1)
+        
         square1.setFixedSize(550, 550)
         squares_layout.addWidget(square1)
 
@@ -148,6 +158,14 @@ class PrintFormWindow(QMainWindow):
         square2_layout.addWidget(top_amount_label, alignment=Qt.AlignCenter)
         square2_layout.addWidget(self.amount_label, alignment=Qt.AlignCenter)
         square2.setFixedSize(550, 550)
+        
+        # Create a shadow effect for square2
+        shadow_effect2 = QGraphicsDropShadowEffect()
+        shadow_effect2.setBlurRadius(45)
+        shadow_effect2.setColor(Qt.gray)
+        shadow_effect2.setOffset(0, 15)
+
+        square2.setGraphicsEffect(shadow_effect2)
 
         squares_layout.addWidget(square2)
 
@@ -165,6 +183,17 @@ class PrintFormWindow(QMainWindow):
         rectangle.setStyleSheet(
             "QFrame { background-color: #FDFDFD; border-radius: 30px; }"
         )
+
+        # Create a QGraphicsDropShadowEffect
+        shadow_effect = QGraphicsDropShadowEffect()
+        shadow_effect.setBlurRadius(30)
+        shadow_effect.setColor(Qt.gray)
+        shadow_effect.setOffset(0, 12)  # Adjust the shadow's offset as needed
+        
+        
+        # Apply the effect to the rectangle
+        rectangle.setGraphicsEffect(shadow_effect)
+        
         rectangle_layout.addWidget(rectangle)
 
         rectangle_inner_layout = QHBoxLayout()
