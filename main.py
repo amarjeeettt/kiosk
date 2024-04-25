@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt, QSize
 from view_form import ViewFormWindow
-from admin_window import AdminScreenWindow
+from admin_login import AdminLoginWindow
 
 
 class HomeScreenWindow(QMainWindow):
@@ -76,7 +76,7 @@ class HomeScreenWindow(QMainWindow):
         self.new_window.home_screen_backbt_clicked.connect(self.go_back_to_home)
 
     def show_admin_window(self):
-        self.admin_window = AdminScreenWindow()
+        self.admin_window = AdminLoginWindow()
         self.admin_window.setVisible(True)
         self.setVisible(False)
 

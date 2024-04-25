@@ -12,7 +12,6 @@ from PyQt5.QtWidgets import (
     QLabel,
     QSpacerItem,
     QSizePolicy,
-    QMessageBox,
     QDesktopWidget,
 )
 from PyQt5.QtCore import Qt, pyqtSignal
@@ -55,8 +54,8 @@ class AdminScreenWindow(QMainWindow):
 
         # Add back button to the layout
         back_button_layout = QHBoxLayout()
-        self.back_bt = QPushButton("Back")
-        self.back_bt.setStyleSheet(
+        self.logout_bt = QPushButton("Logout")
+        self.logout_bt.setStyleSheet(
             """
             QPushButton {
                 background-color: #7C2F3E; 
@@ -75,9 +74,9 @@ class AdminScreenWindow(QMainWindow):
             }
             """
         )
-        self.back_bt.setFocusPolicy(Qt.NoFocus)
-        self.back_bt.clicked.connect(self.go_back)
-        back_button_layout.addWidget(self.back_bt, alignment=Qt.AlignLeft)
+        self.logout_bt.setFocusPolicy(Qt.NoFocus)
+        self.logout_bt.clicked.connect(self.go_back)
+        back_button_layout.addWidget(self.logout_bt, alignment=Qt.AlignLeft)
         top_layout.addLayout(back_button_layout)
 
         # Adding labels in top right corner
