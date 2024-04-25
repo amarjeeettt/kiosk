@@ -17,6 +17,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QPixmap
+from custom_message_box import CustomMessageBox
 
 
 class AdminScreenWindow(QMainWindow):
@@ -261,9 +262,9 @@ class AdminScreenWindow(QMainWindow):
             self.bondpaper_quantity_updated.emit(self.bondpaper_quantity)
 
             # Display dialog box indicating success
-            message_box = QMessageBox(self)
-            message_box.setWindowTitle("Success")
-            message_box.setText("<center>Bondpaper refilled successfully.</center>")
+            message_box = CustomMessageBox(
+                "Success", "Bondpaper refilled successfully.", parent=self
+            )
             message_box.exec_()
 
         except sqlite3.Error as error:

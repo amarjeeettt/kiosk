@@ -10,6 +10,7 @@ from PyQt5.QtWidgets import (
     QSpacerItem,
     QSizePolicy,
     QDesktopWidget,
+    QGraphicsDropShadowEffect,
 )
 from PyQt5.QtGui import QPixmap, QImage, QPainter, QBrush, QColor, QIcon
 from PyQt5.QtCore import Qt, pyqtSignal, QPoint, QPropertyAnimation, QSize
@@ -154,6 +155,16 @@ class PrintPreviewWindow(QMainWindow):
                     }
             """
         )
+
+        # Create a QGraphicsDropShadowEffect
+        shadow_effect = QGraphicsDropShadowEffect()
+        shadow_effect.setBlurRadius(50)
+        shadow_effect.setColor(Qt.gray)
+        shadow_effect.setOffset(0, 8)
+
+        # Apply the shadow effect to the square_frame
+        square_frame.setGraphicsEffect(shadow_effect)
+
         square_frame_layout.setContentsMargins(0, 90, 0, 0)
         square_frame_layout.addWidget(
             square_label, alignment=Qt.AlignCenter

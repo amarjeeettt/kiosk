@@ -9,11 +9,13 @@ from PyQt5.QtWidgets import (
     QWidget,
     QHBoxLayout,
     QDesktopWidget,
+    QMessageBox,
 )
 from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtCore import Qt, QSize, pyqtSignal
 from print_preview import PrintPreviewWindow
 from view_process_controlled import ViewProcessControlledWindow
+from helpers import check_printer_connection
 
 
 class SmoothScrollArea(QScrollArea):
@@ -271,6 +273,15 @@ class ViewFormWindow(QMainWindow):
         central_widget = QWidget(self)
         central_widget.setLayout(main_layout)
         self.setCentralWidget(central_widget)
+
+        """
+        if check_printer_connection():
+            msg_box = QMessageBox(self)
+            msg_box.setWindowTitle("Printer Not Found")
+            msg_box.setText("No printer detected. Please connect a printer.")
+            msg_box.setIcon(QMessageBox.Warning)
+            msg_box.exec_()
+        """
 
     def set_background_image(self):
         # Get screen resolution

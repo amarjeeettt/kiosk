@@ -42,10 +42,10 @@ class PrintFormWindow(QMainWindow):
         main_layout = QVBoxLayout()
         main_widget.setLayout(main_layout)
 
-        top_button = QPushButton(self)
-        top_button.setText("Back button")
-        top_button.clicked.connect(self.go_back)
-        top_button.setStyleSheet(
+        cancel_bt = QPushButton(self)
+        cancel_bt.setText("Cancel")
+        cancel_bt.clicked.connect(self.go_back)
+        cancel_bt.setStyleSheet(
             """
             QPushButton { 
                 background-color: #7C2F3E; 
@@ -58,9 +58,9 @@ class PrintFormWindow(QMainWindow):
             }
             """
         )
-        top_button.setGeometry(778, 0, 125, 90)
-        top_button.setFocusPolicy(Qt.NoFocus)  # Adjust the position here
-        top_button.show()
+        cancel_bt.setGeometry(778, 0, 125, 90)
+        cancel_bt.setFocusPolicy(Qt.NoFocus)  # Adjust the position here
+        cancel_bt.show()
 
         main_layout.addSpacerItem(
             QSpacerItem(40, 40, QSizePolicy.Minimum, QSizePolicy.Preferred)
@@ -100,16 +100,16 @@ class PrintFormWindow(QMainWindow):
             }
             """
         )
-        
+
         # Create a shadow effect for square1
         shadow_effect1 = QGraphicsDropShadowEffect()
-        shadow_effect1.setBlurRadius(45)
+        shadow_effect1.setBlurRadius(50)
         shadow_effect1.setColor(Qt.gray)
         shadow_effect1.setOffset(0, 15)
 
         square1.setFixedSize(550, 550)
         square1.setGraphicsEffect(shadow_effect1)
-        
+
         square1.setFixedSize(550, 550)
         squares_layout.addWidget(square1)
 
@@ -158,10 +158,10 @@ class PrintFormWindow(QMainWindow):
         square2_layout.addWidget(top_amount_label, alignment=Qt.AlignCenter)
         square2_layout.addWidget(self.amount_label, alignment=Qt.AlignCenter)
         square2.setFixedSize(550, 550)
-        
+
         # Create a shadow effect for square2
         shadow_effect2 = QGraphicsDropShadowEffect()
-        shadow_effect2.setBlurRadius(45)
+        shadow_effect2.setBlurRadius(50)
         shadow_effect2.setColor(Qt.gray)
         shadow_effect2.setOffset(0, 15)
 
@@ -189,11 +189,10 @@ class PrintFormWindow(QMainWindow):
         shadow_effect.setBlurRadius(30)
         shadow_effect.setColor(Qt.gray)
         shadow_effect.setOffset(0, 12)  # Adjust the shadow's offset as needed
-        
-        
+
         # Apply the effect to the rectangle
         rectangle.setGraphicsEffect(shadow_effect)
-        
+
         rectangle_layout.addWidget(rectangle)
 
         rectangle_inner_layout = QHBoxLayout()
