@@ -1,7 +1,5 @@
-import cups
 import sqlite3
 import time
-from datetime import datetime
 from threading import Event
 from gpiozero import Button
 from PyQt5.QtWidgets import (
@@ -19,6 +17,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt, pyqtSignal, QThread
+from print_window import PrintWindow
 
 
 class PrintFormWindow(QMainWindow):
@@ -29,11 +28,21 @@ class PrintFormWindow(QMainWindow):
         self.set_background_image()
         self.showMaximized()
 
-        form_label = label
-        number_of_copy = value
-        number_of_page = num_of_pages
+        # Connect database
+        conn = sqlite3.connect("kiosk.db")
+        cursor = conn.cursor()
 
-        self.counter = 0
+        cursor.execute("SELECT coins_left FROM kiosk_settings LIMIT 1")
+        self.coins_left = cursor.fetchone()[0]
+
+        conn.close()
+
+        self.form_label = label
+        self.total = total
+        self.number_of_copy = value
+        self.number_of_page = num_of_pages
+
+        self.counter = self.coins_left
         self.bondpaper_quantity = None
 
         main_widget = QWidget(self)
@@ -49,12 +58,15 @@ class PrintFormWindow(QMainWindow):
             """
             QPushButton { 
                 background-color: #7C2F3E; 
-                color: #F3F7F0; 
+                color: #FAEBD7; 
                 font-family: Montserrat;
                 font-size: 24px; 
                 padding-bottom: 10px;
                 border-bottom-left-radius: 50px; 
                 border-bottom-right-radius: 50px; 
+            }
+            QPushButton:pressed {
+                background-color: #D8973C;
             }
             """
         )
@@ -86,7 +98,7 @@ class PrintFormWindow(QMainWindow):
         )
         top_total_label.setAlignment(Qt.AlignCenter)
 
-        total_label = QLabel(f"₱{total:0.2f}")
+        total_label = QLabel(f"₱{self.total:0.2f}")
         total_label.setAlignment(Qt.AlignCenter)
         total_label.setStyleSheet(
             """
@@ -245,11 +257,7 @@ class PrintFormWindow(QMainWindow):
         )
         rectangle_inner_layout.addWidget(self.print_bt)
 
-        self.print_bt.clicked.connect(
-            lambda: self.print_document(
-                form_label, number_of_copy, total, number_of_page
-            )
-        )
+        self.print_bt.clicked.connect(self.open_print_window)
         self.print_bt.setEnabled(False)
 
         # Add spacer item to push the line to the center
@@ -260,68 +268,63 @@ class PrintFormWindow(QMainWindow):
         """
         self.counter_thread = CounterThread()
         self.counter_thread.counter_changed.connect(
-            lambda counter: self.update_counter(counter, total)
+            lambda counter: self.update_counter(counter)
         )
         self.counter_thread.start()
         """
+        self.update_counter(self.counter)
 
-    def update_counter(self, counter, total):
+    def update_counter(self, counter):
         self.counter = counter
         self.amount_label.setText(f"₱{self.counter:0.2f}")
-        self.check_total_counter_match(total)
 
-    def check_total_counter_match(self, total):
-        if self.counter >= total:
+        # Connect database
+        conn = sqlite3.connect("kiosk.db")
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE kiosk_settings SET coins_left = ?",
+            (self.counter,),
+        )
+        conn.commit()
+
+        cursor.execute("SELECT coins_left FROM kiosk_settings LIMIT 1")
+        coins = cursor.fetchone()[0]
+        conn.close()
+
+        print(coins)
+        self.check_total_counter_match()
+
+    def check_total_counter_match(self):
+        if self.counter >= self.total:
             self.print_bt.setEnabled(True)
         else:
             self.print_bt.setEnabled(False)
 
-    def print_document(self, form_label, number_of_copy, total, number_of_page):
-        bondpaper_left = number_of_copy * number_of_page
+    def open_print_window(self):
+        # Stop the thread and close coinslot connection
+        # self.counter_thread.stop()
+        self.counter -= self.total
 
-        try:
-            conn = cups.Connection()
-            printers = conn.getPrinters()
-            printer_name = list(printers.keys())[0]
-            file_path = f"./forms/{form_label}.pdf"
+        # Connect database
+        conn = sqlite3.connect("kiosk.db")
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE kiosk_settings SET coins_left = ?",
+            (self.counter,),
+        )
+        conn.commit()
 
-            for _ in range(number_of_copy):
-                job_id = conn.printFile(printer_name, file_path, "Print Job", {})
-                print("Print job submitted with ID:", job_id)
+        cursor.execute("SELECT coins_left FROM kiosk_settings LIMIT 1")
+        coins = cursor.fetchone()[0]
+        conn.close()
 
-                if job_id is not None:
-                    print_result = "Success"
-                else:
-                    print_result = "Failed"
+        print(coins)
 
-            with sqlite3.connect("kiosk.db") as conn_sqlite:
-                cursor = conn_sqlite.cursor()
-
-                if print_result == "Success":
-                    cursor.execute(
-                        "UPDATE kiosk_settings SET bondpaper_quantity = bondpaper_quantity - ?",
-                        (bondpaper_left),
-                    )
-
-                cursor.execute(
-                    "INSERT INTO kiosk_print_results (date_printed, form_name, quantity, total_price, result) VALUES (?, ?, ?, ?, ?)",
-                    (
-                        datetime.now(),
-                        form_label,
-                        number_of_copy,
-                        total,
-                        print_result,
-                    ),
-                )
-
-                conn_sqlite.commit()
-                cursor.execute("SELECT bondpaper_quantity FROM kiosk_settings LIMIT 1")
-                self.bondpaper_quantity = cursor.fetchone()[0]
-
-                print(self.bondpaper_quantity)
-
-        except Exception as e:
-            print("Error during printing:", e)
+        self.print_window = PrintWindow(
+            self.form_label, self.number_of_page, self.number_of_copy, self.total
+        )
+        self.print_window.setVisible(True)
+        self.setVisible(False)
 
     def go_back(self):
         # Stop the thread and close coinslot connection
