@@ -51,7 +51,7 @@ class HomeScreenWindow(QMainWindow):
         layout.addWidget(sub_label)
 
         admin_bt = QPushButton(self)
-        admin_bt.setGeometry(1380, 765, 200, 65)
+        admin_bt.setGeometry(1530, 810, 200, 65)
         admin_bt.setIconSize(QSize(65, 65))
         admin_bt.setFocusPolicy(Qt.NoFocus)
         self.button = admin_bt

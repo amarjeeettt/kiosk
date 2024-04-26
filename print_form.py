@@ -60,7 +60,8 @@ class PrintFormWindow(QMainWindow):
                 background-color: #7C2F3E; 
                 color: #FAEBD7; 
                 font-family: Montserrat;
-                font-size: 24px; 
+                font-size: 18px;
+                font-weight: bold; 
                 padding-bottom: 10px;
                 border-bottom-left-radius: 50px; 
                 border-bottom-right-radius: 50px; 
@@ -70,7 +71,7 @@ class PrintFormWindow(QMainWindow):
             }
             """
         )
-        cancel_bt.setGeometry(778, 0, 125, 90)
+        cancel_bt.setGeometry(893, 0, 125, 90)
         cancel_bt.setFocusPolicy(Qt.NoFocus)  # Adjust the position here
         cancel_bt.show()
 
@@ -264,15 +265,14 @@ class PrintFormWindow(QMainWindow):
         rectangle_inner_layout.addSpacerItem(
             QSpacerItem(40, 20, QSizePolicy.Preferred, QSizePolicy.Minimum)
         )
+        
+        self.check_total_counter_match()
 
-        """
         self.counter_thread = CounterThread()
         self.counter_thread.counter_changed.connect(
             lambda counter: self.update_counter(counter)
         )
         self.counter_thread.start()
-        """
-        self.update_counter(self.counter)
 
     def update_counter(self, counter):
         self.counter = counter
@@ -302,7 +302,7 @@ class PrintFormWindow(QMainWindow):
 
     def open_print_window(self):
         # Stop the thread and close coinslot connection
-        # self.counter_thread.stop()
+        self.counter_thread.stop()
         self.counter -= self.total
 
         # Connect database
@@ -328,7 +328,7 @@ class PrintFormWindow(QMainWindow):
 
     def go_back(self):
         # Stop the thread and close coinslot connection
-        # self.counter_thread.stop()
+        self.counter_thread.stop()
         self.setVisible(False)
         self.print_preview_backbt_clicked.emit()
 

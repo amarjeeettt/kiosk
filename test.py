@@ -12,7 +12,7 @@ coinslot.when_pressed = coin_inserted
 counter = 0
 try:
     while True:
-        time.sleep(1)  # Keep the program running
+        time.sleep(0.05)  # Keep the program running
 except KeyboardInterrupt:
     print("Program terminated by user")
 

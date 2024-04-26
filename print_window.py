@@ -15,7 +15,7 @@ class PrintWindow(QMainWindow):
         self.setCentralWidget(central_widget)
 
         layout = QVBoxLayout()
-        layout.setAlignment(Qt.AlignCenter)  # Align layout in the center of the window # Set spacing between widgets
+        layout.setAlignment(Qt.AlignCenter)  # Align layout in the center of the window
         central_widget.setLayout(layout)
 
         # Add image label
@@ -38,7 +38,10 @@ class PrintWindow(QMainWindow):
         self.timer = QTimer()
         self.timer.timeout.connect(self.updateLabel)
         self.timer.start(500)  # Update every 500 milliseconds
-
+        
+        self.print_document(form_label, number_of_page, number_of_copy, total)
+        
+        
     def updateLabel(self):
         text = self.label.text()
         if text.endswith('....'):
@@ -47,7 +50,6 @@ class PrintWindow(QMainWindow):
             text += '.'  # Add a period
         self.label.setText(text)
 
-        # self.print_document(form_label, number_of_page, number_of_copy, total)
 
     def print_document(self, form_label, number_of_page, number_of_copy, total):
         bondpaper_left = number_of_copy * number_of_page
@@ -59,13 +61,18 @@ class PrintWindow(QMainWindow):
             printer_name = list(printers.keys())[0]
             file_path = f"./forms/{form_label}.pdf"
 
+            # Define printer options (margin, orientation, custom paper size)
+            printer_options = {
+                'media': 'legal',  # Set custom paper size to 8.5 x 13 inches
+            }
+
             for _ in range(number_of_copy):
                 try:
-                    job_id = conn.printFile(printer_name, file_path, "Print Job", {})
+                    job_id = conn.printFile(printer_name, file_path, "Print Job", printer_options)
                     print("Print job submitted with ID:", job_id)
                     if job_id is not None:
                         print_result = "Success"
-                except (cups.IPPError, cups.ServerError, cups.IPPConnectionError) as e:
+                except Exception as e:
                     print("Print job failed:", e)
                     print_result = "Failed"
 
