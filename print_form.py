@@ -265,14 +265,14 @@ class PrintFormWindow(QMainWindow):
         rectangle_inner_layout.addSpacerItem(
             QSpacerItem(40, 20, QSizePolicy.Preferred, QSizePolicy.Minimum)
         )
-        
+
         self.check_total_counter_match()
 
-        self.counter_thread = CounterThread()
-        self.counter_thread.counter_changed.connect(
-            lambda counter: self.update_counter(counter)
-        )
-        self.counter_thread.start()
+        # self.counter_thread = CounterThread()
+        # self.counter_thread.counter_changed.connect(
+        #    lambda counter: self.update_counter(counter)
+        # )
+        # self.counter_thread.start()
 
     def update_counter(self, counter):
         self.counter = counter
@@ -302,33 +302,18 @@ class PrintFormWindow(QMainWindow):
 
     def open_print_window(self):
         # Stop the thread and close coinslot connection
-        self.counter_thread.stop()
-        self.counter -= self.total
-
-        # Connect database
-        conn = sqlite3.connect("kiosk.db")
-        cursor = conn.cursor()
-        cursor.execute(
-            "UPDATE kiosk_settings SET coins_left = ?",
-            (self.counter,),
-        )
-        conn.commit()
-
-        cursor.execute("SELECT coins_left FROM kiosk_settings LIMIT 1")
-        coins = cursor.fetchone()[0]
-        conn.close()
-
-        print(coins)
+        # self.counter_thread.stop()
+        coins = self.counter - self.total
 
         self.print_window = PrintWindow(
-            self.form_label, self.number_of_page, self.number_of_copy, self.total
+            self.form_label, self.number_of_page, self.number_of_copy, self.total, coins
         )
         self.print_window.setVisible(True)
         self.setVisible(False)
 
     def go_back(self):
         # Stop the thread and close coinslot connection
-        self.counter_thread.stop()
+        # self.counter_thread.stop()
         self.setVisible(False)
         self.print_preview_backbt_clicked.emit()
 

@@ -13,7 +13,6 @@ from PyQt5.QtCore import Qt, QSize
 from view_form import ViewFormWindow
 from admin_login import AdminLoginWindow
 
-
 class HomeScreenWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -104,11 +103,11 @@ class HomeScreenWindow(QMainWindow):
     # Slot to handle going back to the main window
     def go_back_to_home(self):
         self.setVisible(False)
-        self.showMaximized()  # Show maximized window
+        self.show()
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = HomeScreenWindow()
+    window = HomeScreenWindow()    
     window.show()
     sys.exit(app.exec_())

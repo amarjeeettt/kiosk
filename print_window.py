@@ -1,12 +1,21 @@
 import cups
 import sqlite3
 from datetime import datetime
-from PyQt5.QtWidgets import QMainWindow, QLabel, QVBoxLayout, QWidget, QProgressBar, QDesktopWidget
+from PyQt5.QtWidgets import (
+    QMainWindow,
+    QLabel,
+    QVBoxLayout,
+    QWidget,
+    QProgressBar,
+    QDesktopWidget,
+)
 from PyQt5.QtCore import QTimer, Qt
 from PyQt5.QtGui import QPixmap, QMovie
+from custom_message_box import CustomMessageBox
+
 
 class PrintWindow(QMainWindow):
-    def __init__(self, form_label, number_of_page, number_of_copy, total):
+    def __init__(self, form_label, number_of_page, number_of_copy, total, coins):
         super().__init__()
         self.set_background_image()
         self.showMaximized()  # Show window maximized
@@ -17,6 +26,8 @@ class PrintWindow(QMainWindow):
         layout = QVBoxLayout()
         layout.setAlignment(Qt.AlignCenter)  # Align layout in the center of the window
         central_widget.setLayout(layout)
+        
+        self.print_result = 'Printing'
 
         # Add image label
         image_label = QLabel()
@@ -26,9 +37,9 @@ class PrintWindow(QMainWindow):
         layout.addWidget(image_label, alignment=Qt.AlignCenter)
 
         # Add LoadingWidget
-        loading_widget = LoadingWidget()
-        layout.addWidget(loading_widget)
-        
+        self.loading_widget = LoadingWidget()
+        layout.addWidget(self.loading_widget)
+
         # Add label with dynamic period
         self.label = QLabel("Printing in Progress: Please wait for a moment.")
         self.label.setStyleSheet("font-family: Roboto; font-size: 14px; color: #19323C")
@@ -39,46 +50,95 @@ class PrintWindow(QMainWindow):
         self.timer.timeout.connect(self.updateLabel)
         self.timer.start(500)  # Update every 500 milliseconds
         
-        self.print_document(form_label, number_of_page, number_of_copy, total)
+        # One-time timer to trigger print document after 3 seconds
+        self.print_trigger_timer = QTimer(self)
+        self.print_trigger_timer.timeout.connect(lambda: self.print_document(form_label, number_of_page, number_of_copy, total, coins))
+        self.print_trigger_timer.setSingleShot(True)  # Ensure it runs only once
+        self.print_trigger_timer.start(3000)  # Start after 3 seconds (3000 milliseconds)
         
         
+        # self.print_document(form_label, number_of_page, number_of_copy, total, coins)
+
     def updateLabel(self):
-        text = self.label.text()
-        if text.endswith('....'):
-            text = text[:-4]  # Remove the last four characters
+        if self.print_result == "Printing":
+            text = self.label.text()
+            if text.endswith("...."):
+                text = text[:-4]  # Remove the last four characters
+            else:
+                text += "."  # Add a period
+            self.label.setText(text)
+            
+        elif self.print_result == "Failed":
+            self.label.setText("Failed to Print. Please try again.")
+            self.loading_widget.hide()
+            self.timer.stop()
+            
+            self.home_trigger = QTimer(self)
+            self.home_trigger.timeout.connect(self.go_back_to_home)
+            self.home_trigger.setSingleShot(True)  # Ensure it runs only once
+            self.home_trigger.start(10000)  # Start after 2 seconds (2000 milliseconds)
+            
         else:
-            text += '.'  # Add a period
-        self.label.setText(text)
-
-
-    def print_document(self, form_label, number_of_page, number_of_copy, total):
+            self.label.setText("Printed Successfully!")
+            self.loading_widget.hide()
+            self.timer.stop()
+    
+    
+    def go_back_to_home(self):
+        self.close()
+        
+        from main import HomeScreenWindow
+        self.home_screen = HomeScreenWindow()
+        self.home_screen.show()
+        
+    def print_document(self, form_label, number_of_page, number_of_copy, total, coins):
         bondpaper_left = number_of_copy * number_of_page
-        print_result = None
 
         try:
             conn = cups.Connection()
             printers = conn.getPrinters()
+            
+            if not printers:
+                raise Exception('Printer is not Available or Offline')
+            
             printer_name = list(printers.keys())[0]
+            
+            if printer_name not in printers:
+                raise Exception('Printer is not Available or Offline')
+            
             file_path = f"./forms/{form_label}.pdf"
-
-            # Define printer options (margin, orientation, custom paper size)
+            
+            # Define printer options (media)
             printer_options = {
-                'media': 'legal',  # Set custom paper size to 8.5 x 13 inches
+                "media": "legal",  # Set media to legal size
             }
 
             for _ in range(number_of_copy):
                 try:
-                    job_id = conn.printFile(printer_name, file_path, "Print Job", printer_options)
+                    job_id = conn.printFile(
+                        printer_name, file_path, "Print Job", printer_options
+                    )
                     print("Print job submitted with ID:", job_id)
                     if job_id is not None:
-                        print_result = "Success"
-                except Exception as e:
+                        self.print_result = "Success"
+                except (cups.IPPError, cups.ServerError, cups.IPPConnectionError) as e:
                     print("Print job failed:", e)
-                    print_result = "Failed"
+                    self.print_result = "Failed"
+                    
+                    # Display dialog box indicating error
+                    message_box = CustomMessageBox(
+                        "Error", f"{e}", parent=self
+                    )
+                    message_box.exec_()
 
         except Exception as e:
             print("Error during printing:", e)
-            print_result = "Failed"
+            self.print_result = "Failed"
+            # Display dialog box indicating error
+            message_box = CustomMessageBox(
+                "Error", f"{e}", parent=self
+            )
+            message_box.exec_()
 
         finally:
             conn = None
@@ -86,10 +146,15 @@ class PrintWindow(QMainWindow):
             with sqlite3.connect("kiosk.db") as conn_sqlite:
                 cursor = conn_sqlite.cursor()
 
-                if print_result == "Success":
+                if self.print_result == "Success":
                     cursor.execute(
                         "UPDATE kiosk_settings SET bondpaper_quantity = bondpaper_quantity - ?",
                         (bondpaper_left,),
+                    )
+
+                    cursor.execute(
+                        "UPDATE kiosk_settings SET coins_left = ?",
+                        (coins,),
                     )
 
                 cursor.execute(
@@ -99,7 +164,7 @@ class PrintWindow(QMainWindow):
                         form_label,
                         number_of_copy,
                         total,
-                        print_result,
+                        self.print_result,
                     ),
                 )
                 conn_sqlite.commit()
@@ -108,8 +173,7 @@ class PrintWindow(QMainWindow):
                 self.bondpaper_quantity = cursor.fetchone()[0]
 
                 print(self.bondpaper_quantity)
-    
-    
+
     def set_background_image(self):
         # Get screen resolution
         screen_resolution = QDesktopWidget().screenGeometry()
