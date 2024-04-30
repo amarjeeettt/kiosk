@@ -19,7 +19,6 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.set_background_image()
         self.setWindowTitle("Pay-per Printer")
-        self.showFullScreen()
 
         screen_resolution = app.desktop().screenGeometry()
         width, height = screen_resolution.width(), screen_resolution.height()
@@ -76,7 +75,7 @@ class MainWindow(QMainWindow):
         pixmap = QPixmap("./img/background.jpg")
 
         # Resize the background image to fit the screen resolution
-        pixmap = pixmap.scaled(screen_resolution.width(), screen_resolution.height())
+        pixmap = pixmap.scaled(screen_resolution.width(), screen_resolution.height(), Qt.IgnoreAspectRatio)
 
         # Create a label to display the background image
         background_label = QLabel(self)
@@ -90,5 +89,5 @@ class MainWindow(QMainWindow):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow()
-    window.show()
+    window.showFullScreen()
     sys.exit(app.exec_())
