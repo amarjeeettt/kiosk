@@ -9,105 +9,61 @@ from PyQt5.QtWidgets import (
     QProgressBar,
     QDesktopWidget,
 )
-from PyQt5.QtCore import QTimer, Qt
+from PyQt5.QtCore import QTimer, Qt, QObject, pyqtSignal, QRunnable
 from PyQt5.QtGui import QPixmap, QMovie
 from custom_message_box import CustomMessageBox
 
 
-class PrintWindow(QMainWindow):
+class PrintWorkerSignals(QObject):
+    finished = pyqtSignal()
+    error = pyqtSignal(Exception)
+
+
+class PrintWorker(QRunnable):
     def __init__(self, form_label, number_of_page, number_of_copy, total, coins):
         super().__init__()
-        self.set_background_image()
-        self.showMaximized()  # Show window maximized
+        self.form_label = form_label
+        self.number_of_page = number_of_page
+        self.number_of_copy = number_of_copy
+        self.total = total
+        self.coins = coins
+        self.print_result = None
+        self.signals = PrintWorkerSignals()
 
-        central_widget = QWidget(self)
-        self.setCentralWidget(central_widget)
+    def run(self):
+        try:
+            # Printing operation
+            # Code from print_document goes here
+            self.print_document(
+                self.form_label,
+                self.number_of_page,
+                self.number_of_copy,
+                self.total,
+                self.coins,
+            )
+            # Emit finished signal on success
+            self.signals.finished.emit()
+        except Exception as e:
+            # Emit error signal on failure
+            self.signals.error.emit(e)
 
-        layout = QVBoxLayout()
-        layout.setAlignment(Qt.AlignCenter)  # Align layout in the center of the window
-        central_widget.setLayout(layout)
-        
-        self.print_result = 'Printing'
-
-        # Add image label
-        image_label = QLabel()
-        movie = QMovie("./img/animated_printer.gif")
-        image_label.setMovie(movie)
-        movie.start()
-        layout.addWidget(image_label, alignment=Qt.AlignCenter)
-
-        # Add LoadingWidget
-        self.loading_widget = LoadingWidget()
-        layout.addWidget(self.loading_widget)
-
-        # Add label with dynamic period
-        self.label = QLabel("Printing in Progress: Please wait for a moment.")
-        self.label.setStyleSheet("font-family: Roboto; font-size: 14px; color: #19323C")
-        layout.addWidget(self.label, alignment=Qt.AlignCenter)
-
-        # Start timer to update label text
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.updateLabel)
-        self.timer.start(500)  # Update every 500 milliseconds
-        
-        # One-time timer to trigger print document after 3 seconds
-        self.print_trigger_timer = QTimer(self)
-        self.print_trigger_timer.timeout.connect(lambda: self.print_document(form_label, number_of_page, number_of_copy, total, coins))
-        self.print_trigger_timer.setSingleShot(True)  # Ensure it runs only once
-        self.print_trigger_timer.start(3000)  # Start after 3 seconds (3000 milliseconds)
-        
-        
-        # self.print_document(form_label, number_of_page, number_of_copy, total, coins)
-
-    def updateLabel(self):
-        if self.print_result == "Printing":
-            text = self.label.text()
-            if text.endswith("...."):
-                text = text[:-4]  # Remove the last four characters
-            else:
-                text += "."  # Add a period
-            self.label.setText(text)
-            
-        elif self.print_result == "Failed":
-            self.label.setText("Failed to Print. Please try again.")
-            self.loading_widget.hide()
-            self.timer.stop()
-            
-            self.home_trigger = QTimer(self)
-            self.home_trigger.timeout.connect(self.go_back_to_home)
-            self.home_trigger.setSingleShot(True)  # Ensure it runs only once
-            self.home_trigger.start(10000)  # Start after 2 seconds (2000 milliseconds)
-            
-        else:
-            self.label.setText("Printed Successfully!")
-            self.loading_widget.hide()
-            self.timer.stop()
-    
-    
-    def go_back_to_home(self):
-        self.close()
-        
-        from main import HomeScreenWindow
-        self.home_screen = HomeScreenWindow()
-        self.home_screen.show()
-        
     def print_document(self, form_label, number_of_page, number_of_copy, total, coins):
         bondpaper_left = number_of_copy * number_of_page
 
         try:
             conn = cups.Connection()
             printers = conn.getPrinters()
-            
+
             if not printers:
-                raise Exception('Printer is not Available or Offline')
-            
+                raise Exception("Printer is not Available or Offline")
+
             printer_name = list(printers.keys())[0]
-            
+
             if printer_name not in printers:
-                raise Exception('Printer is not Available or Offline')
-            
+                raise Exception("Printer is not Available or Offline")
+
             file_path = f"./forms/{form_label}.pdf"
-            
+
             # Define printer options (media)
             printer_options = {
                 "media": "legal",  # Set media to legal size
@@ -124,21 +80,11 @@ class PrintWindow(QMainWindow):
                 except (cups.IPPError, cups.ServerError, cups.IPPConnectionError) as e:
                     print("Print job failed:", e)
                     self.print_result = "Failed"
-                    
-                    # Display dialog box indicating error
-                    message_box = CustomMessageBox(
-                        "Error", f"{e}", parent=self
-                    )
-                    message_box.exec_()
+                    raise Exception(e)
 
         except Exception as e:
             print("Error during printing:", e)
-            self.print_result = "Failed"
-            # Display dialog box indicating error
-            message_box = CustomMessageBox(
-                "Error", f"{e}", parent=self
-            )
-            message_box.exec_()
+            raise Exception(e)
 
         finally:
             conn = None
@@ -174,8 +120,83 @@ class PrintWindow(QMainWindow):
 
                 print(self.bondpaper_quantity)
 
+
+class PrintWindow(QMainWindow):
+    def __init__(self, form_label, number_of_page, number_of_copy, total, coins):
+        super().__init__()
+        self.set_background_image()
+        self.showMaximized()  # Show window maximized
+
+        self.loading_widget = LoadingWidget()
+
+        central_widget = QWidget(self)
+        self.setCentralWidget(central_widget)
+
+        layout = QVBoxLayout(central_widget)
+        layout.setAlignment(Qt.AlignCenter)  # Align layout in the center of the window
+
+
+        # Add image label
+        image_label = QLabel()
+        movie = QMovie("./img/animated_printer.gif")
+        image_label.setMovie(movie)
+        movie.start()
+        layout.addWidget(image_label, alignment=Qt.AlignCenter)
+
+        # Add label with dynamic period
+        self.label = QLabel("Printing in Progress: Please wait for a moment.")
+        self.label.setStyleSheet("font-family: Roboto; font-size: 14px; color: #19323C")
+        layout.addWidget(self.label, alignment=Qt.AlignCenter)
+
+        # Add LoadingWidget
+        layout.addWidget(self.loading_widget)
+
+        self.print_worker = PrintWorker(
+            form_label, number_of_page, number_of_copy, total, coins
+        )
+        self.print_worker.signals.finished.connect(self.print_success)
+        self.print_worker.signals.error.connect(self.print_failed)
+
+        # Start timer to update label text
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.update_label)
+        self.timer.start(500)  # Update every 500 milliseconds
+
+        # One-time timer to trigger print document after 3 seconds
+        QTimer.singleShot(3000, self.print_worker.run)
+
+    def update_label(self):
+        text = self.label.text()
+        if text.endswith("...."):
+            text = text[:-4]  # Remove the last four characters
+        else:
+            text += "."  # Add a period
+        self.label.setText(text)
+
+    def print_success(self):
+        self.label.setText("Printed Successfully!")
+        self.loading_widget.hide()
+        self.timer.stop()
+
+    def print_failed(self, error_message):
+        self.label.setText("Failed to Print. Please try again.")
+        self.loading_widget.hide()
+        self.timer.stop()
+        
+        # message_box = CustomMessageBox("Error", f"{error_message}", parent=self)
+        # message_box.exec_()
+
+        QTimer.singleShot(10000, self.go_back_to_home)
+
+    def go_back_to_home(self):
+        self.close()
+        from main import HomeScreenWindow
+
+        home_screen = HomeScreenWindow()
+        home_screen.show()
+
+    # Get screen resolution
     def set_background_image(self):
-        # Get screen resolution
         screen_resolution = QDesktopWidget().screenGeometry()
 
         # Load the background image
@@ -196,14 +217,6 @@ class PrintWindow(QMainWindow):
 class LoadingWidget(QWidget):
     def __init__(self):
         super().__init__()
-
-        self.initUI()
-
-    def initUI(self):
-        layout = QVBoxLayout()
-        layout.setAlignment(
-            Qt.AlignCenter
-        )  # Align progress bar in the center of its layout
 
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(
@@ -226,21 +239,8 @@ class LoadingWidget(QWidget):
             """
         )
 
+        layout = QVBoxLayout(self)
+        layout.setAlignment(
+            Qt.AlignCenter
+        )  # Align progress bar in the center of its layout
         layout.addWidget(self.progress_bar)
-
-        self.startLoading()  # Automatically start loading
-
-        self.setLayout(layout)
-
-    def startLoading(self):
-        # Simulate loading by periodically updating the progress bar value
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.updateProgressBar)
-        self.timer.start(100)  # Update every 100 milliseconds
-
-    def updateProgressBar(self):
-        # Increase progress bar value
-        value = self.progress_bar.value() + 1
-        if value > 100:
-            value = 0  # Reset progress bar value
-        self.progress_bar.setValue(value)

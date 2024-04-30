@@ -2,85 +2,71 @@ import sys
 from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
-    QVBoxLayout,
     QWidget,
-    QPushButton,
+    QVBoxLayout,
     QLabel,
+    QPushButton,
     QDesktopWidget,
 )
-from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt, QSize
-from view_form import ViewFormWindow
-from admin_login import AdminLoginWindow
+from PyQt5.QtGui import QPixmap
+from home_screen_widget import HomeScreenWidget
+from admin_login import AdminLoginWidget
 
-class HomeScreenWindow(QMainWindow):
+
+class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-
         self.set_background_image()
-        self.showMaximized()  # Set window to be maximized
+        self.setWindowTitle("Pay-per Printer")
+        self.showFullScreen()
 
-        # Create a central widget to hold the background image
-        central_widget = QWidget(self)
-        self.setCentralWidget(central_widget)
+        screen_resolution = app.desktop().screenGeometry()
+        width, height = screen_resolution.width(), screen_resolution.height()
 
-        # Create a layout for the central widget
-        layout = QVBoxLayout(central_widget)
-        layout.setAlignment(Qt.AlignVCenter)  # Align the layout vertically
+        self.centralWidget = QWidget(self)
+        self.setCentralWidget(self.centralWidget)
 
-        # Load image for the label
-        image_label = QLabel()
-        pixmap = QPixmap("./img/logo.png")
-        pixmap = pixmap.scaledToWidth(
-            500, Qt.SmoothTransformation
-        )  # Scale the image width to fit the label
-        image_label.setPixmap(pixmap)
-        image_label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(image_label)
-        layout.setContentsMargins(0, 165, 0, 0)
+        self.home_screen_widget = HomeScreenWidget(self)
+        self.admin_bt = QPushButton("", self)
+        
+        self.admin_login = AdminLoginWidget(self)
 
-        # Add spacing between image_label and sub_label
-        layout.addSpacing(170)
+        self.setup_ui()
 
-        # Create second label and add it to the layout
-        sub_label = QLabel("Touch Anywhere to Continue", alignment=Qt.AlignCenter)
-        sub_label.setStyleSheet(
-            "color: #A93F55; font-family: Roboto; font-size: 20px; font-weight: bold; letter-spacing: 3px; "
-        )
-        layout.addWidget(sub_label)
+    def setup_ui(self):
+        layout = QVBoxLayout(self.centralWidget)
+        layout.setAlignment(Qt.AlignCenter)
 
-        admin_bt = QPushButton(self)
-        admin_bt.setGeometry(1530, 810, 200, 65)
-        admin_bt.setIconSize(QSize(65, 65))
-        admin_bt.setFocusPolicy(Qt.NoFocus)
-        self.button = admin_bt
-        admin_bt.show()
+        # Adding HomeScreenWindow
+        layout.addWidget(self.home_screen_widget)
+        
+        # Adding AdminLoginWindow
+        layout.addWidget(self.admin_login)
+        self.admin_login.setVisible(False)
 
-        # Set style sheet to remove background and border
-        admin_bt.setStyleSheet(
+        # Set properties of the admin button
+        self.admin_bt.setGeometry(1430, 813, 200, 65)
+        self.admin_bt.setIconSize(QSize(65, 65))
+        self.admin_bt.setFocusPolicy(Qt.NoFocus)
+        self.admin_bt.setStyleSheet(
             "QPushButton {background-color: transparent; border: none; image: url('img/admin_bt.svg');}"
             "QPushButton:pressed {background-color: transparent; border: none; image: url('img/admin_bt_pressed.svg');}"
         )
+        self.admin_bt.show()
+        self.admin_bt.clicked.connect(self.show_admin_login)
+    
+    def go_back_to_home(self):
+        self.home_screen_widget.setVisible(True)
+        self.admin_bt.show()
+    
+    def show_admin_login(self):
+        self.home_screen_widget.setVisible(False)
+        self.admin_login.show()
+        self.admin_bt.hide()
+        
+        self.admin_login.home_screen_backbt_clicked.connect(self.go_back_to_home)
 
-        # Set up the click event
-        admin_bt.clicked.connect(self.show_admin_window)
-        central_widget.mousePressEvent = self.switch_window
-
-    def switch_window(self, event):
-        self.new_window = ViewFormWindow()
-        self.new_window.setVisible(True)
-        self.setVisible(False)
-
-        # Connect the back button clicked signal from ViewScreenWindow to go_back_to_home slot
-        self.new_window.home_screen_backbt_clicked.connect(self.go_back_to_home)
-
-    def show_admin_window(self):
-        self.admin_window = AdminLoginWindow()
-        self.admin_window.setVisible(True)
-        self.setVisible(False)
-
-        # Connect the back button clicked signal from AdminScreenWindow to go_back_to_home slot
-        self.admin_window.home_screen_backbt_clicked.connect(self.go_back_to_home)
 
     def set_background_image(self):
         # Get screen resolution
@@ -100,14 +86,9 @@ class HomeScreenWindow(QMainWindow):
         )  # Set label size to screen resolution
         background_label.setScaledContents(True)
 
-    # Slot to handle going back to the main window
-    def go_back_to_home(self):
-        self.setVisible(False)
-        self.show()
-
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = HomeScreenWindow()    
+    window = MainWindow()
     window.show()
     sys.exit(app.exec_())

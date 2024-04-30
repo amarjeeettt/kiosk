@@ -1,26 +1,23 @@
-import cups
+import sys
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton
 
-def get_first_printer_info():
-    conn = cups.Connection()
-    printers = conn.getPrinters()
-    if printers:
-        first_printer_name = list(printers.keys())[0]
-        printer_info = conn.getPrinterAttributes(first_printer_name)
-        return first_printer_name, printer_info
-    else:
-        return None, None
 
-def get_ink_level(printer_info):
-    ink_level = printer_info.get('printer-state-message', "Unknown")
-    return ink_level
+class MainWindow(QWidget):
+    def __init__(self):
+        super().__init__()
 
-def main():
-    printer_name, printer_info = get_first_printer_info()
-    if printer_name and printer_info:
-        ink_level = get_ink_level(printer_info)
-        print(f"Ink Level for {printer_name}: {ink_level}")
-    else:
-        print("No printers found.")
+        layout = QVBoxLayout(self)
+        button = QPushButton("Click me", self)
+        layout.addWidget(button)
+
+        self.setWindowTitle("Mouse Event Example")
+
+    def mousePressEvent(self, event):
+        print("Mouse pressed at ({}, {})".format(event.x(), event.y()))
+
 
 if __name__ == "__main__":
-    main()
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec_())
