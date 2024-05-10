@@ -1,42 +1,10 @@
-import time
-from gpiozero import Button
+import datetime
 
-def coin_inserted():
-    global counter
-    counter += 1
-    print("Coin inserted. Total coins:", counter)
+# Get the current date and time
+current_datetime = datetime.datetime.now()
 
-coinslot = Button(17)
-coinslot.when_pressed = coin_inserted
+# Format the datetime object into a string without seconds
+formatted_datetime = current_datetime.strftime("%Y-%m-%d %H:%M")
 
-counter = 0
-try:
-    while True:
-        time.sleep(0.05)  # Keep the program running
-except KeyboardInterrupt:
-    print("Program terminated by user")
-
-
-
-"""
-import RPi.GPIO as GPIO
-import time
-
-# Set up GPIO using BCM numbering
-GPIO.setmode(GPIO.BCM)
-
-# Pin number to reset
-pin_number = 17
-
-# Set pin as input and pull it low (reset)
-GPIO.setup(pin_number, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-
-# Wait for a short duration
-time.sleep(0.1)
-
-# Set pin back to output mode and pull it low (if necessary)
-GPIO.setup(pin_number, GPIO.OUT, initial=GPIO.LOW)
-
-# Clean up GPIO
-GPIO.cleanup()
-"""
+# Print the formatted datetime
+print("Formatted datetime without seconds:", formatted_datetime)

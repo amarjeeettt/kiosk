@@ -1,29 +1,27 @@
 import sqlite3
 from PyQt5.QtWidgets import (
-    QMainWindow,
     QPushButton,
     QGridLayout,
+    QFrame,
     QVBoxLayout,
     QScrollArea,
     QLabel,
     QWidget,
     QHBoxLayout,
-    QDesktopWidget,
-    QMessageBox,
+    QSizePolicy,
+    QGraphicsDropShadowEffect,
+    QSpacerItem,
 )
-from PyQt5.QtGui import QPixmap, QIcon
-from PyQt5.QtCore import Qt, QSize, pyqtSignal
-from print_preview import PrintPreviewWindow
-from view_process_controlled import ViewProcessControlledWindow
-from helpers import check_printer_connection
+from PyQt5.QtGui import QPixmap, QColor
+from PyQt5.QtCore import Qt, pyqtSignal
 
 
 class SmoothScrollArea(QScrollArea):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        self.verticalScrollBar().setSingleStep(20)  # Set the scrolling step size
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.verticalScrollBar().setSingleStep(15)  # Set the scrolling step size
         self._mousePressPos = None
         self._scrollBarValueAtMousePress = None
 
@@ -47,16 +45,140 @@ class SmoothScrollArea(QScrollArea):
         super().mouseReleaseEvent(event)
 
 
-class ViewFormWindow(QMainWindow):
-    # Define a signal for back button clicked
-    home_screen_backbt_clicked = pyqtSignal()
-
-    def __init__(self):
+class ButtonWidget(QWidget):
+    # Define a new signal
+    buttonClicked = pyqtSignal(str, str)
+    def __init__(self, title_label, page_number_label, description_label, category):
         super().__init__()
+        self.title_text = title_label
+        self.page_number_text = page_number_label
+        self.description_text = description_label
+        self.category = category
 
-        self.set_background_image()
-        self.showMaximized()  # Increased width to accommodate more buttons
+        self.initUI()
 
+    def initUI(self):
+        layout = QVBoxLayout()
+
+        # Create a QFrame to contain the labels and button
+        self.frame = QFrame(self)
+        # Apply shadow effect to the frame
+        self.applyShadowEffect()
+
+        # Labels
+        self.title_label = QLabel(self.title_text)
+        self.title_label.setWordWrap(True)
+        self.title_label.setStyleSheet(
+            """
+                font-family: Montserrat;
+                font-size: 19px;
+                font-weight: bold;
+                padding-top: 15px;
+                padding-left: 15px;
+                padding-right: 15px;
+                color: #7C2F3E;
+            """
+        )
+
+        self.num_pages_layout = QHBoxLayout()
+
+        self.bondpaper_img = QLabel()
+        self.pixmap = QPixmap("./img/static/paper_img.png")
+        self.bondpaper_img.setPixmap(self.pixmap)
+
+        self.page_number_label = QLabel(self.page_number_text)
+
+        self.num_pages_layout.addWidget(self.bondpaper_img)
+        self.num_pages_layout.addWidget(self.page_number_label)
+
+        self.num_pages_layout.setContentsMargins(15, 0, 180, 0)
+
+        self.description_label = QLabel(self.description_text)
+        self.description_label.setStyleSheet(
+            """
+            font-family: Open Sans;
+            font-size: 12px;
+            """
+        )
+        self.description_label.setWordWrap(True)
+        self.description_label.setContentsMargins(15, 0, 15, 0)
+
+        # Button
+        self.button = QPushButton("View")
+        self.button.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #7C2F3E; 
+                color: #FAEBD7; 
+                font-family: Montserrat;
+                font-size: 16px; 
+                font-weight: bold; 
+                border-radius: 10px;
+                border: none;
+                margin-left: 25px;
+                margin-right: 25px;
+                margin-bottom: 15px;
+                min-width: 150px;
+                min-height: 70px;
+            }
+            QPushButton:pressed {
+                background-color: #D8973C;
+            }
+            """
+        )
+        self.button.clicked.connect(self.emitButtonClickedSignal)
+
+        # Add labels and button to the layout
+        layout.addWidget(self.title_label)
+        layout.addLayout(self.num_pages_layout)
+        layout.addWidget(self.description_label)
+
+        # Add vertical spacer
+        spacer_item = QSpacerItem(20, 95, QSizePolicy.Minimum, QSizePolicy.Preferred)
+        layout.addItem(spacer_item)
+
+        layout.addWidget(self.button)
+
+        # Set layout to the QFrame
+        self.frame.setLayout(layout)
+
+        # Set the main layout for the widget
+        self.setLayout(QVBoxLayout())
+        self.layout().addWidget(self.frame)
+
+    def applyShadowEffect(self):
+        shadow_effect = QGraphicsDropShadowEffect()
+        shadow_effect.setBlurRadius(30)
+        shadow_effect.setColor(QColor(0, 0, 0, 150))
+        shadow_effect.setOffset(0, 0)
+        self.frame.setGraphicsEffect(shadow_effect)
+
+    def emitButtonClickedSignal(self):
+        # Emit the signal with necessary data
+        self.buttonClicked.emit(self.title_label.text(), self.page_number_label.text())
+
+        
+class ViewFormWidget(QWidget):
+    view_button_clicked = pyqtSignal(str, int)
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.setup_ui()
+
+        # Connect navigation buttons to their respective slots
+        self.nav_btn_all.clicked.connect(self.filter_buttons_all)
+        self.nav_btn_category1.clicked.connect(self.filter_buttons_category1)
+        self.nav_btn_category2.clicked.connect(self.filter_buttons_category2)
+        self.nav_btn_category3.clicked.connect(self.filter_buttons_category3)
+        self.nav_btn_category4.clicked.connect(self.filter_buttons_category4)
+        self.nav_btn_category5.clicked.connect(self.filter_buttons_category5)
+        self.nav_btn_category6.clicked.connect(self.filter_buttons_category6)
+        self.nav_btn_category7.clicked.connect(self.filter_buttons_category7)
+
+        # Set the active button initially
+        self.active_button = self.nav_btn_all
+        self.update_button_styles()
+
+    def setup_ui(self):
         # connect database
         conn = sqlite3.connect("kiosk.db")
         cursor = conn.cursor()
@@ -69,277 +191,361 @@ class ViewFormWindow(QMainWindow):
 
         conn.close()
 
-        main_layout = QVBoxLayout()
+        layout = QVBoxLayout(self)
 
-        # Adding back button and labels in top right corner
-        top_layout = QHBoxLayout()
+        # Adding labels in top right corner
+        rectangle_layout = QHBoxLayout()
 
-        # Add back button to the layout
-        back_button_layout = QHBoxLayout()
-        self.back_bt = QPushButton("Back")
-        self.back_bt.setStyleSheet(
-            """
+        rectangle = QFrame()
+        rectangle.setFrameShape(QFrame.StyledPanel)
+        rectangle.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        rectangle.setFixedSize(465, 65)
+        rectangle.setStyleSheet(
+            "QFrame { background-color: #FDFDFD; border-radius: 20px; }"
+        )
+
+        # Create a QGraphicsDropShadowEffect
+        shadow_effect = QGraphicsDropShadowEffect()
+        shadow_effect.setBlurRadius(50)
+        shadow_effect.setColor(Qt.gray)
+        shadow_effect.setOffset(0, 0)  # Adjust the shadow's offset as needed
+
+        # Apply the effect to the rectangle
+        rectangle.setGraphicsEffect(shadow_effect)
+
+        rectangle_layout.addWidget(rectangle, alignment=Qt.AlignTop | Qt.AlignRight)
+        rectangle_layout.setContentsMargins(0, 30, 60, 0)
+
+        rectangle_inner_layout = QHBoxLayout()
+        rectangle_inner_layout.setContentsMargins(30, 0, 15, 0)
+        rectangle.setLayout(rectangle_inner_layout)
+
+        # Create layouts for bondpaper, coins, and printer
+        bondpaper_layout = QHBoxLayout()
+        coins_layout = QHBoxLayout()
+        printer_layout = QHBoxLayout()
+
+        # Set spacing and margins for each layout if needed
+        bondpaper_layout.setSpacing(15)
+        coins_layout.setSpacing(15)
+        printer_layout.setSpacing(15)
+
+        # Set contents margins for each layout if needed
+        bondpaper_layout.setContentsMargins(30, 0, 30, 0)
+        bondpaper_layout.setContentsMargins(30, 0, 30, 0)
+        coins_layout.setContentsMargins(30, 0, 30, 0)
+        printer_layout.setContentsMargins(30, 0, 30, 0)
+
+        # Bondpaper widgets
+        bondpaper_img = QLabel()
+        pixmap = QPixmap("./img/static/bondpaper_quantity.png")
+        bondpaper_img.setPixmap(pixmap)
+        bondpaper_label = QLabel(str(self.bondpaper_quantity))
+        bondpaper_layout.addWidget(bondpaper_img)
+        bondpaper_layout.addWidget(bondpaper_label)
+
+        # Coins widgets
+        coins_img = QLabel()
+        pixmap = QPixmap("./img/static/coins_img.png")
+        coins_img.setPixmap(pixmap)
+        coins_label = QLabel(f"{self.coins_left:0.2f}")
+        coins_layout.addWidget(coins_img)
+        coins_layout.addWidget(coins_label)
+
+        # Printer widgets
+        printer_img = QLabel()
+        pixmap = QPixmap("./img/static/printer_img.png")
+        printer_img.setPixmap(pixmap)
+        printer_status_symbol = QLabel("X")
+        printer_layout.addWidget(printer_img)
+        printer_layout.addWidget(printer_status_symbol)
+
+        # Add layouts to the rectangle_inner_layout
+        rectangle_inner_layout.addLayout(bondpaper_layout)
+        rectangle_inner_layout.addLayout(coins_layout)
+        rectangle_inner_layout.addLayout(printer_layout)
+
+        layout.addLayout(rectangle_layout)
+
+        self.nav_btn_all = QPushButton("All")
+        self.nav_btn_category1 = QPushButton("Academic Recognition")
+        self.nav_btn_category2 = QPushButton("Accreditation")
+        self.nav_btn_category3 = QPushButton("Clearance")
+        self.nav_btn_category4 = QPushButton("Enrollment")
+        self.nav_btn_category5 = QPushButton("Graduation")
+        self.nav_btn_category6 = QPushButton("Petition")
+        self.nav_btn_category7 = QPushButton("Research")
+
+        # Set size policy for navigation buttons to Fixed
+        self.nav_btn_all.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.nav_btn_category1.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.nav_btn_category2.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.nav_btn_category3.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.nav_btn_category4.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.nav_btn_category5.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.nav_btn_category6.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.nav_btn_category7.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+        self.nav_layout = QHBoxLayout()
+        self.nav_buttons = [
+            self.nav_btn_all,
+            self.nav_btn_category1,
+            self.nav_btn_category2,
+            self.nav_btn_category3,
+            self.nav_btn_category4,
+            self.nav_btn_category5,
+            self.nav_btn_category6,
+            self.nav_btn_category7,
+        ]
+
+        for button in self.nav_buttons:
+            self.nav_layout.addWidget(button)
+
+        # Apply common CSS style to navigation buttons
+        nav_css = """
             QPushButton {
-                background-color: #7C2F3E; 
-                color: #FAEBD7; 
                 font-family: Montserrat;
+                font-size: 16px;
+                font-weight: bold;
+                border: none;
+                padding-bottom: 8px;
+            }
+        """
+
+        # Set style sheet for navigation bar buttons
+        self.nav_btn_all.setStyleSheet(
+            """
+            QPushButton { 
+                font-family: Montserrat; 
                 font-size: 16px; 
                 font-weight: bold; 
-                border-radius: 10px;
-                border: none;
-                margin-left: 35px;
-                min-width: 150px;
-                min-height: 80px;
-            }
-            QPushButton:pressed {
-                background-color: #D8973C;
+                border: none; 
+                border-bottom: 2px solid blue; 
+                padding-bottom: 5px; 
             }
             """
         )
-        self.back_bt.setFocusPolicy(Qt.NoFocus)
-        self.back_bt.clicked.connect(self.go_back)
-        back_button_layout.addWidget(self.back_bt, alignment=Qt.AlignLeft)
-        top_layout.addLayout(back_button_layout)
+        self.nav_btn_category1.setStyleSheet(nav_css)
+        self.nav_btn_category2.setStyleSheet(nav_css)
+        self.nav_btn_category3.setStyleSheet(nav_css)
+        self.nav_btn_category4.setStyleSheet(nav_css)
+        self.nav_btn_category5.setStyleSheet(nav_css)
+        self.nav_btn_category6.setStyleSheet(nav_css)
+        self.nav_btn_category7.setStyleSheet(nav_css)
 
-        # Adding labels in top right corner
-        top_right_layout = QHBoxLayout()
-        label1 = QLabel(f"Bondpaper Left: {self.bondpaper_quantity}")
-        label2 = QLabel(f"Coins Left: {self.coins_left}")
-        top_right_layout.addWidget(label1, alignment=Qt.AlignRight)
-        top_right_layout.addWidget(label2, alignment=Qt.AlignRight)
-        top_right_layout.setSpacing(0)
-        top_right_layout.setContentsMargins(0, 0, 130, 0)
-        top_layout.addLayout(top_right_layout)
+        # Align the navigation bar to the top
+        self.nav_layout.setAlignment(Qt.AlignTop)
+        self.nav_layout.setSpacing(40)
+        self.nav_layout.setContentsMargins(80, 20, 0, 0)
 
-        main_layout.addLayout(top_layout)
+        layout.addLayout(self.nav_layout)
 
-        button_labels = {
-            "form_names": [
-                "Application for Completion of Incomplete Grades",
-                "Application for Research Oral Defense",
-                "Application for Subject Accreditation",
-                "Consolidated Requests of Petition Subject",
-                "Evaluation of Graduating Student with Academic Honors",
-                "Individual Request of Petition Subject",
-                "List of Graduating Students with Academic Honors",
-                "List of Graduating Students with Loyalty Award",
-                "List of Graduating Students with Recognition Award",
-                "Notice of Research Oral Defense",
-                "Oral Examination",
-                "Oral Examination Evaluation Sheet",
-                "Pre-Oral Examination",
-                "Request for Cross-Enrollment",
-                "Request Letter for Overloading of Subjects",
-                "Request on Shifting of Course",
-                "Student Clearance",
-                "Thesis Distribution Form",
-            ],
-            "form_types": [
-                "Uncontrolled",
-                "Uncontrolled",
-                "Uncontrolled",
-                "Uncontrolled",
-                "Uncontrolled",
-                "Uncontrolled",
-                "Uncontrolled",
-                "Uncontrolled",
-                "Uncontrolled",
-                "Uncontrolled",
-                "Uncontrolled",
-                "Uncontrolled",
-                "Uncontrolled",
-                "Uncontrolled",
-                "Uncontrolled",
-                "Uncontrolled",
-                "Uncontrolled",
-                "Uncontrolled",
-            ],
-            "num_of_page": [1, 1, 1, 1, 3, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-        }
+        # Add ButtonWidgets
+        button_labels = fetch_button_labels()
 
+        self.grid_layout = QGridLayout()
+        self.grid_layout.setSpacing(20)
 
+        num_forms = len(button_labels["form_names"])
+        num_columns = 4
+        num_rows = (num_forms + num_columns - 1) // num_columns
 
-        num_buttons = len(button_labels["form_names"])
-        num_columns = 5
-        num_rows = (
-            num_buttons + num_columns - 1
-        ) // num_columns  # Calculate the number of rows
+        for i, (
+            form_name,
+            number_of_pages,
+            form_description,
+            form_category,
+        ) in enumerate(
+            zip(
+                button_labels["form_names"],
+                button_labels["num_of_pages"],
+                button_labels["form_description"],
+                button_labels["form_category"],
+            )
+        ):
+            button_widget = ButtonWidget(
+                form_name, str(number_of_pages), form_description, form_category
+            )
+            button_widget.setFixedHeight(450)
+            button_widget.setFixedWidth(330)
+            button_widget.setStyleSheet(
+                """
+                    background-color: #FFFFFF;
+                    border-radius: 15px
+                """
+            )
+            row = i // num_columns
+            col = i % num_columns
+            self.grid_layout.addWidget(button_widget, row, col)
+            
+            # Connect the buttonClicked signal to the handleButtonClicked slot
+            button_widget.buttonClicked.connect(self.handleButtonClicked)
 
         scroll_area = SmoothScrollArea()
         scroll_area.setWidgetResizable(True)
-        scroll_widget = QWidget()
+        scroll_widget = QWidget()  # Create a widget to hold the grid layout
         scroll_widget.setStyleSheet("background-color: transparent;")
-        scroll_layout = QGridLayout(scroll_widget)
 
-        # Set spacing between buttons
-        scroll_layout.setHorizontalSpacing(20)
-        scroll_layout.setVerticalSpacing(50)
+        scroll_area_layout = QVBoxLayout(scroll_widget)
+        scroll_area_layout.addLayout(self.grid_layout)
+        scroll_area_layout.setContentsMargins(20, 20, 30, 0)
 
-        for i, label_text in enumerate(button_labels["form_names"]):
-            row = i // num_columns
-            col = i % num_columns
-            button = QPushButton()
-            button.setFixedSize(250, 250)
-            button_layout = QVBoxLayout(button)
-            button.setStyleSheet(
-                """
-                QPushButton {
-                    border-radius: 45px;
-                    background-color: #7C2F3E;
-                    color: #F3F7F0;
-                    padding-bottom: 50px;
-                    text-align: bottom;  /* Align text to the bottom */
-                }
-                QPushButton:pressed {
-                    background-color: #D8973C;
-                }
-                """
-            )
-
-            button.clicked.connect(
-                lambda _, label=label_text: self.open_button_window(
-                    label, button_labels
-                )
-            )
-
-            # Create QLabel for the image
-            image_label = QLabel()
-            icon = QIcon("./img/view_forms_icon.svg")
-            pixmap = icon.pixmap(QSize(200, 200))
-            pixmap = pixmap.scaled(
-                QSize(100, 100), Qt.KeepAspectRatio, Qt.SmoothTransformation
-            )  # Adjust size as needed
-            image_label.setPixmap(pixmap)
-            image_label.setAlignment(Qt.AlignCenter)
-            image_label.setStyleSheet("margin-top: 45px;")
-            button_layout.addWidget(image_label)
-
-            label = QLabel(label_text)
-            label.setAlignment(Qt.AlignCenter)
-            label.setWordWrap(True)
-            label.setStyleSheet(
-                """
-                QLabel {
-                    font-family: Montserrat;
-                    font-size: 11px; 
-                    font-weight: bold; 
-                    padding: 0px 25px 0px 25px; /* Adjust padding as needed */
-                    background-color: transparent;
-                    margin-bottom: 25px;
-                    color: #FAEBD7;
-                    }
-                """
-            )
-            button_layout.addWidget(label)
-
-            scroll_layout.addWidget(button, row, col)
-
-        scroll_widget.setLayout(scroll_layout)
-        scroll_area.setWidget(scroll_widget)
-        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        scroll_area.setMaximumHeight(
-            min(num_rows, 3) * 230 + 20
-        )  # Maximum of 3 rows of buttons + spacing, smaller height
+        scroll_area.setWidget(
+            scroll_widget
+        )  # Set the scroll widget as the scroll area's widget
         scroll_area.setStyleSheet(
             """
             QScrollArea {
                 background-color: transparent;
                 border: none;
             }
-            QScrollBar:vertical {
-                border: none;
-                background-color: transparent;
-                width: 10px;
-            }
-            QScrollBar::handle:vertical {
-                background-color: #7B0323;
-                min-height: 20px;
-                border-radius: 5px;
-            }
-            QScrollBar::handle:vertical:hover {
-                background-color: #7B0323;
-            }
-            QScrollBar::sub-line:vertical {
-                border: none;
-                background: none;
-            }
-            QScrollBar::add-line:vertical {
-                border: none;
-                background: none;
-            }
             """
         )
-        main_layout.addWidget(scroll_area)
 
-        # Set window layout
-        central_widget = QWidget(self)
-        central_widget.setLayout(main_layout)
-        self.setCentralWidget(central_widget)
+        layout.addWidget(scroll_area)
 
-        """
-        if check_printer_connection():
-            msg_box = QMessageBox(self)
-            msg_box.setWindowTitle("Printer Not Found")
-            msg_box.setText("No printer detected. Please connect a printer.")
-            msg_box.setIcon(QMessageBox.Warning)
-            msg_box.exec_()
-        """
-
-    def set_background_image(self):
-        # Get screen resolution
-        screen_resolution = QDesktopWidget().screenGeometry()
-
-        # Load the background image
-        pixmap = QPixmap("./img/background.jpg")
-
-        # Resize the background image to fit the screen resolution
-        pixmap = pixmap.scaled(screen_resolution.width(), screen_resolution.height())
-
-        # Create a label to display the background image
-        background_label = QLabel(self)
-        background_label.setPixmap(pixmap)
-        background_label.setGeometry(
-            0, 0, screen_resolution.width(), screen_resolution.height()
-        )  # Set label size to screen resolution
-        background_label.setScaledContents(True)
-
-    # Slot to handle going back to the main window
-    def go_back(self):
-        self.setVisible(False)
-        self.home_screen_backbt_clicked.emit()
-
-    def open_button_window(self, label, button_labels):
-        form_names = button_labels["form_names"]
-        form_types = button_labels["form_types"]
-
-        try:
-            index = form_names.index(label)
-            form_type = form_types[index]
-            num_of_pages = button_labels["num_of_page"][index]
-
-            print(
-                f"Button label '{label}' clicked, Form Type: {form_type}, Number of Pages: {num_of_pages}"
+    def update_button_styles(self):
+        # Reset style for all buttons
+        for button in self.nav_buttons:
+            button.setStyleSheet(
+                """
+                QPushButton {
+                    font-family: Montserrat;
+                    font-size: 16px;
+                    font-weight: bold;
+                    border: none;
+                    padding-bottom: 8px;
+                }
+            """
             )
 
-            if form_type == "Uncontrolled":
-                self.new_window = PrintPreviewWindow(label, num_of_pages)
-                self.new_window.setVisible(True)
-                self.setVisible(False)
+        # Set active button style
+        self.active_button.setStyleSheet(
+            """
+            QPushButton { 
+                font-family: Montserrat; 
+                font-size: 16px; 
+                font-weight: bold; 
+                border: none; 
+                border-bottom: 2px solid blue; 
+                padding-bottom: 5px; 
+            }
+        """
+        )
 
-                self.new_window.view_form_backbt_clicked.connect(
-                    self.go_back_to_view_form
-                )
-            else:
-                self.new_window = ViewProcessControlledWindow(label)
-                self.new_window.setVisible(True)
-                self.setVisible(False)
+    def filter_buttons_all(self):
+        self.active_button = self.nav_btn_all
+        self.filter_buttons(None)  # Pass None to show all buttons
+        self.update_button_styles()
 
-                self.new_window.view_form_backbt_clicked.connect(
-                    self.go_back_to_view_form
-                )
-        except ValueError:
-            print(f"Label '{label}' not found in the form names.")
+    def filter_buttons_category1(self):
+        self.active_button = self.nav_btn_category1
+        self.filter_buttons("Academic Recognition")  # Filter by category
+        self.update_button_styles()
 
-    def go_back_to_view_form(self):
-        self.setVisible(False)
-        self.show()
+    def filter_buttons_category2(self):
+        self.active_button = self.nav_btn_category2
+        self.filter_buttons("Accreditation")  # Filter by category
+        self.update_button_styles()
+
+    def filter_buttons_category3(self):
+        self.active_button = self.nav_btn_category3
+        self.filter_buttons("Clearance")  # Filter by category
+        self.update_button_styles()
+
+    def filter_buttons_category4(self):
+        self.active_button = self.nav_btn_category4
+        self.filter_buttons("Enrollment")  # Filter by category
+        self.update_button_styles()
+
+    def filter_buttons_category5(self):
+        self.active_button = self.nav_btn_category5
+        self.filter_buttons("Graduation")  # Filter by category
+        self.update_button_styles()
+
+    def filter_buttons_category6(self):
+        self.active_button = self.nav_btn_category6
+        self.filter_buttons("Petition")  # Filter by category
+        self.update_button_styles()
+
+    def filter_buttons_category7(self):
+        self.active_button = self.nav_btn_category7
+        self.filter_buttons("Research")  # Filter by category
+        self.update_button_styles()
+
+    def filter_buttons(self, category):
+        visible_widgets = []  # Maintain a list of visible widgets
+        for i in range(self.grid_layout.count()):
+            item = self.grid_layout.itemAt(i)
+            if isinstance(item.widget(), ButtonWidget):
+                widget = item.widget()
+                if category is None or widget.category == category:
+                    widget.show()
+                    visible_widgets.append(widget)  # Add visible widgets to the list
+                else:
+                    widget.hide()
+
+        # Calculate the number of columns based on the number of visible widgets
+        num_visible_widgets = len(visible_widgets)
+        num_columns = min(num_visible_widgets, self.grid_layout.columnCount())
+
+        # Adjust the layout to accommodate the visible widgets
+        row = 0
+        col = 0
+        for i, widget in enumerate(visible_widgets):
+            if col >= num_columns:
+                row += 1
+                col = 0
+            self.grid_layout.addWidget(widget, row, col)
+            col += 1
+
+        # If the number of visible widgets is less than or equal to 3, align the layout to the left
+        if num_visible_widgets <= 3:
+            self.grid_layout.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+            self.grid_layout.setContentsMargins(40, 0, 0, 0)
+        else:
+            self.grid_layout.setAlignment(Qt.AlignTop | Qt.AlignCenter)
+            self.grid_layout.setContentsMargins(0, 0, 0, 0)
+        
+        self.grid_layout.setHorizontalSpacing(60) 
+    
+    
+     # Function to handle the emitted signal
+    def handleButtonClicked(self, title, page_number):
+        print("Title:", title)
+        print("Page number:", int(page_number))
+        
+        self.view_button_clicked.emit(title, int(page_number))
+    
+
+def fetch_button_labels():
+    conn = sqlite3.connect("kiosk.db")
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT form_name, number_of_pages, form_description, form_category FROM kiosk_forms"
+    )
+    rows = cursor.fetchall()
+
+    conn.close()
+
+    form_names = []
+    num_of_pages = []
+    form_description = []
+    form_category = []
+
+    for row in rows:
+        form_names.append(row[0])
+        num_of_pages.append(row[1])
+        form_description.append(row[2])
+        form_category.append(row[3])
+
+    # Create a dictionary to store the lists
+    button_labels = {
+        "form_names": form_names,
+        "num_of_pages": num_of_pages,
+        "form_description": form_description,
+        "form_category": form_category,
+    }
+
+    return button_labels

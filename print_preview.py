@@ -1,6 +1,5 @@
 import sqlite3
 from PyQt5.QtWidgets import (
-    QMainWindow,
     QLabel,
     QPushButton,
     QVBoxLayout,
@@ -9,28 +8,27 @@ from PyQt5.QtWidgets import (
     QFrame,
     QSpacerItem,
     QSizePolicy,
-    QDesktopWidget,
     QGraphicsDropShadowEffect,
 )
 from PyQt5.QtGui import QPixmap, QImage, QPainter, QBrush, QColor, QIcon
 from PyQt5.QtCore import Qt, pyqtSignal, QPoint, QPropertyAnimation, QSize
-from view_process_uncontrolled import ViewProcessUncontrolledWindow
-from print_form import PrintFormWindow
 
 
-class PrintPreviewWindow(QMainWindow):
+class PrintPreviewWidget(QWidget):
     view_form_backbt_clicked = pyqtSignal()
-
-    def __init__(self, label, num_of_pages):
-        super().__init__()
-
-        self.set_background_image()
-        self.showMaximized()
-
-        # connect database
+    view_process_clicked = pyqtSignal(str)
+    print_form_clicked = pyqtSignal(str, int, int, int)
+    def __init__(self, parent, title, page_number):
+        super().__init__(parent)
+        
+        self.setup_ui(title, page_number)
+        
+    def setup_ui(self, title, page_number):
+        
+        # Connect database
         conn = sqlite3.connect("kiosk.db")
         cursor = conn.cursor()
-
+        
         cursor.execute("SELECT base_price FROM kiosk_settings LIMIT 1")
         self.base_price = cursor.fetchone()[0]
 
@@ -38,12 +36,16 @@ class PrintPreviewWindow(QMainWindow):
         self.bondpaper_quantity = cursor.fetchone()[0]
 
         conn.close()
-
-        self.num_of_pages = num_of_pages
-
-        # Left window
+        
+        self.title = title
+        self.page_number = page_number
+        
+        
+        main_layout = QHBoxLayout(self)
+        main_layout.setContentsMargins(0,55,0,0)
+        
         left_window = QWidget()
-        left_window.setFixedWidth(200)  # Set fixed width
+        left_window.setFixedWidth(200)
         left_layout = QVBoxLayout(left_window)  # Use QVBoxLayout
         left_layout.setAlignment(Qt.AlignTop)  # Align top
         back_bt = QPushButton("Back")
@@ -72,14 +74,13 @@ class PrintPreviewWindow(QMainWindow):
         back_bt.clicked.connect(self.go_back)
         # Apply margin to the left button
         left_layout.addWidget(back_bt)
-
+        
         # Center image
         self.index = 1
-        self.label = label
 
         # Load the image
         self.image = (
-            QImage(f"./img/form-preview/{self.label}-{self.index}.jpg")
+            QImage(f"./img/form-preview/{self.title}-{self.index}.jpg")
             .scaledToWidth(700, Qt.SmoothTransformation)
             .scaledToHeight(830, Qt.SmoothTransformation)
         )
@@ -97,7 +98,7 @@ class PrintPreviewWindow(QMainWindow):
         top_margin_label.setFixedHeight(25)  # Set the height of the margin
 
         # Bottom label
-        self.bottom_label = QLabel(f"{self.index}/{num_of_pages}")
+        self.bottom_label = QLabel(f"{self.index}/{self.page_number}")
         self.bottom_label.setStyleSheet(
             """
                 QLabel {
@@ -115,9 +116,9 @@ class PrintPreviewWindow(QMainWindow):
         center_layout.addWidget(top_margin_label)  # Add margin above the image
         center_layout.addWidget(self.center_image)
         center_layout.addWidget(self.bottom_label)
-
+        
         # Right label
-        form_label = label
+        form_label = self.title
         right_label = QLabel(form_label)
         right_label.setFixedSize(380, 150)
         right_label.setAlignment(Qt.AlignCenter)
@@ -170,7 +171,7 @@ class PrintPreviewWindow(QMainWindow):
             square_label, alignment=Qt.AlignCenter
         )  # Align label in center
 
-        self.total = self.base_price * self.num_of_pages
+        self.total = self.base_price * self.page_number
         self.total_label = QLabel(
             f"₱{self.total:0.2f}"
         )  # Initialize total label with base price
@@ -280,7 +281,7 @@ class PrintPreviewWindow(QMainWindow):
             }
             """
         )
-        view_process_bt.clicked.connect(lambda: self.view_process_window(form_label))
+        view_process_bt.clicked.connect(lambda: self.process_bt_clicked(self.title))
 
         # Create layout for button
         process_button_layout = QVBoxLayout()
@@ -336,7 +337,7 @@ class PrintPreviewWindow(QMainWindow):
             }
             """
         )
-        print_bt.clicked.connect(lambda: self.print_form_window(form_label))
+        print_bt.clicked.connect(lambda: self.print_form_bt_clicked(title, page_number))
 
         # Create layout for button
         print_button_layout = QVBoxLayout()
@@ -384,16 +385,13 @@ class PrintPreviewWindow(QMainWindow):
         # Add spacer item between center image and right layout
         spacer_left = QSpacerItem(120, 20, QSizePolicy.Preferred, QSizePolicy.Minimum)
         spacer_right = QSpacerItem(140, 20, QSizePolicy.Preferred, QSizePolicy.Minimum)
-        spacer = QSpacerItem(100, 20, QSizePolicy.Preferred, QSizePolicy.Minimum)
-
-        main_layout = QHBoxLayout()
+        spacer = QSpacerItem(100, 20, QSizePolicy.Preferred, QSizePolicy.Minimum)        
+          
         main_layout.addWidget(left_window)
         main_layout.addItem(spacer_left)
-
-        main_layout.addLayout(center_layout)  # Add the center layout
-
+        main_layout.addLayout(center_layout)
         main_layout.addItem(spacer_right)
-
+        
         # Add right_layout as a widget with alignment
         widget = QWidget()
         widget.setLayout(right_layout)
@@ -402,38 +400,17 @@ class PrintPreviewWindow(QMainWindow):
         )  # Align right layout to top
 
         main_layout.addItem(spacer)
-
-        central_widget = QWidget(self)
-        central_widget.setLayout(main_layout)
-        self.setCentralWidget(central_widget)
-
+        
         # Variables for swipe detection
         self.start_pos = QPoint()
         self.end_pos = QPoint()
 
         # Enable swipe feature if num_of_pages is greater than 1
-        if self.num_of_pages <= 1:
+        if self.page_number <= 1:
             self.center_image.mousePressEvent = lambda event: None
             self.center_image.mouseReleaseEvent = lambda event: None
-
-    def set_background_image(self):
-        # Get screen resolution
-        screen_resolution = QDesktopWidget().screenGeometry()
-
-        # Load the background image
-        pixmap = QPixmap("./img/background.jpg")
-
-        # Resize the background image to fit the screen resolution
-        pixmap = pixmap.scaled(screen_resolution.width(), screen_resolution.height())
-
-        # Create a label to display the background image
-        background_label = QLabel(self)
-        background_label.setPixmap(pixmap)
-        background_label.setGeometry(
-            0, 0, screen_resolution.width(), screen_resolution.height()
-        )  # Set label size to screen resolution
-        background_label.setScaledContents(True)
-
+    
+    
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
             self.start_pos = event.pos()
@@ -473,7 +450,7 @@ class PrintPreviewWindow(QMainWindow):
         self.next_image()
 
     def next_image(self):
-        if self.index < self.num_of_pages:
+        if self.index < self.page_number:
             self.index += 1
             print(self.index)
             self.update_image()
@@ -489,7 +466,7 @@ class PrintPreviewWindow(QMainWindow):
     def update_image(self):
         # Load the image corresponding to the new index
         self.image = (
-            QImage(f"./img/form-preview/{self.label}-{self.index}.jpg")
+            QImage(f"./img/form-preview/{self.title}-{self.index}.jpg")
             .scaledToWidth(700, Qt.SmoothTransformation)
             .scaledToHeight(830, Qt.SmoothTransformation)
         )
@@ -501,7 +478,7 @@ class PrintPreviewWindow(QMainWindow):
         self.center_image.setPixmap(pixmap)
 
     def update_bottom_label(self):
-        self.bottom_label.setText(f"{self.index}/{self.num_of_pages}")
+        self.bottom_label.setText(f"{self.index}/{self.page_number}")
 
     def increment_value(self):
         if self.value < self.bondpaper_quantity:
@@ -516,7 +493,7 @@ class PrintPreviewWindow(QMainWindow):
             self.update_total_label()
 
     def update_total_label(self):
-        self.total = (self.base_price * self.num_of_pages) * self.value
+        self.total = (self.base_price * self.page_number) * self.value
         self.total_label.setText(f"₱{self.total:0.2f}")
 
     def apply_border_radius(self):
@@ -534,31 +511,15 @@ class PrintPreviewWindow(QMainWindow):
 
         # Apply the mask to the image
         self.image.setAlphaChannel(mask)
-
-    def view_process_window(self, form_label):
-        self.new_window = ViewProcessUncontrolledWindow(form_label)
-        self.new_window.setVisible(True)
-        self.setVisible(False)
-
-        self.new_window.print_preview_backbt_clicked.connect(
-            self.go_back_to_print_preview
-        )
-
-    def print_form_window(self, form_label):
-        self.new_window = PrintFormWindow(
-            form_label, self.value, self.total, self.num_of_pages
-        )
-        self.new_window.setVisible(True)
-        self.setVisible(False)
-
-        self.new_window.print_preview_backbt_clicked.connect(
-            self.go_back_to_print_preview
-        )
-
+    
+    def process_bt_clicked(self, title):
+        self.view_process_clicked.emit(title)
+        
+    def print_form_bt_clicked(self, title, page_number):
+        self.print_form_clicked.emit(title, int(self.value), page_number, int(self.total))
+    
     def go_back(self):
         self.setVisible(False)
         self.view_form_backbt_clicked.emit()
-
-    def go_back_to_print_preview(self):
-        self.setVisible(False)
-        self.show()
+        
+        
