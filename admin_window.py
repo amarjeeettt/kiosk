@@ -1,3 +1,4 @@
+import os
 import sqlite3
 from PyQt5.QtWidgets import (
     QTableWidget,
@@ -13,17 +14,1264 @@ from PyQt5.QtWidgets import (
     QGraphicsDropShadowEffect,
     QTabWidget,
     QAbstractScrollArea,
+    QSpacerItem,
+    QAbstractItemView,
+    QScrollArea,
+    QLineEdit,
+    QComboBox,
+    QSpinBox,
+    QTextEdit,
+    QFileDialog,
+    QDialog,
 )
 from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QPixmap, QColor
+from PyQt5.QtGui import QPixmap
+from virtual_keyboard import AlphaNeumericVirtualKeyboard
+from helpers import upload_form_file, upload_process_file
 from custom_message_box import CustomMessageBox
+
+class SmoothScrollArea(QScrollArea):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.verticalScrollBar().setSingleStep(15)  # Set the scrolling step size
+        self._mousePressPos = None
+        self._scrollBarValueAtMousePress = None
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._mousePressPos = event.globalPos()
+            self._scrollBarValueAtMousePress = self.verticalScrollBar().value()
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if self._mousePressPos:
+            delta = event.globalPos() - self._mousePressPos
+            self.verticalScrollBar().setValue(
+                self._scrollBarValueAtMousePress - delta.y()
+            )
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        self._mousePressPos = None
+        self._scrollBarValueAtMousePress = None
+        super().mouseReleaseEvent(event)
+        
+
+class EditMessageBox(QDialog):
+    file_button_clicked = pyqtSignal(int, int, str)
+    form_button_clicked = pyqtSignal(int, int, str)
+    form_file_button_clicked = pyqtSignal(int, int, str)
+    def __init__(self, index, form_name, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(400, 525)
+        
+        self.index = index
+        self.form_name = form_name
+
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+        self.setStyleSheet("background-color: #EBEBEB;")
+
+        title_label = QLabel('Edit Form')
+        title_label.setStyleSheet(
+            "font-size: 24px; font-family: Montserrat; font-weight: bold; color: #7C2F3E;"
+        )
+        layout.addWidget(title_label, alignment=Qt.AlignCenter)
+
+        # Add a vertical spacer item
+        layout.addSpacerItem(
+            QSpacerItem(20, 20, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
+
+        message_label = QLabel(f"You're currently editing {form_name}.\n\nPlease choose an editing option below.")
+        message_label.setWordWrap(True)
+        message_label.setStyleSheet("font-size: 14px; font-family: Roboto; ")
+        layout.addWidget(message_label, alignment=Qt.AlignCenter)
+
+        # Add a vertical spacer item
+        layout.addSpacerItem(
+            QSpacerItem(20, 20, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
+
+        button_layout = QVBoxLayout()
+        layout.addLayout(button_layout)
+
+        # Add a vertical spacer item
+        layout.addSpacerItem(
+            QSpacerItem(20, 20, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
+
+        file_button = QPushButton("Edit File Contents")
+        file_button.setFixedSize(200, 45)
+        file_button.clicked.connect(self.file_clicked)
+        file_button.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #7C2F3E;
+                border-radius: 5px;
+                color: #FAEBD7; 
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+            QPushButton:pressed {
+                background-color: #D8973C;
+            }
+            """
+        )
+        button_layout.addWidget(file_button, alignment=Qt.AlignCenter)
+        
+        form_button = QPushButton("Edit Form Information")
+        form_button.setFixedSize(200, 45)
+        form_button.clicked.connect(self.form_clicked)
+        form_button.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #7C2F3E;
+                border-radius: 5px;
+                color: #FAEBD7; 
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+            QPushButton:pressed {
+                background-color: #D8973C;
+            }
+            """
+        )
+        button_layout.addWidget(form_button, alignment=Qt.AlignCenter)
+        
+        form_file_button = QPushButton("Edit both File Contents\nand File Information")
+        form_file_button.setFixedSize(200, 85)
+        form_file_button.clicked.connect(self.form_file_clicked)
+        form_file_button.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #7C2F3E;
+                border-radius: 5px;
+                color: #FAEBD7; 
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+            QPushButton:pressed {
+                background-color: #D8973C;
+            }
+            """
+        )
+        button_layout.addWidget(form_file_button, alignment=Qt.AlignCenter)
+
+    def file_clicked(self):
+        self.file_button_clicked.emit(5, self.index, self.form_name)
+        self.accept()
+    
+    def form_clicked(self):
+        self.form_button_clicked.emit(6, self.index, self.form_name)
+        self.accept()
+        
+    def form_file_clicked(self):
+        self.form_file_button_clicked.emit(7, self.index, self.form_name)
+        self.accept()
+
+class DeleteButtonWidget(QWidget):
+    # Define a new signal
+    delete_button_clicked = pyqtSignal(int, str)
+    def __init__(self, id_num, title_label, page_number_label, description_label, category):
+        super().__init__()
+        self.index = id_num
+        self.title_text = title_label
+        self.page_number_text = page_number_label
+        self.description_text = description_label
+        self.category_text = category
+        
+        self.initUI()
+    
+    def initUI(self):
+        layout = QHBoxLayout()  # Use QVBoxLayout for the main widget
+        
+        self.frame = QFrame(self)
+        
+        self.title_label = QLabel(self.title_text)
+        self.title_label.setWordWrap(True)
+        self.title_label.setStyleSheet(
+            """
+            font-family: Montserrat;
+            font-size: 19px;
+            font-weight: bold;
+            padding-top: 15px;
+            padding-left: 15px;
+            padding-right: 10px;
+            color: #7C2F3E;
+            """
+        )
+        
+        self.category_label = QLabel(self.category_text)
+        self.category_label.setStyleSheet(
+            """
+            font-family: Open Sans;
+            font-size: 12px;
+            padding-left: 15px;
+            """
+        )
+        
+        self.num_pages_layout = QHBoxLayout()
+
+        self.bondpaper_img = QLabel()
+        self.pixmap = QPixmap("./img/static/paper_img.png")
+        self.bondpaper_img.setPixmap(self.pixmap)
+
+        self.page_number_label = QLabel(self.page_number_text)
+
+        self.num_pages_layout.addWidget(self.bondpaper_img)
+        self.num_pages_layout.addWidget(self.page_number_label)
+
+        self.num_pages_layout.setContentsMargins(15, 0, 240, 0)
+
+        self.description_label = QLabel(self.description_text)
+        self.description_label.setStyleSheet(
+            """
+            font-family: Open Sans;
+            font-size: 12px;
+            """
+        )
+        self.description_label.setWordWrap(True)
+        self.description_label.setContentsMargins(15, 0, 10, 0)
+        
+        self.button = QPushButton('Delete')
+        self.button.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #7C2F3E; 
+                color: #FAEBD7; 
+                font-family: Montserrat;
+                font-size: 16px; 
+                font-weight: bold; 
+                border-radius: 10px;
+                border: none;
+                margin-left: 25px;
+                margin-right: 25px;
+                min-width: 120px;
+                min-height: 120px;
+            }
+            QPushButton:pressed {
+                background-color: #D8973C;
+            }
+            """
+        )
+        self.button.clicked.connect(self.emitButtonClickedSignal)
+        
+        form_content_layout = QVBoxLayout()  # Use QVBoxLayout for the form content
+        
+        form_content_layout.addWidget(self.title_label)
+        form_content_layout.addWidget(self.category_label)
+        form_content_layout.addLayout(self.num_pages_layout)
+        form_content_layout.addWidget(self.description_label)
+        
+        layout.addLayout(form_content_layout)
+        layout.addWidget(self.button, alignment=Qt.AlignRight)
+
+        self.frame.setLayout(layout)
+        
+        self.setLayout(QVBoxLayout())  # Set layout to QVBoxLayout
+        self.layout().addWidget(self.frame)  # Add the frame to the layout
+
+    def emitButtonClickedSignal(self):
+        # Emit the signal with necessary data
+        self.delete_button_clicked.emit(self.index, self.title_text)
+
+
+class EditButtonWidget(QWidget):
+    # Define a new signal
+    buttonClicked = pyqtSignal(int, str)
+    def __init__(self, id_num, title_label, page_number_label, description_label, category):
+        super().__init__()
+        self.index = id_num
+        self.title_text = title_label
+        self.page_number_text = page_number_label
+        self.description_text = description_label
+        self.category_text = category
+        
+        self.initUI()
+    
+    def initUI(self):
+        layout = QHBoxLayout()  # Use QVBoxLayout for the main widget
+        
+        self.frame = QFrame(self)
+        
+        self.title_label = QLabel(self.title_text)
+        self.title_label.setWordWrap(True)
+        self.title_label.setStyleSheet(
+            """
+            font-family: Montserrat;
+            font-size: 19px;
+            font-weight: bold;
+            padding-top: 15px;
+            padding-left: 15px;
+            padding-right: 10px;
+            color: #7C2F3E;
+            """
+        )
+        
+        self.category_label = QLabel(self.category_text)
+        self.category_label.setStyleSheet(
+            """
+            font-family: Open Sans;
+            font-size: 12px;
+            padding-left: 15px;
+            """
+        )
+        
+        self.num_pages_layout = QHBoxLayout()
+
+        self.bondpaper_img = QLabel()
+        self.pixmap = QPixmap("./img/static/paper_img.png")
+        self.bondpaper_img.setPixmap(self.pixmap)
+
+        self.page_number_label = QLabel(self.page_number_text)
+
+        self.num_pages_layout.addWidget(self.bondpaper_img)
+        self.num_pages_layout.addWidget(self.page_number_label)
+
+        self.num_pages_layout.setContentsMargins(15, 0, 240, 0)
+
+        self.description_label = QLabel(self.description_text)
+        self.description_label.setStyleSheet(
+            """
+            font-family: Open Sans;
+            font-size: 12px;
+            """
+        )
+        self.description_label.setWordWrap(True)
+        self.description_label.setContentsMargins(15, 0, 10, 0)
+        
+        self.button = QPushButton('Edit')
+        self.button.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #7C2F3E; 
+                color: #FAEBD7; 
+                font-family: Montserrat;
+                font-size: 16px; 
+                font-weight: bold; 
+                border-radius: 10px;
+                border: none;
+                margin-left: 25px;
+                margin-right: 25px;
+                min-width: 120px;
+                min-height: 120px;
+            }
+            QPushButton:pressed {
+                background-color: #D8973C;
+            }
+            """
+        )
+        self.button.clicked.connect(self.emitButtonClickedSignal)
+        
+        form_content_layout = QVBoxLayout()  # Use QVBoxLayout for the form content
+        
+        form_content_layout.addWidget(self.title_label)
+        form_content_layout.addWidget(self.category_label)
+        form_content_layout.addLayout(self.num_pages_layout)
+        form_content_layout.addWidget(self.description_label)
+        
+        layout.addLayout(form_content_layout)
+        layout.addWidget(self.button, alignment=Qt.AlignRight)
+
+        self.frame.setLayout(layout)
+        
+        self.setLayout(QVBoxLayout())  # Set layout to QVBoxLayout
+        self.layout().addWidget(self.frame)  # Add the frame to the layout
+
+    def emitButtonClickedSignal(self):
+        # Emit the signal with necessary data
+        self.buttonClicked.emit(self.index, self.title_text)
+
+        
+class FormWidget(QWidget):
+    title_input_clicked = pyqtSignal()
+    description_input_clicked = pyqtSignal()
+    add_button_clicked = pyqtSignal()
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+
+    def initUI(self):
+        conn = sqlite3.connect("kiosk.db")
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT DISTINCT form_category FROM kiosk_forms")
+        self.form_category = [category[0] for category in cursor.fetchall()]
+
+        conn.close()
+
+        # Main layout
+        main_layout = QVBoxLayout(self)
+
+        # Create a square QFrame to contain the form layout
+        frame = QFrame()
+        frame.setFrameShape(QFrame.Box)  # Set fixed width to contain the layout
+        form_layout = QVBoxLayout(frame)  # Set the layout for the frame
+
+        # Title layout
+        title_layout = QVBoxLayout()
+        title_label = QLabel("Form Title:")
+        self.title_input = QLineEdit()
+        self.title_input.mousePressEvent = self.title_clicked
+        self.title_input.setFixedWidth(300)
+        title_layout.addWidget(title_label)
+        title_layout.addWidget(self.title_input)
+
+        # Category layout
+        category_layout = QVBoxLayout()
+        category_label = QLabel("Form Category:")
+        self.category_input = QComboBox()
+        self.category_input.addItems(self.form_category)
+        self.category_input.setFixedWidth(300)
+        category_layout.addWidget(category_label)
+        category_layout.addWidget(self.category_input)
+
+        # Page number layout
+        page_number_layout = QVBoxLayout()
+        pages_label = QLabel("Number of Pages:")
+        self.page_input = QSpinBox()
+        self.page_input.setMinimum(1)
+        self.page_input.setMaximum(10)
+        self.page_input.setFixedWidth(300)
+        page_number_layout.addWidget(pages_label)
+        page_number_layout.addWidget(self.page_input)
+
+        # Upper form layout
+        upper_form_layout = QHBoxLayout()
+        upper_form_layout.addLayout(title_layout)
+        upper_form_layout.addLayout(category_layout)
+        upper_form_layout.addLayout(page_number_layout)
+
+        upper_form_layout.setContentsMargins(15, 0, 15, 0)
+        form_layout.addLayout(upper_form_layout)
+        form_layout.addSpacerItem(
+            QSpacerItem(20, 35, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
+
+        # Form description layout
+        form_description_layout = QVBoxLayout()
+        description_label = QLabel("Form Description:")
+        self.description_input = QTextEdit()
+        self.description_input.mousePressEvent = self.description_clicked
+        form_description_layout.addWidget(description_label)
+        form_description_layout.addWidget(self.description_input)
+        form_description_layout.setContentsMargins(95, 0, 95, 0)
+
+        form_layout.addLayout(form_description_layout)
+        form_layout.addSpacerItem(
+            QSpacerItem(20, 35, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
+
+        # Lower form layout
+        lower_form_layout = QHBoxLayout()
+
+        self.upload_form_widget = UploadFormWidget()
+        self.upload_form_widget.setFixedSize(300, 300)
+        self.upload_form_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+        self.upload_process_widget = UploadProcessWidget()
+        self.upload_process_widget.setFixedSize(300, 300)
+        self.upload_process_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+        lower_form_layout.addWidget(self.upload_form_widget)
+        lower_form_layout.addSpacerItem(
+            QSpacerItem(50, 25, QSizePolicy.Fixed, QSizePolicy.Fixed)
+        )
+        lower_form_layout.addWidget(self.upload_process_widget)
+        lower_form_layout.setAlignment(Qt.AlignLeft)
+        lower_form_layout.setContentsMargins(90, 0, 0, 0)
+
+        form_layout.addLayout(lower_form_layout)
+        form_layout.addSpacerItem(
+            QSpacerItem(20, 25, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
+
+        add_clear_button_layout = QHBoxLayout()
+        self.add_button = QPushButton("Add")
+        self.add_button.clicked.connect(self.add_file)
+
+        self.clear_button = QPushButton("Clear")
+        self.clear_button.clicked.connect(self.clear)
+
+        add_clear_button_layout.addWidget(self.clear_button)
+        add_clear_button_layout.addWidget(self.add_button)
+
+        self.add_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.clear_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+        add_clear_button_layout.setAlignment(Qt.AlignRight)
+
+        form_layout.addLayout(add_clear_button_layout)
+
+        # Add the frame to the main layout
+        main_layout.addWidget(frame)
+        main_layout.addStretch(1)  # Adjust as needed
+        self.setLayout(main_layout)
+
+    def title_clicked(self, event):
+        self.title_input_clicked.emit()
+
+    def description_clicked(self, event):
+        self.description_input_clicked.emit()
+
+    def clear(self):
+        self.title_input.clear()
+        self.category_input.setCurrentIndex(0)
+        self.page_input.setValue(1)
+        self.description_input.clear()
+
+        self.upload_form_widget.clearSelectedFile()
+        self.upload_process_widget.clearSelectedFile()
+
+    def check_inputs(self):
+        return not any(
+            [
+                self.title_input.text().strip() == "",
+                self.description_input.toPlainText().strip() == "",
+            ]
+        )
+    
+    def add_sql_data(self, form_title, num_page, form_description, form_category):
+        try:
+            conn = sqlite3.connect("kiosk.db")
+            cursor = conn.cursor()
+
+            cursor.execute(
+                "INSERT INTO kiosk_forms (form_name, number_of_pages, form_description, form_category) VALUES (?,?,?,?)",
+                (form_title, num_page, form_description, form_category),
+            )
+
+            # Commit the transaction to save changes
+            conn.commit()
+
+            print("Data inserted successfully.")
+
+        except sqlite3.Error as e:
+            print("SQLite error:", e)
+
+        finally:
+            # Close the connection
+            conn.close()
+
+    def add_file(self):
+        if (
+            self.upload_form_widget.check_input()
+            and self.check_inputs()
+            and self.upload_process_widget.check_input()
+        ):
+            form_title = self.title_input.text().title().strip()
+            num_page = self.page_input.value()
+            form_description = self.description_input.toPlainText().strip()
+            form_category = self.category_input.currentText()
+            
+            self.add_sql_data(str(form_title), int(num_page), str(form_description), str(form_category))
+        
+            form_file_path = self.upload_form_widget.get_file()
+            upload_form_file(form_file_path, form_title)
+            
+            process_file_path = self.upload_process_widget.get_file()
+            upload_process_file(process_file_path, form_title)
+            
+            self.add_button_clicked.emit()
+            
+            message_box = CustomMessageBox(
+                "Success",
+                f"{form_title} has been successfully added.",
+                parent=self,
+            )
+            message_box.exec_()
+            
+            self.clear()
+                   
+        else:
+            # Display dialog box indicating success
+            message_box = CustomMessageBox(
+                "Error",
+                "Please fill in all required fields before proceeding.",
+                parent=self,
+            )
+            message_box.exec_()
+            
+
+class FileWidget(QWidget):
+    file_edit_success = pyqtSignal()
+    def __init__(self, id_num, form_name):
+        super().__init__()
+        self.initUI(id_num, form_name)
+
+    def initUI(self, id_num, form_name):
+        
+        self.form_title = form_name
+
+        # Main layout
+        main_layout = QVBoxLayout(self)
+
+        # Create a square QFrame to contain the form layout
+        frame = QFrame()
+        frame.setFrameShape(QFrame.Box)  # Set fixed width to contain the layout
+        form_layout = QVBoxLayout(frame)  # Set the layout for the frame
+
+
+        # Lower form layout
+        lower_form_layout = QHBoxLayout()
+
+        self.upload_form_widget = UploadFormWidget()
+        self.upload_form_widget.setFixedSize(300, 300)
+        self.upload_form_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+        self.upload_process_widget = UploadProcessWidget()
+        self.upload_process_widget.setFixedSize(300, 300)
+        self.upload_process_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+        lower_form_layout.addWidget(self.upload_form_widget)
+        lower_form_layout.addSpacerItem(
+            QSpacerItem(50, 25, QSizePolicy.Fixed, QSizePolicy.Fixed)
+        )
+        lower_form_layout.addWidget(self.upload_process_widget)
+        lower_form_layout.setAlignment(Qt.AlignCenter)
+        lower_form_layout.setContentsMargins(0, 0, 0, 0)
+
+        form_layout.addLayout(lower_form_layout)
+        form_layout.addSpacerItem(
+            QSpacerItem(20, 25, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
+
+        add_clear_button_layout = QHBoxLayout()
+        self.add_button = QPushButton("Add")
+        self.add_button.clicked.connect(self.add_file)
+
+        self.clear_button = QPushButton("Clear")
+        self.clear_button.clicked.connect(self.clear)
+
+        add_clear_button_layout.addWidget(self.clear_button)
+        add_clear_button_layout.addWidget(self.add_button)
+
+        self.add_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.clear_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+        add_clear_button_layout.setAlignment(Qt.AlignCenter)
+
+        form_layout.addLayout(add_clear_button_layout)
+
+        # Add the frame to the main layout
+        main_layout.addWidget(frame)
+        main_layout.addStretch(1)  # Adjust as needed
+        self.setLayout(main_layout)
+
+    def clear(self):
+        self.upload_form_widget.clearSelectedFile()
+        self.upload_process_widget.clearSelectedFile()
+
+    def add_file(self):
+        if (
+            self.upload_form_widget.check_input()
+            and self.upload_process_widget.check_input()
+        ):
+        
+            form_file_path = self.upload_form_widget.get_file()
+            upload_form_file(form_file_path, self.form_title)
+            
+            process_file_path = self.upload_process_widget.get_file()
+            upload_process_file(process_file_path, self.form_title)
+            
+            self.file_edit_success.emit()
+            
+            message_box = CustomMessageBox(
+                "Success",
+                f"{self.form_title} has been successfully updated.",
+                parent=self,
+            )
+            message_box.exec_()
+            
+            self.clear()
+                   
+        else:
+            # Display dialog box indicating success
+            message_box = CustomMessageBox(
+                "Error",
+                "Please fill in all required fields before proceeding.",
+                parent=self,
+            )
+            message_box.exec_()
+
+
+class EditFormWidget(QWidget):
+    title_input_clicked = pyqtSignal()
+    description_input_clicked = pyqtSignal()
+    edit_form_sucess = pyqtSignal()
+    def __init__(self, id_num, form_name):
+        super().__init__()
+        self.initUI(id_num, form_name)
+
+    def initUI(self, id_num, form_name):
+        
+        self.id_num = id_num
+        self.form_name = form_name
+        
+        conn = sqlite3.connect("kiosk.db")
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT DISTINCT form_category FROM kiosk_forms")
+        self.form_category = [category[0] for category in cursor.fetchall()]
+
+        conn.close()
+
+        # Main layout
+        main_layout = QVBoxLayout(self)
+
+        # Create a square QFrame to contain the form layout
+        frame = QFrame()
+        frame.setFrameShape(QFrame.Box)  # Set fixed width to contain the layout
+        form_layout = QVBoxLayout(frame)  # Set the layout for the frame
+
+        # Title layout
+        title_layout = QVBoxLayout()
+        title_label = QLabel("Form Title:")
+        self.title_input = QLineEdit()
+        self.title_input.mousePressEvent = self.title_clicked
+        self.title_input.setFixedWidth(300)
+        title_layout.addWidget(title_label)
+        title_layout.addWidget(self.title_input)
+
+        # Category layout
+        category_layout = QVBoxLayout()
+        category_label = QLabel("Form Category:")
+        self.category_input = QComboBox()
+        self.category_input.addItems(self.form_category)
+        self.category_input.setFixedWidth(300)
+        category_layout.addWidget(category_label)
+        category_layout.addWidget(self.category_input)
+
+        # Page number layout
+        page_number_layout = QVBoxLayout()
+        pages_label = QLabel("Number of Pages:")
+        self.page_input = QSpinBox()
+        self.page_input.setMinimum(1)
+        self.page_input.setMaximum(10)
+        self.page_input.setFixedWidth(300)
+        page_number_layout.addWidget(pages_label)
+        page_number_layout.addWidget(self.page_input)
+
+        # Upper form layout
+        upper_form_layout = QHBoxLayout()
+        upper_form_layout.addLayout(title_layout)
+        upper_form_layout.addLayout(category_layout)
+        upper_form_layout.addLayout(page_number_layout)
+
+        upper_form_layout.setContentsMargins(15, 0, 15, 0)
+        form_layout.addLayout(upper_form_layout)
+        form_layout.addSpacerItem(
+            QSpacerItem(20, 35, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
+
+        # Form description layout
+        form_description_layout = QVBoxLayout()
+        description_label = QLabel("Form Description:")
+        self.description_input = QTextEdit()
+        self.description_input.mousePressEvent = self.description_clicked
+        form_description_layout.addWidget(description_label)
+        form_description_layout.addWidget(self.description_input)
+        form_description_layout.setContentsMargins(95, 0, 95, 0)
+
+        form_layout.addLayout(form_description_layout)
+        form_layout.addSpacerItem(
+            QSpacerItem(20, 35, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
+
+        form_layout.addSpacerItem(
+            QSpacerItem(20, 25, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
+
+        add_clear_button_layout = QHBoxLayout()
+        self.add_button = QPushButton("Add")
+        self.add_button.clicked.connect(self.add_file)
+
+        self.clear_button = QPushButton("Clear")
+        self.clear_button.clicked.connect(self.clear)
+
+        add_clear_button_layout.addWidget(self.clear_button)
+        add_clear_button_layout.addWidget(self.add_button)
+
+        self.add_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.clear_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+        add_clear_button_layout.setAlignment(Qt.AlignRight)
+
+        form_layout.addLayout(add_clear_button_layout)
+
+        # Add the frame to the main layout
+        main_layout.addWidget(frame)
+        main_layout.addStretch(1)  # Adjust as needed
+        self.setLayout(main_layout)
+
+    def title_clicked(self, event):
+        self.title_input_clicked.emit()
+
+    def description_clicked(self, event):
+        self.description_input_clicked.emit()
+
+    def clear(self):
+        self.title_input.clear()
+        self.category_input.setCurrentIndex(0)
+        self.page_input.setValue(1)
+        self.description_input.clear()
+
+    def check_inputs(self):
+        return not any(
+            [
+                self.title_input.text().strip() == "",
+                self.description_input.toPlainText().strip() == "",
+            ]
+        )
+    
+    def add_file(self):
+        if self.check_inputs():
+            form_title = self.title_input.text().title().strip()
+            num_page = self.page_input.value()
+            form_description = self.description_input.toPlainText().strip()
+            form_category = self.category_input.currentText()
+            
+            self.add_sql_data(str(form_title), int(num_page), str(form_description), str(form_category))
+            
+            self.edit_form_sucess.emit()
+            
+            message_box = CustomMessageBox(
+                "Success",
+                f"{form_title} has been successfully updated.",
+                parent=self,
+            )
+            message_box.exec_()
+            
+            self.clear()
+                   
+        else:
+            # Display dialog box indicating success
+            message_box = CustomMessageBox(
+                "Error",
+                "Please fill in all required fields before proceeding.",
+                parent=self,
+            )
+            message_box.exec_()
+    
+    def add_sql_data(self, form_title, num_page, form_description, form_category):
+        try:
+            conn = sqlite3.connect("kiosk.db")
+            cursor = conn.cursor()
+            
+            cursor.execute(
+                """
+                UPDATE kiosk_forms 
+                SET 
+                    form_name = ?, 
+                    number_of_pages = ?, 
+                    form_description = ?, 
+                    form_category = ?
+                WHERE 
+                    id = ?
+                """,
+                (form_title, num_page, form_description, form_category, self.id_num)
+            )
+
+            # Commit the transaction to save changes
+            conn.commit()
+
+            print("Data updated successfully.")
+
+        except sqlite3.Error as e:
+            print("SQLite error:", e)
+
+        finally:
+            # Close the connection
+            conn.close()
+            
+
+class FormFileWidget(QWidget):
+    title_input_clicked = pyqtSignal()
+    description_input_clicked = pyqtSignal()
+    edit_form_file_success = pyqtSignal()
+    
+    def __init__(self, id_num, form_name):
+        super().__init__()
+        self.initUI(id_num, form_name)
+
+    def initUI(self, id_num, form_name):
+        
+        self.id_num = id_num
+        self.form_title = form_name
+        
+        conn = sqlite3.connect("kiosk.db")
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT DISTINCT form_category FROM kiosk_forms")
+        self.form_category = [category[0] for category in cursor.fetchall()]
+
+        conn.close()
+
+        # Main layout
+        main_layout = QVBoxLayout(self)
+
+        # Create a square QFrame to contain the form layout
+        frame = QFrame()
+        frame.setFrameShape(QFrame.Box)  # Set fixed width to contain the layout
+        form_layout = QVBoxLayout(frame)  # Set the layout for the frame
+
+        # Title layout
+        title_layout = QVBoxLayout()
+        title_label = QLabel("Form Title:")
+        self.title_input = QLineEdit()
+        self.title_input.mousePressEvent = self.title_clicked
+        self.title_input.setFixedWidth(300)
+        title_layout.addWidget(title_label)
+        title_layout.addWidget(self.title_input)
+
+        # Category layout
+        category_layout = QVBoxLayout()
+        category_label = QLabel("Form Category:")
+        self.category_input = QComboBox()
+        self.category_input.addItems(self.form_category)
+        self.category_input.setFixedWidth(300)
+        category_layout.addWidget(category_label)
+        category_layout.addWidget(self.category_input)
+
+        # Page number layout
+        page_number_layout = QVBoxLayout()
+        pages_label = QLabel("Number of Pages:")
+        self.page_input = QSpinBox()
+        self.page_input.setMinimum(1)
+        self.page_input.setMaximum(10)
+        self.page_input.setFixedWidth(300)
+        page_number_layout.addWidget(pages_label)
+        page_number_layout.addWidget(self.page_input)
+
+        # Upper form layout
+        upper_form_layout = QHBoxLayout()
+        upper_form_layout.addLayout(title_layout)
+        upper_form_layout.addLayout(category_layout)
+        upper_form_layout.addLayout(page_number_layout)
+
+        upper_form_layout.setContentsMargins(15, 0, 15, 0)
+        form_layout.addLayout(upper_form_layout)
+        form_layout.addSpacerItem(
+            QSpacerItem(20, 35, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
+
+        # Form description layout
+        form_description_layout = QVBoxLayout()
+        description_label = QLabel("Form Description:")
+        self.description_input = QTextEdit()
+        self.description_input.mousePressEvent = self.description_clicked
+        form_description_layout.addWidget(description_label)
+        form_description_layout.addWidget(self.description_input)
+        form_description_layout.setContentsMargins(95, 0, 95, 0)
+
+        form_layout.addLayout(form_description_layout)
+        form_layout.addSpacerItem(
+            QSpacerItem(20, 35, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
+
+        # Lower form layout
+        lower_form_layout = QHBoxLayout()
+
+        self.upload_form_widget = UploadFormWidget()
+        self.upload_form_widget.setFixedSize(300, 300)
+        self.upload_form_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+        self.upload_process_widget = UploadProcessWidget()
+        self.upload_process_widget.setFixedSize(300, 300)
+        self.upload_process_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+        lower_form_layout.addWidget(self.upload_form_widget)
+        lower_form_layout.addSpacerItem(
+            QSpacerItem(50, 25, QSizePolicy.Fixed, QSizePolicy.Fixed)
+        )
+        lower_form_layout.addWidget(self.upload_process_widget)
+        lower_form_layout.setAlignment(Qt.AlignLeft)
+        lower_form_layout.setContentsMargins(90, 0, 0, 0)
+
+        form_layout.addLayout(lower_form_layout)
+        form_layout.addSpacerItem(
+            QSpacerItem(20, 25, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
+
+        add_clear_button_layout = QHBoxLayout()
+        self.add_button = QPushButton("Add")
+        self.add_button.clicked.connect(self.add_file)
+
+        self.clear_button = QPushButton("Clear")
+        self.clear_button.clicked.connect(self.clear)
+
+        add_clear_button_layout.addWidget(self.clear_button)
+        add_clear_button_layout.addWidget(self.add_button)
+
+        self.add_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.clear_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+        add_clear_button_layout.setAlignment(Qt.AlignRight)
+
+        form_layout.addLayout(add_clear_button_layout)
+
+        # Add the frame to the main layout
+        main_layout.addWidget(frame)
+        main_layout.addStretch(1)  # Adjust as needed
+        self.setLayout(main_layout)
+
+    def title_clicked(self, event):
+        self.title_input_clicked.emit()
+
+    def description_clicked(self, event):
+        self.description_input_clicked.emit()
+
+    def clear(self):
+        self.title_input.clear()
+        self.category_input.setCurrentIndex(0)
+        self.page_input.setValue(1)
+        self.description_input.clear()
+
+        self.upload_form_widget.clearSelectedFile()
+        self.upload_process_widget.clearSelectedFile()
+
+    def check_inputs(self):
+        return not any(
+            [
+                self.title_input.text().strip() == "",
+                self.description_input.toPlainText().strip() == "",
+            ]
+        )
+    
+    def add_sql_data(self, form_title, num_page, form_description, form_category):
+        try:
+            conn = sqlite3.connect("kiosk.db")
+            cursor = conn.cursor()
+            
+            cursor.execute(
+                """
+                UPDATE kiosk_forms 
+                SET 
+                    form_name = ?, 
+                    number_of_pages = ?, 
+                    form_description = ?, 
+                    form_category = ?
+                WHERE 
+                    id = ?
+                """,
+                (form_title, num_page, form_description, form_category, self.id_num)
+            )
+
+            # Commit the transaction to save changes
+            conn.commit()
+
+            print("Data updated successfully.")
+
+        except sqlite3.Error as e:
+            print("SQLite error:", e)
+
+        finally:
+            # Close the connection
+            conn.close()
+
+    def add_file(self):
+        if (
+            self.upload_form_widget.check_input()
+            and self.check_inputs()
+            and self.upload_process_widget.check_input()
+        ):
+            form_title = self.title_input.text().title().strip()
+            num_page = self.page_input.value()
+            form_description = self.description_input.toPlainText().strip()
+            form_category = self.category_input.currentText()
+            
+            self.add_sql_data(str(form_title), int(num_page), str(form_description), str(form_category))
+        
+            form_file_path = self.upload_form_widget.get_file()
+            upload_form_file(form_file_path, self.form_title)
+            
+            process_file_path = self.upload_process_widget.get_file()
+            upload_process_file(process_file_path, self.form_title)
+            
+            self.edit_form_file_success.emit()
+            
+            message_box = CustomMessageBox(
+                "Success",
+                f"{form_title} has been successfully added.",
+                parent=self,
+            )
+            message_box.exec_()
+            
+            self.clear()
+                   
+        else:
+            # Display dialog box indicating success
+            message_box = CustomMessageBox(
+                "Error",
+                "Please fill in all required fields before proceeding.",
+                parent=self,
+            )
+            message_box.exec_()
+
+
+class UploadFormWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+
+    def initUI(self):
+        # Create a frame to contain the widget
+        frame = QFrame(self)
+        frame.setFrameShape(QFrame.Box)  # Set frame shape
+
+        layout = QVBoxLayout(frame)
+
+        self.selected_file_path = None
+
+        # Create and add the first label
+        form_upload_label = QLabel("Form Upload")
+        layout.addWidget(form_upload_label, alignment=Qt.AlignCenter)
+
+        self.image_label = QLabel()
+        pixmap = QPixmap("./img/static/upload_img.png")
+        scaled_pixmap = pixmap.scaled(
+            120, 120, Qt.IgnoreAspectRatio, Qt.SmoothTransformation
+        )
+        self.image_label.setPixmap(scaled_pixmap)
+        layout.addWidget(self.image_label, alignment=Qt.AlignCenter)
+
+        # Create and add the button
+        self.browse_button = QPushButton("Browse")
+        self.browse_button.clicked.connect(self.open_file_explorer)
+        layout.addWidget(self.browse_button)
+
+        # Create and add the second label
+        self.file_label = QLabel("")
+        layout.addWidget(self.file_label, alignment=Qt.AlignCenter)
+
+        # Set layout margins and spacing
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        # Set the frame's layout
+        frame.setLayout(layout)
+
+        # Set the layout of UploadFormWidget
+        self.setLayout(QVBoxLayout(self))
+        self.layout().addWidget(frame)  # Add the frame to UploadFormWidget's layout
+
+    def open_file_explorer(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog  # Use native dialog on macOS
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Open File", "", "Document (*.pdf)", options=options
+        )
+        if file_path:
+            file_name = os.path.basename(file_path)
+            print("Selected file:", file_name)
+            self.display_file_preview(file_name)
+            self.selected_file_path = file_path
+
+    def display_file_preview(self, file_name):
+        self.file_label.setText(f"Selected File: {file_name}")
+        self.file_label.setWordWrap(True)
+
+    def clearSelectedFile(self):
+        self.selected_file_path = None
+        self.file_label.clear()
+
+    def get_file(self):
+        return self.selected_file_path
+
+    def check_input(self):
+        return self.selected_file_path is not None
+
+
+class UploadProcessWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+
+    def initUI(self):
+        # Create a frame to contain the widget
+        frame = QFrame(self)
+        frame.setFrameShape(QFrame.Box)  # Set frame shape
+
+        layout = QVBoxLayout(frame)
+
+        # Create and add the first label
+        form_upload_label = QLabel("Process Upload")
+        layout.addWidget(form_upload_label, alignment=Qt.AlignCenter)
+
+        self.image_label = QLabel()
+        pixmap = QPixmap("./img/static/upload_img.png")
+        scaled_pixmap = pixmap.scaled(
+            120, 120, Qt.IgnoreAspectRatio, Qt.SmoothTransformation
+        )
+        self.image_label.setPixmap(scaled_pixmap)
+        layout.addWidget(self.image_label, alignment=Qt.AlignCenter)
+
+        # Create and add the button
+        self.browse_button = QPushButton("Browse")
+        self.browse_button.clicked.connect(self.open_file_explorer)
+        layout.addWidget(self.browse_button)
+
+        # Create and add the second label
+        self.file_label = QLabel("")
+        layout.addWidget(self.file_label, alignment=Qt.AlignCenter)
+
+        # Set layout margins and spacing
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        # Set the frame's layout
+        frame.setLayout(layout)
+
+        # Set the layout of UploadFormWidget
+        self.setLayout(QVBoxLayout(self))
+        self.layout().addWidget(frame)  # Add the frame to UploadFormWidget's layout
+
+    def open_file_explorer(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog  # Use native dialog on macOS
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Open File", "", "Images (*.png *.jpg *.jpeg *.bmp)", options=options
+        )
+        if file_path:
+            file_name = os.path.basename(file_path)
+            print("Selected file:", file_name)
+            self.display_file_preview(file_name)
+            self.selected_file_path = file_path
+
+    def display_file_preview(self, file_name):
+        self.file_label.setText(f"Selected File: {file_name}")
+
+    def clearSelectedFile(self):
+        self.selected_file_path = None
+        self.file_label.clear()
+
+    def get_file(self):
+        return self.selected_file_path
+
+    def check_input(self):
+        return self.selected_file_path is not None
 
 
 class AdminWindowWidget(QWidget):
     home_screen_backbt_clicked = pyqtSignal()
     bondpaper_quantity_updated = pyqtSignal(int)
+
     def __init__(self, parent):
         super().__init__(parent)
+        
+        # Define instance variables for temporary values
+        self.id_num = 0
+        self.form_name = ' '
+        
+        # Create and position the virtual keyboard
+        self.virtual_keyboard = AlphaNeumericVirtualKeyboard('', parent=self)
+
+        # Set window flags to make the keyboard stay on top
+        self.virtual_keyboard.setWindowFlags(Qt.Window | Qt.WindowStaysOnTopHint)
+        self.virtual_keyboard.hide()
 
         # add all widgets
         self.btn_1 = QPushButton("Dashboard", self)
@@ -46,6 +1294,9 @@ class AdminWindowWidget(QWidget):
         self.tab3 = self.ui3()
         self.tab4 = self.ui4()
         self.tab5 = self.ui5()
+        self.tab6 = self.ui6()
+        self.tab7 = self.ui7()
+        self.tab8 = self.ui8()
 
         self.setup_ui()
 
@@ -161,8 +1412,11 @@ class AdminWindowWidget(QWidget):
         self.right_widget.addTab(self.tab3, "")
         self.right_widget.addTab(self.tab4, "")
         self.right_widget.addTab(self.tab5, "")
+        self.right_widget.addTab(self.tab6, "")
+        self.right_widget.addTab(self.tab7, "")
+        self.right_widget.addTab(self.tab8, "")
 
-        self.right_widget.setCurrentIndex(0)
+        self.right_widget.setCurrentIndex(2)
         self.right_widget.setStyleSheet(
             """QTabBar::tab{width: 0; \
             height: 0; margin: 0; padding: 0; border: none;}"""
@@ -208,9 +1462,15 @@ class AdminWindowWidget(QWidget):
 
         title_label = QLabel("Dashboard")
         main_layout.addWidget(title_label)
+        main_layout.addSpacerItem(
+            QSpacerItem(20, 45, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
+
+        dashboard_layout = QHBoxLayout()
 
         # Add rectangle frame with labels
         rectangle_frame = QFrame()
+        rectangle_frame.setFixedSize(380, 150)
         rectangle_frame.setFrameShape(QFrame.StyledPanel)
         rectangle_frame.setStyleSheet(
             "background-color: #FFFFFF; border: 2px solid #000000; border-radius: 5px;"
@@ -228,16 +1488,17 @@ class AdminWindowWidget(QWidget):
         text_layout.addWidget(label2)
         text_layout.addWidget(label3)
 
-        # Add text_layout to rectangle_layout
+        # Add text_layout to rectangle_layouts
         rectangle_layout.addLayout(text_layout)
 
         # Set size policy of the rectangle frame
         rectangle_frame.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
-        main_layout.addWidget(rectangle_frame)
+        dashboard_layout.addWidget(rectangle_frame)
 
         # Add second rectangle frame with labels
         rectangle_frame2 = QFrame()
+        rectangle_frame2.setFixedSize(380, 150)
         rectangle_frame2.setFrameShape(QFrame.StyledPanel)
         rectangle_frame2.setStyleSheet(
             "background-color: #FFFFFF; border: 2px solid #000000; border-radius: 5px;"
@@ -261,16 +1522,107 @@ class AdminWindowWidget(QWidget):
         # Set size policy of the second rectangle frame
         rectangle_frame2.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
-        main_layout.addWidget(rectangle_frame2)
+        dashboard_layout.addWidget(rectangle_frame2)
+
+        # Add second rectangle frame with labels
+        rectangle_frame3 = QFrame()
+        rectangle_frame3.setFixedSize(380, 150)
+        rectangle_frame3.setFrameShape(QFrame.StyledPanel)
+        rectangle_frame3.setStyleSheet(
+            "background-color: #FFFFFF; border: 2px solid #000000; border-radius: 5px;"
+        )
+        rectangle_layout3 = QHBoxLayout(rectangle_frame3)
+
+        label7 = QLabel("Label 4")
+        label8 = QLabel("Label 5")
+        label9 = QLabel("Label 6")
+
+        rectangle_layout3.addWidget(label7)
+
+        # Create a QVBoxLayout for label5 and label6
+        text_layout3 = QVBoxLayout()
+        text_layout3.addWidget(label8)
+        text_layout3.addWidget(label9)
+
+        # Add text_layout2 to rectangle_layout2
+        rectangle_layout3.addLayout(text_layout3)
+
+        # Set size policy of the second rectangle frame
+        rectangle_frame3.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+        dashboard_layout.addWidget(rectangle_frame3)
+        dashboard_layout.setAlignment(Qt.AlignLeft)
+
+        main_layout.addLayout(dashboard_layout)
+        main_layout.addSpacerItem(
+            QSpacerItem(20, 25, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
+
+        button_layout = QHBoxLayout()
+
+        self.btn_year = QPushButton("Year")
+        self.btn_month = QPushButton("Month")
+        self.btn_day = QPushButton("Day")
+
+        self.btn_year.setFixedSize(180, 50)
+        self.btn_month.setFixedSize(180, 50)
+        self.btn_day.setFixedSize(180, 50)
+
+        self.btn_year.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.btn_month.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.btn_day.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+        button_layout.addWidget(self.btn_year)
+        button_layout.addWidget(self.btn_month)
+        button_layout.addWidget(self.btn_day)
+
+        button_layout.setContentsMargins(780, 0, 0, 0)
+
+        main_layout.addLayout(button_layout, Qt.AlignRight)
+        main_layout.addSpacerItem(
+            QSpacerItem(20, 25, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
 
         # Create a table
         self.tableWidget = QTableWidget()
         self.tableWidget.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
+        self.tableWidget.verticalHeader().setDefaultSectionSize(80)
+        self.tableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)
         table_layout = QVBoxLayout()
         table_layout.addWidget(self.tableWidget)
         main_layout.addLayout(table_layout)
 
         self.populate_table()
+
+        self.tableWidget.setStyleSheet(
+            """
+            QTableWidget {
+                background-color: #f0f0f0;
+                alternate-background-color: #e0e0e0; /* Alternating row color */
+                color: #000000;
+                border: none;
+                font-size: 14px;
+            }
+            QTableWidget::item {
+                padding: 10px; /* Adjust cell padding */
+            }
+            QTableWidget::item:selected {
+                background-color: #e0e0e0; /* Selected item color */
+                color: #000000;
+            }
+            QHeaderView::section {
+                background-color: #7C2F3E; /* Header background color */
+                color: #FAEBD7;
+                padding: 8px;
+                border: none;
+                font-weight: bold;
+                font-size: 16px;
+            }
+        """
+        )
+
+        self.selection_enabled = True
+        self.tableWidget.clicked.connect(self.clear_selection)
 
         main_layout.addStretch(5)
         main = QWidget()
@@ -279,7 +1631,23 @@ class AdminWindowWidget(QWidget):
 
     def ui2(self):
         main_layout = QVBoxLayout()
-        main_layout.addWidget(QLabel("page 2"))
+        main_layout.addWidget(QLabel("Add School Forms"))
+
+        main_layout.addSpacerItem(
+            QSpacerItem(20, 25, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
+
+        self.form_widget = FormWidget()
+        self.form_widget.title_input_clicked.connect(
+            lambda: self.show_virtual_keyboard(self.form_widget.title_input)
+        )
+        self.form_widget.description_input_clicked.connect(
+            lambda: self.show_virtual_keyboard(self.form_widget.description_input)
+        )
+        self.form_widget.add_button_clicked.connect(self.re_init)
+
+        main_layout.addWidget(self.form_widget)
+
         main_layout.addStretch(5)
         main = QWidget()
         main.setLayout(main_layout)
@@ -287,7 +1655,69 @@ class AdminWindowWidget(QWidget):
 
     def ui3(self):
         main_layout = QVBoxLayout()
-        main_layout.addWidget(QLabel("page 3"))
+        main_layout.addWidget(QLabel("Edit School Forms"))
+        main_layout.addSpacerItem(
+            QSpacerItem(20, 25, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
+        
+        button_labels = self.fetch_button_labels()
+        
+        self.vbox_layout = QVBoxLayout()
+
+        for (
+            id_num,
+            form_name,
+            number_of_pages,
+            form_description,
+            form_category,
+        ) in zip(
+            button_labels["id_num"],
+            button_labels["form_names"],
+            button_labels["num_of_pages"],
+            button_labels["form_description"],
+            button_labels["form_category"],
+        ):
+            self.button_widget = EditButtonWidget(
+                id_num, form_name, str(number_of_pages), form_description, form_category
+            )
+            self.button_widget.setFixedHeight(220)
+            self.button_widget.setFixedWidth(750)
+            self.button_widget.setStyleSheet(
+                """
+                    background-color: #FFFFFF;
+                    border-radius: 15px
+                """
+            )
+            self.vbox_layout.addWidget(self.button_widget)
+
+            # Connect the buttonClicked signal to the handleButtonClicked slot
+            self.button_widget.buttonClicked.connect(self.edit_form)
+        
+        scroll_area = SmoothScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setFixedSize(880,785)
+        scroll_widget = QWidget()  # Create a widget to hold the grid layout
+        scroll_widget.setStyleSheet("background-color: transparent;")
+
+        scroll_area_layout = QVBoxLayout(scroll_widget)
+        scroll_area_layout.addLayout(self.vbox_layout)
+        scroll_area_layout.setContentsMargins(0, 0, 0, 0)
+
+        scroll_area.setWidget(
+            scroll_widget
+        )  # Set the scroll widget as the scroll area's widget
+        scroll_area.setStyleSheet(
+            """
+            QScrollArea {
+                background-color: transparent;
+                border: none;
+            }
+            """
+        )
+
+        main_layout.addWidget(scroll_area, alignment=Qt.AlignCenter)
+        
+        
         main_layout.addStretch(5)
         main = QWidget()
         main.setLayout(main_layout)
@@ -295,7 +1725,68 @@ class AdminWindowWidget(QWidget):
 
     def ui4(self):
         main_layout = QVBoxLayout()
-        main_layout.addWidget(QLabel("page 4"))
+        main_layout.addWidget(QLabel("Delete School Forms"))
+        main_layout.addSpacerItem(
+            QSpacerItem(20, 25, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
+        
+        button_labels = self.fetch_button_labels()
+        
+        self.vbox_layout = QVBoxLayout()
+
+        for (
+            id_num,
+            form_name,
+            number_of_pages,
+            form_description,
+            form_category,
+        ) in zip(
+            button_labels["id_num"],
+            button_labels["form_names"],
+            button_labels["num_of_pages"],
+            button_labels["form_description"],
+            button_labels["form_category"],
+        ):
+            self.button_widget = DeleteButtonWidget(
+                id_num, form_name, str(number_of_pages), form_description, form_category
+            )
+            self.button_widget.setFixedHeight(220)
+            self.button_widget.setFixedWidth(750)
+            self.button_widget.setStyleSheet(
+                """
+                    background-color: #FFFFFF;
+                    border-radius: 15px
+                """
+            )
+            self.vbox_layout.addWidget(self.button_widget)
+
+            # Connect the buttonClicked signal to the handleButtonClicked slot
+            self.button_widget.delete_button_clicked.connect(self.handleButtonClicked)
+        
+        scroll_area = SmoothScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setFixedSize(880,785)
+        scroll_widget = QWidget()  # Create a widget to hold the grid layout
+        scroll_widget.setStyleSheet("background-color: transparent;")
+
+        scroll_area_layout = QVBoxLayout(scroll_widget)
+        scroll_area_layout.addLayout(self.vbox_layout)
+        scroll_area_layout.setContentsMargins(0, 0, 0, 0)
+
+        scroll_area.setWidget(
+            scroll_widget
+        )  # Set the scroll widget as the scroll area's widget
+        scroll_area.setStyleSheet(
+            """
+            QScrollArea {
+                background-color: transparent;
+                border: none;
+            }
+            """
+        )
+
+        main_layout.addWidget(scroll_area, alignment=Qt.AlignCenter)
+        
         main_layout.addStretch(5)
         main = QWidget()
         main.setLayout(main_layout)
@@ -303,7 +1794,7 @@ class AdminWindowWidget(QWidget):
 
     def ui5(self):
         main_layout = QVBoxLayout()
-        
+
         settings_label = QLabel("Settings")
         main_layout.addWidget(settings_label)
 
@@ -568,12 +2059,81 @@ class AdminWindowWidget(QWidget):
         center_layout.addLayout(frames_layout)
         center_layout.addStretch(1)  # Add stretch to center vertically
 
-        main_layout.addLayout(
-            center_layout
-        )
+        main_layout.addLayout(center_layout)
         main = QWidget()
         main.setLayout(main_layout)
         return main
+
+    def switch_ui(self, index, id_num, form_name):
+        self.update_temp_values(id_num, form_name)
+        self.right_widget.setCurrentIndex(index)
+        
+    
+    def ui6(self):
+        
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(QLabel(f'Edit File Contents'))
+        
+        main_layout.addSpacerItem(
+            QSpacerItem(20, 25, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
+        
+        self.file_widget = FileWidget(self.id_num, self.form_name)
+        self.file_widget.file_edit_success.connect(self.re_init)
+        main_layout.addWidget(self.file_widget)
+        
+        main_layout.addStretch(5)
+        main = QWidget()
+        main.setLayout(main_layout)
+        return main
+
+    def ui7(self):
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(QLabel('Edit Form Contents'))
+        
+        main_layout.addSpacerItem(
+            QSpacerItem(20, 25, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
+        
+        self.edit_form_widget = EditFormWidget(self.id_num, self.form_name)
+        self.edit_form_widget.title_input_clicked.connect(
+            lambda: self.show_virtual_keyboard(self.edit_form_widget.title_input)
+        )
+        self.edit_form_widget.description_input_clicked.connect(
+            lambda: self.show_virtual_keyboard(self.edit_form_widget.description_input)
+        )
+        self.edit_form_widget.edit_form_sucess.connect(self.re_init)
+        main_layout.addWidget(self.edit_form_widget)
+        
+        main_layout.addStretch(5)
+        main = QWidget()
+        main.setLayout(main_layout)
+        return main
+    
+    def ui8(self):
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(QLabel('Edit Form Information and File Contents'))
+        
+        main_layout.addSpacerItem(
+            QSpacerItem(20, 25, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
+        self.form_file_widget = FormFileWidget(self.id_num, self.form_name)
+        self.form_file_widget.title_input_clicked.connect(
+            lambda: self.show_virtual_keyboard(self.form_file_widget.title_input)
+        )
+        self.form_file_widget.description_input_clicked.connect(
+            lambda: self.show_virtual_keyboard(self.form_file_widget.description_input)
+        )
+        self.form_file_widget.edit_form_file_success.connect(self.re_init)
+        main_layout.addWidget(self.form_file_widget)
+        
+        main_layout.addStretch(5)
+        main = QWidget()
+        main.setLayout(main_layout)
+        return main
+
+    def show_virtual_keyboard(self, title_input):
+        self.virtual_keyboard.display(title_input)
 
     def bondpaper_increment_value(self):
         self.number_value += 10
@@ -637,7 +2197,7 @@ class AdminWindowWidget(QWidget):
         finally:
             if connection:
                 connection.close()
-    
+
     def refill_bondpaper(self):
         bondpaper_quantity = self.number_value
 
@@ -668,7 +2228,7 @@ class AdminWindowWidget(QWidget):
 
             print(self.bondpaper_quantity)
             print("Bondpaper refilled successfully.")
-            
+
             # Emit signal to update label
             self.bondpaper_quantity_updated.emit(self.bondpaper_quantity)
 
@@ -685,7 +2245,7 @@ class AdminWindowWidget(QWidget):
         finally:
             if connection:
                 connection.close()
-    
+
     # Slot to update the bondpaper label
     def update_label_slot(self, new_quantity):
         self.bondpaper_label.setText(str(new_quantity))
@@ -730,6 +2290,130 @@ class AdminWindowWidget(QWidget):
         words = [word.capitalize() for word in words]
         # Join the words with spaces
         return " ".join(words)
+
+    def clear_selection(self):
+        # Toggle the selection state
+        self.selection_enabled = not self.selection_enabled
+
+        if not self.selection_enabled:
+            # Clear the selection if selection is disabled
+            self.tableWidget.clearSelection()
+
+    def fetch_button_labels(self):
+        conn = sqlite3.connect("kiosk.db")
+        cursor = conn.cursor()
+
+        cursor.execute(
+            "SELECT id, form_name, number_of_pages, form_description, form_category FROM kiosk_forms"
+        )
+        rows = cursor.fetchall()
+
+        conn.close()
+
+        id_num = []
+        form_names = []
+        num_of_pages = []
+        form_description = []
+        form_category = []
+
+        for row in rows:
+            id_num.append(row[0])
+            form_names.append(row[1])
+            num_of_pages.append(row[2])
+            form_description.append(row[3])
+            form_category.append(row[4])
+
+        # Create a dictionary to store the lists
+        button_labels = {
+            "id_num": id_num,
+            "form_names": form_names,
+            "num_of_pages": num_of_pages,
+            "form_description": form_description,
+            "form_category": form_category,
+        }
+
+        return button_labels
+
+    def handleButtonClicked(self, index, form_name):
+        print(index)
+        print(form_name)
+        
+        # Get the sender of the signal
+        button_widget = self.sender()
+        # Remove the button widget from the layout
+        self.vbox_layout.removeWidget(button_widget)
+        button_widget.deleteLater()
+        
+        try:
+            conn = sqlite3.connect("kiosk.db")
+            cursor = conn.cursor()
+
+            cursor.execute("DELETE FROM kiosk_forms WHERE id = ?", (index,))
+
+            conn.commit()  # Commit changes to the database
+            conn.close()
+            
+            self.re_init()
+            
+            message_box = CustomMessageBox(
+                "Success",
+                f"{form_name} deleted successfully!",
+                parent=self,
+            )
+            message_box.exec_()
+            
+        except sqlite3.Error as e:
+            print("Error deleting row:", e)
+    
+    def edit_form(self, index, form_name):
+        self.edit_message_box = EditMessageBox(index, form_name, parent=self)
+        self.edit_message_box.file_button_clicked.connect(self.switch_ui)
+        self.edit_message_box.form_button_clicked.connect(self.switch_ui)
+        self.edit_message_box.form_file_button_clicked.connect(self.switch_ui)
+        self.edit_message_box.exec_()
+    
+    def update_temp_values(self, index, form_name):
+        self.id_num = index
+        self.form_name = form_name
+        print(self.form_name)
+        # Update UI to reflect new values
+        self.tab1 = self.ui1()
+        self.tab2 = self.ui2()
+        self.tab3 = self.ui3()
+        self.tab4 = self.ui4()
+        self.tab5 = self.ui5()
+        self.tab6 = self.ui6()
+        self.tab7 = self.ui7()
+        self.tab8 = self.ui8()
+        self.right_widget.clear()
+        self.right_widget.addTab(self.tab1, "")
+        self.right_widget.addTab(self.tab2, "")
+        self.right_widget.addTab(self.tab3, "")
+        self.right_widget.addTab(self.tab4, "")
+        self.right_widget.addTab(self.tab5, "")
+        self.right_widget.addTab(self.tab6, "")
+        self.right_widget.addTab(self.tab7, "")
+        self.right_widget.addTab(self.tab8, "")
+    
+    def re_init(self):
+        # Update UI to reflect new values
+        self.tab1 = self.ui1()
+        self.tab2 = self.ui2()
+        self.tab3 = self.ui3()
+        self.tab4 = self.ui4()
+        self.tab5 = self.ui5()
+        self.tab6 = self.ui6()
+        self.tab7 = self.ui7()
+        self.tab8 = self.ui8()
+        self.right_widget.clear()
+        self.right_widget.addTab(self.tab1, "")
+        self.right_widget.addTab(self.tab2, "")
+        self.right_widget.addTab(self.tab3, "")
+        self.right_widget.addTab(self.tab4, "")
+        self.right_widget.addTab(self.tab5, "")
+        self.right_widget.addTab(self.tab6, "")
+        self.right_widget.addTab(self.tab7, "")
+        self.right_widget.addTab(self.tab8, "")
 
     def logout(self):
         self.setVisible(False)
