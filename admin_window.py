@@ -61,13 +61,11 @@ class SmoothScrollArea(QScrollArea):
 
 
 class EditMessageBox(QDialog):
-    file_button_clicked = pyqtSignal(int, int, str)
-    form_button_clicked = pyqtSignal(int, int, str)
-    form_file_button_clicked = pyqtSignal(int, int, str)
+    edit_form_button_clicked = pyqtSignal(int, int, str)
 
     def __init__(self, index, form_name, parent=None):
         super().__init__(parent)
-        self.setFixedSize(400, 525)
+        self.setFixedSize(400, 325)
 
         self.index = index
         self.form_name = form_name
@@ -82,100 +80,143 @@ class EditMessageBox(QDialog):
         )
         layout.addWidget(title_label, alignment=Qt.AlignCenter)
 
-        # Add a vertical spacer item
-        layout.addSpacerItem(
-            QSpacerItem(20, 20, QSizePolicy.Minimum, QSizePolicy.Fixed)
-        )
-
         message_label = QLabel(
-            f"You're currently editing {form_name}.\n\nPlease choose an editing option below."
+            f"You're editing {form_name}.\n\nDo you want to continue making changes or discard."
         )
         message_label.setWordWrap(True)
         message_label.setStyleSheet("font-size: 14px; font-family: Roboto; ")
         layout.addWidget(message_label, alignment=Qt.AlignCenter)
 
-        # Add a vertical spacer item
-        layout.addSpacerItem(
-            QSpacerItem(20, 20, QSizePolicy.Minimum, QSizePolicy.Fixed)
-        )
-
-        button_layout = QVBoxLayout()
+        button_layout = QHBoxLayout()
         layout.addLayout(button_layout)
 
-        # Add a vertical spacer item
-        layout.addSpacerItem(
-            QSpacerItem(20, 20, QSizePolicy.Minimum, QSizePolicy.Fixed)
-        )
-
-        file_button = QPushButton("Edit File Contents")
-        file_button.setFixedSize(200, 45)
-        file_button.clicked.connect(self.file_clicked)
+        file_button = QPushButton("Discard")
+        file_button.setFixedSize(100, 45)
+        file_button.clicked.connect(lambda: self.reject())
         file_button.setStyleSheet(
             """
             QPushButton {
-                background-color: #7C2F3E;
-                border-radius: 5px;
-                color: #FAEBD7; 
-                padding: 10px 20px;
+                background-color: #B3B3B3;
+                border-radius: 10px;
+                color: #19323C;
+                padding: 8px 16px;
                 font-size: 14px;
+                font-weight: bold;
+                font-family: Montserrat;
             }
             QPushButton:pressed {
-                background-color: #D8973C;
+                background-color: #7C2F3E;
+                color: #FAEBD7;
             }
             """
         )
         button_layout.addWidget(file_button, alignment=Qt.AlignCenter)
 
-        form_button = QPushButton("Edit Form Information")
-        form_button.setFixedSize(200, 45)
-        form_button.clicked.connect(self.form_clicked)
-        form_button.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #7C2F3E;
-                border-radius: 5px;
-                color: #FAEBD7; 
-                padding: 10px 20px;
-                font-size: 14px;
-            }
-            QPushButton:pressed {
-                background-color: #D8973C;
-            }
-            """
-        )
-        button_layout.addWidget(form_button, alignment=Qt.AlignCenter)
-
-        form_file_button = QPushButton("Edit both File Contents\nand File Information")
-        form_file_button.setFixedSize(200, 85)
-        form_file_button.clicked.connect(self.form_file_clicked)
+        form_file_button = QPushButton("Continue")
+        form_file_button.setFixedSize(100, 45)
+        form_file_button.clicked.connect(self.edit_form_clicked)
         form_file_button.setStyleSheet(
             """
             QPushButton {
                 background-color: #7C2F3E;
-                border-radius: 5px;
-                color: #FAEBD7; 
-                padding: 10px 20px;
+                border-radius: 10px;
+                color: #FAEBD7;
+                padding: 8px 16px;
                 font-size: 14px;
+                font-weight: bold;
+                font-family: Montserrat;
             }
             QPushButton:pressed {
-                background-color: #D8973C;
+                background-color: #B3B3B3;
+                color: #19323C;
             }
             """
         )
         button_layout.addWidget(form_file_button, alignment=Qt.AlignCenter)
+        button_layout.setContentsMargins(45,0,65,0)
 
-    def file_clicked(self):
-        self.file_button_clicked.emit(5, self.index, self.form_name)
+    def edit_form_clicked(self):
+        self.edit_form_button_clicked.emit(5, self.index, self.form_name)
         self.accept()
 
-    def form_clicked(self):
-        self.form_button_clicked.emit(6, self.index, self.form_name)
-        self.accept()
+class DeleteMessageBox(QDialog):
+    continue_button_clicked = pyqtSignal(int, str)
 
-    def form_file_clicked(self):
-        self.form_file_button_clicked.emit(7, self.index, self.form_name)
-        self.accept()
+    def __init__(self, index, form_name, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(400, 325)
 
+        self.index = index
+        self.form_name = form_name
+
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+        self.setStyleSheet("background-color: #EBEBEB;")
+
+        title_label = QLabel("Delete Form")
+        title_label.setStyleSheet(
+            "font-size: 24px; font-family: Montserrat; font-weight: bold; color: #7C2F3E;"
+        )
+        layout.addWidget(title_label, alignment=Qt.AlignCenter)
+
+        message_label = QLabel(
+            f"You're currrently deleting {form_name}.\n\nDo you want to continue or discard."
+        )
+        message_label.setWordWrap(True)
+        message_label.setStyleSheet("font-size: 14px; font-family: Roboto; ")
+        layout.addWidget(message_label, alignment=Qt.AlignCenter)
+
+        button_layout = QHBoxLayout()
+        layout.addLayout(button_layout)
+
+        discard_button = QPushButton("Discard")
+        discard_button.setFixedSize(100, 45)
+        discard_button.clicked.connect(lambda: self.reject())
+        discard_button.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #B3B3B3;
+                border-radius: 10px;
+                color: #19323C;
+                padding: 8px 16px;
+                font-size: 14px;
+                font-weight: bold;
+                font-family: Montserrat;
+            }
+            QPushButton:pressed {
+                background-color: #7C2F3E;
+                color: #FAEBD7;
+            }
+            """
+        )
+        button_layout.addWidget(discard_button, alignment=Qt.AlignCenter)
+
+        continue_button = QPushButton("Continue")
+        continue_button.setFixedSize(100, 45)
+        continue_button.clicked.connect(self.continue_clicked)
+        continue_button.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #7C2F3E;
+                border-radius: 10px;
+                color: #FAEBD7;
+                padding: 8px 16px;
+                font-size: 14px;
+                font-weight: bold;
+                font-family: Montserrat;
+            }
+            QPushButton:pressed {
+                background-color: #B3B3B3;
+                color: #19323C;
+            }
+            """
+        )
+        button_layout.addWidget(continue_button, alignment=Qt.AlignCenter)
+        button_layout.setContentsMargins(55,0,65,0)
+
+    def continue_clicked(self):
+        self.continue_button_clicked.emit(self.index, self.form_name)
+        self.close()
 
 class DeleteButtonWidget(QWidget):
     # Define a new signal
@@ -447,7 +488,7 @@ class FormWidget(QWidget):
         title_label.setStyleSheet(
             """
             margin-top: 20px;
-            font-family: Robot;
+            font-family: Roboto;
             font-size: 16px;
             font-weight: bold;
             """
@@ -465,6 +506,7 @@ class FormWidget(QWidget):
                 padding-bottom: 15px;
                 font-size: 14px;
                 background-color: #ffffff;
+                color: #444444;
             }
             QLineEdit:focus {
                 border: 2px solid #7C2F3E;
@@ -483,7 +525,7 @@ class FormWidget(QWidget):
         category_label.setStyleSheet(
             """
             margin-top: 20px;
-            font-family: Robot;
+            font-family: Roboto;
             font-size: 16px;
             font-weight: bold;
             """
@@ -492,12 +534,14 @@ class FormWidget(QWidget):
         self.category_input.setStyleSheet(
             """
             QComboBox {
-                border: 2px solid #b3b3b3;
+                border: 2px solid #B3B3B3;
                 border-radius: 0px;
                 padding-left: 10px;
                 padding-top: 15px;
                 padding-bottom: 15px;
+                font-family: Roboto;
                 font-size: 14px;
+                color: #444444;
             }
             QComboBox:focus {
                 border: 2px solid #7C2F3E;
@@ -510,7 +554,6 @@ class FormWidget(QWidget):
             }
             QComboBox QAbstractItemView {
                 selection-background-color: #5c9ded;
-                selection-color: #ffffff;
                 font-size: 14px;
             }
             """
@@ -526,7 +569,7 @@ class FormWidget(QWidget):
         pages_label.setStyleSheet(
             """
             margin-top: 20px;
-            font-family: Robot;
+            font-family: Roboto;
             font-size: 16px;
             font-weight: bold;
             """
@@ -536,9 +579,11 @@ class FormWidget(QWidget):
             """
             QSpinBox {
                 border: 2px solid #B3B3B3;
+                padding-left: 10px;
                 padding-top: 15px;
                 padding-bottom: 15px;
                 font-size: 14px;
+                color: #444444;
                 border-radius: 0px;
             }
             QSpinBox:focus {
@@ -580,7 +625,7 @@ class FormWidget(QWidget):
         description_label.setStyleSheet(
             """
             margin-top: 20px;
-            font-family: Robot;
+            font-family: Roboto;
             font-size: 16px;
             font-weight: bold;
             """
@@ -591,8 +636,9 @@ class FormWidget(QWidget):
             QTextEdit {
                 border: 2px solid #b3b3b3;
                 border-radius: 10px;
-                padding: 5px;
+                padding: 10px;
                 font-size: 14px;
+                color: #444444;
                 background-color: #ffffff;
             }
             QTextEdit:focus {
@@ -787,306 +833,10 @@ class FormWidget(QWidget):
             )
             message_box.exec_()
 
-
-class FileWidget(QWidget):
-    file_edit_success = pyqtSignal()
-
-    def __init__(self, id_num, form_name):
-        super().__init__()
-        self.initUI(id_num, form_name)
-
-    def initUI(self, id_num, form_name):
-        self.form_title = form_name
-
-        # Main layout
-        main_layout = QVBoxLayout(self)
-
-        # Create a square QFrame to contain the form layout
-        frame = QFrame()
-        frame.setFrameShape(QFrame.Box)  # Set fixed width to contain the layout
-        form_layout = QVBoxLayout(frame)  # Set the layout for the frame
-
-        # Lower form layout
-        lower_form_layout = QHBoxLayout()
-
-        self.upload_form_widget = UploadFormWidget()
-        self.upload_form_widget.setFixedSize(300, 300)
-        self.upload_form_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-
-        self.upload_process_widget = UploadProcessWidget()
-        self.upload_process_widget.setFixedSize(300, 300)
-        self.upload_process_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-
-        lower_form_layout.addWidget(self.upload_form_widget)
-        lower_form_layout.addSpacerItem(
-            QSpacerItem(50, 25, QSizePolicy.Fixed, QSizePolicy.Fixed)
-        )
-        lower_form_layout.addWidget(self.upload_process_widget)
-        lower_form_layout.setAlignment(Qt.AlignCenter)
-        lower_form_layout.setContentsMargins(0, 0, 0, 0)
-
-        form_layout.addLayout(lower_form_layout)
-        form_layout.addSpacerItem(
-            QSpacerItem(20, 25, QSizePolicy.Minimum, QSizePolicy.Fixed)
-        )
-
-        add_clear_button_layout = QHBoxLayout()
-        self.add_button = QPushButton("Add")
-        self.add_button.clicked.connect(self.add_file)
-
-        self.clear_button = QPushButton("Clear")
-        self.clear_button.clicked.connect(self.clear)
-
-        add_clear_button_layout.addWidget(self.clear_button)
-        add_clear_button_layout.addWidget(self.add_button)
-
-        self.add_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.clear_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-
-        add_clear_button_layout.setAlignment(Qt.AlignCenter)
-
-        form_layout.addLayout(add_clear_button_layout)
-
-        # Add the frame to the main layout
-        main_layout.addWidget(frame)
-        main_layout.addStretch(1)  # Adjust as needed
-        self.setLayout(main_layout)
-
-    def clear(self):
-        self.upload_form_widget.clearSelectedFile()
-        self.upload_process_widget.clearSelectedFile()
-
-    def add_file(self):
-        if (
-            self.upload_form_widget.check_input()
-            and self.upload_process_widget.check_input()
-        ):
-            form_file_path = self.upload_form_widget.get_file()
-            upload_form_file(form_file_path, self.form_title)
-
-            process_file_path = self.upload_process_widget.get_file()
-            upload_process_file(process_file_path, self.form_title)
-
-            self.file_edit_success.emit()
-
-            message_box = CustomMessageBox(
-                "Success",
-                f"{self.form_title} has been successfully updated.",
-                parent=self,
-            )
-            message_box.exec_()
-
-            self.clear()
-
-        else:
-            # Display dialog box indicating success
-            message_box = CustomMessageBox(
-                "Error",
-                "Please fill in all required fields before proceeding.",
-                parent=self,
-            )
-            message_box.exec_()
-
-
 class EditFormWidget(QWidget):
     title_input_clicked = pyqtSignal()
     description_input_clicked = pyqtSignal()
-    edit_form_sucess = pyqtSignal()
-
-    def __init__(self, id_num, form_name):
-        super().__init__()
-        self.initUI(id_num, form_name)
-
-    def initUI(self, id_num, form_name):
-        self.id_num = id_num
-        self.form_name = form_name
-
-        conn = sqlite3.connect("kiosk.db")
-        cursor = conn.cursor()
-
-        cursor.execute("SELECT DISTINCT form_category FROM kiosk_forms")
-        self.form_category = [category[0] for category in cursor.fetchall()]
-
-        conn.close()
-
-        # Main layout
-        main_layout = QVBoxLayout(self)
-
-        # Create a square QFrame to contain the form layout
-        frame = QFrame()
-        frame.setFrameShape(QFrame.Box)  # Set fixed width to contain the layout
-        form_layout = QVBoxLayout(frame)  # Set the layout for the frame
-
-        # Title layout
-        title_layout = QVBoxLayout()
-        title_label = QLabel("Form Title:")
-        self.title_input = QLineEdit()
-        self.title_input.mousePressEvent = self.title_clicked
-        self.title_input.setFixedWidth(300)
-        title_layout.addWidget(title_label)
-        title_layout.addWidget(self.title_input)
-
-        # Category layout
-        category_layout = QVBoxLayout()
-        category_label = QLabel("Form Category:")
-        self.category_input = QComboBox()
-        self.category_input.addItems(self.form_category)
-        self.category_input.setFixedWidth(300)
-        category_layout.addWidget(category_label)
-        category_layout.addWidget(self.category_input)
-
-        # Page number layout
-        page_number_layout = QVBoxLayout()
-        pages_label = QLabel("Number of Pages:")
-        self.page_input = QSpinBox()
-        self.page_input.setMinimum(1)
-        self.page_input.setMaximum(10)
-        self.page_input.setFixedWidth(300)
-        page_number_layout.addWidget(pages_label)
-        page_number_layout.addWidget(self.page_input)
-
-        # Upper form layout
-        upper_form_layout = QHBoxLayout()
-        upper_form_layout.addLayout(title_layout)
-        upper_form_layout.addLayout(category_layout)
-        upper_form_layout.addLayout(page_number_layout)
-
-        upper_form_layout.setContentsMargins(15, 0, 15, 0)
-        form_layout.addLayout(upper_form_layout)
-        form_layout.addSpacerItem(
-            QSpacerItem(20, 35, QSizePolicy.Minimum, QSizePolicy.Fixed)
-        )
-
-        # Form description layout
-        form_description_layout = QVBoxLayout()
-        description_label = QLabel("Form Description:")
-        self.description_input = QTextEdit()
-        self.description_input.mousePressEvent = self.description_clicked
-        form_description_layout.addWidget(description_label)
-        form_description_layout.addWidget(self.description_input)
-        form_description_layout.setContentsMargins(95, 0, 95, 0)
-
-        form_layout.addLayout(form_description_layout)
-        form_layout.addSpacerItem(
-            QSpacerItem(20, 35, QSizePolicy.Minimum, QSizePolicy.Fixed)
-        )
-
-        form_layout.addSpacerItem(
-            QSpacerItem(20, 25, QSizePolicy.Minimum, QSizePolicy.Fixed)
-        )
-
-        add_clear_button_layout = QHBoxLayout()
-        self.add_button = QPushButton("Add")
-        self.add_button.clicked.connect(self.add_file)
-
-        self.clear_button = QPushButton("Clear")
-        self.clear_button.clicked.connect(self.clear)
-
-        add_clear_button_layout.addWidget(self.clear_button)
-        add_clear_button_layout.addWidget(self.add_button)
-
-        self.add_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.clear_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-
-        add_clear_button_layout.setAlignment(Qt.AlignRight)
-
-        form_layout.addLayout(add_clear_button_layout)
-
-        # Add the frame to the main layout
-        main_layout.addWidget(frame)
-        main_layout.addStretch(1)  # Adjust as needed
-        self.setLayout(main_layout)
-
-    def title_clicked(self, event):
-        self.title_input_clicked.emit()
-
-    def description_clicked(self, event):
-        self.description_input_clicked.emit()
-
-    def clear(self):
-        self.title_input.clear()
-        self.category_input.setCurrentIndex(0)
-        self.page_input.setValue(1)
-        self.description_input.clear()
-
-    def check_inputs(self):
-        return not any(
-            [
-                self.title_input.text().strip() == "",
-                self.description_input.toPlainText().strip() == "",
-            ]
-        )
-
-    def add_file(self):
-        if self.check_inputs():
-            form_title = self.title_input.text().title().strip()
-            num_page = self.page_input.value()
-            form_description = self.description_input.toPlainText().strip()
-            form_category = self.category_input.currentText()
-
-            self.add_sql_data(
-                str(form_title),
-                int(num_page),
-                str(form_description),
-                str(form_category),
-            )
-
-            self.edit_form_sucess.emit()
-
-            message_box = CustomMessageBox(
-                "Success",
-                f"{form_title} has been successfully updated.",
-                parent=self,
-            )
-            message_box.exec_()
-
-            self.clear()
-
-        else:
-            # Display dialog box indicating success
-            message_box = CustomMessageBox(
-                "Error",
-                "Please fill in all required fields before proceeding.",
-                parent=self,
-            )
-            message_box.exec_()
-
-    def add_sql_data(self, form_title, num_page, form_description, form_category):
-        try:
-            conn = sqlite3.connect("kiosk.db")
-            cursor = conn.cursor()
-
-            cursor.execute(
-                """
-                UPDATE kiosk_forms 
-                SET 
-                    form_name = ?, 
-                    number_of_pages = ?, 
-                    form_description = ?, 
-                    form_category = ?
-                WHERE 
-                    id = ?
-                """,
-                (form_title, num_page, form_description, form_category, self.id_num),
-            )
-
-            # Commit the transaction to save changes
-            conn.commit()
-
-            print("Data updated successfully.")
-
-        except sqlite3.Error as e:
-            print("SQLite error:", e)
-
-        finally:
-            # Close the connection
-            conn.close()
-
-
-class FormFileWidget(QWidget):
-    title_input_clicked = pyqtSignal()
-    description_input_clicked = pyqtSignal()
-    edit_form_file_success = pyqtSignal()
+    edit_form_success = pyqtSignal()
 
     def __init__(self, id_num, form_name):
         super().__init__()
@@ -1110,12 +860,58 @@ class FormFileWidget(QWidget):
         # Create a square QFrame to contain the form layout
         frame = QFrame()
         frame.setFrameShape(QFrame.Box)  # Set fixed width to contain the layout
+        frame.setStyleSheet(
+            """
+            background-color: #FFFFFF;
+            border-radius: 15px;
+            """
+        )
         form_layout = QVBoxLayout(frame)  # Set the layout for the frame
+        form_layout.addSpacerItem(
+            QSpacerItem(20, 10, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
+        
+        # Create a QGraphicsDropShadowEffect
+        shadow_effect = QGraphicsDropShadowEffect()
+        shadow_effect.setBlurRadius(50)
+        shadow_effect.setColor(Qt.gray)
+        shadow_effect.setOffset(0, 0)  # Adjust the shadow's offset as needed
 
+        # Apply the effect to the rectangle
+        frame.setGraphicsEffect(shadow_effect)
+        
         # Title layout
         title_layout = QVBoxLayout()
         title_label = QLabel("Form Title:")
+        title_label.setStyleSheet(
+            """
+            margin-top: 20px;
+            font-family: Roboto;
+            font-size: 16px;
+            font-weight: bold;
+            """
+        )
         self.title_input = QLineEdit()
+        self.title_input.setStyleSheet(
+            """
+            QLineEdit {
+                font-family: Open Sans;
+                border: 2px solid #b3b3b3;
+                border-radius: 10px;
+                padding-left: 10px;
+                padding-right: 10px;
+                padding-top: 15px;
+                padding-bottom: 15px;
+                font-size: 14px;
+                background-color: #ffffff;
+                color: #444444;
+            }
+            QLineEdit:focus {
+                border: 2px solid #7C2F3E;
+                background-color: #ffffff;
+            }
+            """
+        )
         self.title_input.mousePressEvent = self.title_clicked
         self.title_input.setFixedWidth(300)
         title_layout.addWidget(title_label)
@@ -1124,7 +920,42 @@ class FormFileWidget(QWidget):
         # Category layout
         category_layout = QVBoxLayout()
         category_label = QLabel("Form Category:")
+        category_label.setStyleSheet(
+            """
+            margin-top: 20px;
+            font-family: Roboto;
+            font-size: 16px;
+            font-weight: bold;
+            """
+        )
         self.category_input = QComboBox()
+        self.category_input.setStyleSheet(
+            """
+            QComboBox {
+                border: 2px solid #B3B3B3;
+                border-radius: 0px;
+                padding-left: 10px;
+                padding-top: 15px;
+                padding-bottom: 15px;
+                font-family: Roboto;
+                font-size: 14px;
+                color: #444444;
+            }
+            QComboBox:focus {
+                border: 2px solid #7C2F3E;
+            }
+            QComboBox::drop-down {
+                subcontrol-origin: padding;
+                subcontrol-position: center right;  /* Adjusted position */
+                
+                width: 20px;
+            }
+            QComboBox QAbstractItemView {
+                selection-background-color: #5c9ded;
+                font-size: 14px;
+            }
+            """
+        )
         self.category_input.addItems(self.form_category)
         self.category_input.setFixedWidth(300)
         category_layout.addWidget(category_label)
@@ -1133,7 +964,41 @@ class FormFileWidget(QWidget):
         # Page number layout
         page_number_layout = QVBoxLayout()
         pages_label = QLabel("Number of Pages:")
+        pages_label.setStyleSheet(
+            """
+            margin-top: 20px;
+            font-family: Roboto;
+            font-size: 16px;
+            font-weight: bold;
+            """
+        )
         self.page_input = QSpinBox()
+        self.page_input.setStyleSheet(
+            """
+            QSpinBox {
+                border: 2px solid #B3B3B3;
+                padding-left: 10px;
+                padding-top: 15px;
+                padding-bottom: 15px;
+                font-size: 14px;
+                color: #444444;
+                border-radius: 0px;
+            }
+            QSpinBox:focus {
+                border: 2px solid #7C2F3E;
+            }
+            QSpinBox::up-button {
+                subcontrol-origin: border;
+                subcontrol-position: top right;
+                width: 25px;
+            }
+            QSpinBox::down-button {
+                subcontrol-origin: border;
+                subcontrol-position: bottom right;
+                width: 25px;
+            }
+            """
+        )
         self.page_input.setMinimum(1)
         self.page_input.setMaximum(10)
         self.page_input.setFixedWidth(300)
@@ -1155,7 +1020,30 @@ class FormFileWidget(QWidget):
         # Form description layout
         form_description_layout = QVBoxLayout()
         description_label = QLabel("Form Description:")
+        description_label.setStyleSheet(
+            """
+            margin-top: 20px;
+            font-family: Roboto;
+            font-size: 16px;
+            font-weight: bold;
+            """
+        )
         self.description_input = QTextEdit()
+        self.description_input.setStyleSheet(
+            """
+            QTextEdit {
+                border: 2px solid #b3b3b3;
+                border-radius: 10px;
+                padding: 10px;
+                font-size: 14px;
+                color: #444444;
+                background-color: #ffffff;
+            }
+            QTextEdit:focus {
+                border: 2px solid #7C2F3E;
+            }
+            """
+        )
         self.description_input.mousePressEvent = self.description_clicked
         form_description_layout.addWidget(description_label)
         form_description_layout.addWidget(self.description_input)
@@ -1192,20 +1080,62 @@ class FormFileWidget(QWidget):
 
         add_clear_button_layout = QHBoxLayout()
         self.add_button = QPushButton("Add")
+        self.add_button.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #7C2F3E;
+                border-radius: 10px;
+                color: #FAEBD7;
+                padding: 8px 16px;
+                font-size: 14px;
+                font-weight: bold;
+                font-family: Montserrat;
+            }
+            QPushButton:pressed {
+                background-color: #B3B3B3;
+                color: #19323C;
+            }
+            """
+        )
+        self.add_button.setFixedSize(170,65)
         self.add_button.clicked.connect(self.add_file)
 
         self.clear_button = QPushButton("Clear")
+        self.clear_button.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #B3B3B3;
+                border-radius: 10px;
+                color: #19323C;
+                padding: 8px 16px;
+                font-size: 14px;
+                font-weight: bold;
+                font-family: Montserrat;
+            }
+            QPushButton:pressed {
+                background-color: #7C2F3E;
+                color: #FAEBD7;
+            }
+            """
+        )
+        self.clear_button.setFixedSize(170,65)
         self.clear_button.clicked.connect(self.clear)
 
         add_clear_button_layout.addWidget(self.clear_button)
+        add_clear_button_layout.addItem(QSpacerItem(20, 25, QSizePolicy.Minimum, QSizePolicy.Fixed))
         add_clear_button_layout.addWidget(self.add_button)
 
         self.add_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.clear_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
         add_clear_button_layout.setAlignment(Qt.AlignRight)
+        add_clear_button_layout.setContentsMargins(0,0,90,0)
 
         form_layout.addLayout(add_clear_button_layout)
+        
+        form_layout.addSpacerItem(
+            QSpacerItem(20, 15, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
 
         # Add the frame to the main layout
         main_layout.addWidget(frame)
@@ -1663,8 +1593,7 @@ class AdminWindowWidget(QWidget):
         self.tab4 = self.ui4()
         self.tab5 = self.ui5()
         self.tab6 = self.ui6()
-        self.tab7 = self.ui7()
-        self.tab8 = self.ui8()
+
 
         self.active_button = self.btn_1
         # self.update_button_styles()
@@ -1784,10 +1713,8 @@ class AdminWindowWidget(QWidget):
         self.right_widget.addTab(self.tab4, "")
         self.right_widget.addTab(self.tab5, "")
         self.right_widget.addTab(self.tab6, "")
-        self.right_widget.addTab(self.tab7, "")
-        self.right_widget.addTab(self.tab8, "")
 
-        self.right_widget.setCurrentIndex(1)
+        self.right_widget.setCurrentIndex(0)
         self.right_widget.setStyleSheet(
             """
             QTabWidget::pane {
@@ -2502,29 +2429,23 @@ class AdminWindowWidget(QWidget):
 
     def ui6(self):
         main_layout = QVBoxLayout()
-        main_layout.addWidget(QLabel(f"Edit File Contents"))
+        
+        edit_form_label = QLabel("Edit School Forms")
+        edit_form_label.setStyleSheet(
+            """
+            font-family: Montserrat;
+            font-size: 28px;
+            font-weight: bold;
+            color: #19323C;
+            margin-top: 10px;
+            margin-left: 8px;
+            """
+        )
+        main_layout.addWidget(edit_form_label)
 
         main_layout.addSpacerItem(
-            QSpacerItem(20, 25, QSizePolicy.Minimum, QSizePolicy.Fixed)
+            QSpacerItem(20, 10, QSizePolicy.Minimum, QSizePolicy.Fixed)
         )
-
-        self.file_widget = FileWidget(self.id_num, self.form_name)
-        self.file_widget.file_edit_success.connect(self.re_init)
-        main_layout.addWidget(self.file_widget)
-
-        main_layout.addStretch(5)
-        main = QWidget()
-        main.setLayout(main_layout)
-        return main
-
-    def ui7(self):
-        main_layout = QVBoxLayout()
-        main_layout.addWidget(QLabel("Edit Form Contents"))
-
-        main_layout.addSpacerItem(
-            QSpacerItem(20, 25, QSizePolicy.Minimum, QSizePolicy.Fixed)
-        )
-
         self.edit_form_widget = EditFormWidget(self.id_num, self.form_name)
         self.edit_form_widget.title_input_clicked.connect(
             lambda: self.show_virtual_keyboard(self.edit_form_widget.title_input)
@@ -2532,30 +2453,8 @@ class AdminWindowWidget(QWidget):
         self.edit_form_widget.description_input_clicked.connect(
             lambda: self.show_virtual_keyboard(self.edit_form_widget.description_input)
         )
-        self.edit_form_widget.edit_form_sucess.connect(self.re_init)
+        self.edit_form_widget.edit_form_success.connect(self.re_init)
         main_layout.addWidget(self.edit_form_widget)
-
-        main_layout.addStretch(5)
-        main = QWidget()
-        main.setLayout(main_layout)
-        return main
-
-    def ui8(self):
-        main_layout = QVBoxLayout()
-        main_layout.addWidget(QLabel("Edit Form Information and File Contents"))
-
-        main_layout.addSpacerItem(
-            QSpacerItem(20, 25, QSizePolicy.Minimum, QSizePolicy.Fixed)
-        )
-        self.form_file_widget = FormFileWidget(self.id_num, self.form_name)
-        self.form_file_widget.title_input_clicked.connect(
-            lambda: self.show_virtual_keyboard(self.form_file_widget.title_input)
-        )
-        self.form_file_widget.description_input_clicked.connect(
-            lambda: self.show_virtual_keyboard(self.form_file_widget.description_input)
-        )
-        self.form_file_widget.edit_form_file_success.connect(self.re_init)
-        main_layout.addWidget(self.form_file_widget)
 
         main_layout.addStretch(5)
         main = QWidget()
@@ -2768,7 +2667,11 @@ class AdminWindowWidget(QWidget):
         print(index)
         print(form_name)
 
-        # Get the sender of the signal
+        self.delete_message_box = DeleteMessageBox(index, form_name, parent=self)
+        self.delete_message_box.continue_button_clicked.connect(self.delete_form)
+        self.delete_message_box.exec_()
+    
+    def delete_form(self, index, form_name):
         button_widget = self.sender()
         # Remove the button widget from the layout
         self.vbox_layout.removeWidget(button_widget)
@@ -2797,9 +2700,7 @@ class AdminWindowWidget(QWidget):
 
     def edit_form(self, index, form_name):
         self.edit_message_box = EditMessageBox(index, form_name, parent=self)
-        self.edit_message_box.file_button_clicked.connect(self.switch_ui)
-        self.edit_message_box.form_button_clicked.connect(self.switch_ui)
-        self.edit_message_box.form_file_button_clicked.connect(self.switch_ui)
+        self.edit_message_box.edit_form_button_clicked.connect(self.switch_ui)
         self.edit_message_box.exec_()
 
     def update_temp_values(self, index, form_name):
@@ -2813,8 +2714,6 @@ class AdminWindowWidget(QWidget):
         self.tab4 = self.ui4()
         self.tab5 = self.ui5()
         self.tab6 = self.ui6()
-        self.tab7 = self.ui7()
-        self.tab8 = self.ui8()
         self.right_widget.clear()
         self.right_widget.addTab(self.tab1, "")
         self.right_widget.addTab(self.tab2, "")
@@ -2822,8 +2721,6 @@ class AdminWindowWidget(QWidget):
         self.right_widget.addTab(self.tab4, "")
         self.right_widget.addTab(self.tab5, "")
         self.right_widget.addTab(self.tab6, "")
-        self.right_widget.addTab(self.tab7, "")
-        self.right_widget.addTab(self.tab8, "")
 
     def re_init(self):
         # Update UI to reflect new values
@@ -2833,8 +2730,6 @@ class AdminWindowWidget(QWidget):
         self.tab4 = self.ui4()
         self.tab5 = self.ui5()
         self.tab6 = self.ui6()
-        self.tab7 = self.ui7()
-        self.tab8 = self.ui8()
         self.right_widget.clear()
         self.right_widget.addTab(self.tab1, "")
         self.right_widget.addTab(self.tab2, "")
@@ -2842,8 +2737,6 @@ class AdminWindowWidget(QWidget):
         self.right_widget.addTab(self.tab4, "")
         self.right_widget.addTab(self.tab5, "")
         self.right_widget.addTab(self.tab6, "")
-        self.right_widget.addTab(self.tab7, "")
-        self.right_widget.addTab(self.tab8, "")
 
     def logout(self):
         self.setVisible(False)
