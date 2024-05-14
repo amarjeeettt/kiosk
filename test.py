@@ -1,6 +1,5 @@
-from PyQt5.QtWidgets import *
 import sys
-
+from PyQt5.QtWidgets import *
 
 class Window(QMainWindow):
     def __init__(self):
@@ -35,6 +34,8 @@ class Window(QMainWindow):
         self.btn_3.clicked.connect(self.button3)
         self.btn_4.clicked.connect(self.button4)
 
+        self.active_button = self.btn_1  # Set the initial active button
+
         # add tabs
         self.tab1 = self.ui1()
         self.tab2 = self.ui2()
@@ -64,7 +65,20 @@ class Window(QMainWindow):
         self.right_widget.addTab(self.tab4, '')
 
         self.right_widget.setCurrentIndex(0)
-        self.right_widget.setStyleSheet('''QTabBar::tab{width: 0; height: 0; margin: 0; padding: 0; border: none;}''')
+        self.right_widget.setStyleSheet('''
+            QTabWidget::pane {
+                border: 1px solid #ccc;
+                border-radius: 10px; /* Adjust the border-radius value as needed */
+                padding: 5px;
+            }
+            QTabBar::tab {
+                width: 0;
+                height: 0;
+                margin: 0;
+                padding: 0;
+                border: none;
+            }
+        ''')
 
         main_layout = QHBoxLayout()
         main_layout.addWidget(left_widget)
@@ -75,20 +89,75 @@ class Window(QMainWindow):
         main_widget.setLayout(main_layout)
         self.setCentralWidget(main_widget)
 
+        # Initial button style update
+        self.update_button_styles()
+
+    def update_button_styles(self):
+        # Define the common style for all buttons
+        button_style = """
+        QPushButton#left_button {
+            border: none;
+            background-color: #f0f0f0;
+            padding: 10px;
+        }
+        QPushButton#left_button:hover {
+            background-color: #d0d0d0;
+        }
+        QPushButton#left_button:focus {
+            outline: none;
+        }
+        """
+        # Define the active style for the active button
+        active_style = """
+        QPushButton#left_button[active="true"] {
+            border-bottom: 2px solid #0000ff;
+        }
+        """
+
+        # Apply the styles
+        self.setStyleSheet(button_style + active_style)
+
+        # Set the active property for the active button
+        buttons = [self.btn_1, self.btn_2, self.btn_3, self.btn_4]
+        for button in buttons:
+            button.setProperty('active', False)
+            button.style().unpolish(button)
+            button.style().polish(button)
+
+        self.active_button.setProperty('active', True)
+        self.active_button.style().unpolish(self.active_button)
+        self.active_button.style().polish(self.active_button)
+
+    # Update active button method
+    def set_active_button(self, button):
+        self.active_button.setProperty('active', False)
+        self.active_button.style().unpolish(self.active_button)
+        self.active_button.style().polish(self.active_button)
+
+        self.active_button = button
+
+        self.active_button.setProperty('active', True)
+        self.active_button.style().unpolish(self.active_button)
+        self.active_button.style().polish(self.active_button)
+
     # ----------------- 
     # buttons
 
     def button1(self):
         self.right_widget.setCurrentIndex(0)
+        self.set_active_button(self.btn_1)
 
     def button2(self):
         self.right_widget.setCurrentIndex(1)
+        self.set_active_button(self.btn_2)
 
     def button3(self):
         self.right_widget.setCurrentIndex(2)
+        self.set_active_button(self.btn_3)
 
     def button4(self):
         self.right_widget.setCurrentIndex(3)
+        self.set_active_button(self.btn_4)
 
     # -----------------
     # pages
@@ -167,7 +236,6 @@ class Window(QMainWindow):
         new_value3 = 'Updated'
         # Call update_temp_values() with new values
         self.update_temp_values(new_value1, new_value2, new_value3)
-
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
