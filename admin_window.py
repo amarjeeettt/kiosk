@@ -1,5 +1,6 @@
 import os
 import sqlite3
+import datetime
 from PyQt5.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
@@ -23,6 +24,9 @@ from PyQt5.QtWidgets import (
     QTextEdit,
     QFileDialog,
     QDialog,
+    QToolButton,
+    QMenu,
+    QAction,
 )
 from PyQt5.QtCore import Qt, QSize, pyqtSignal
 from PyQt5.QtGui import QPixmap, QIcon
@@ -133,11 +137,12 @@ class EditMessageBox(QDialog):
             """
         )
         button_layout.addWidget(form_file_button, alignment=Qt.AlignCenter)
-        button_layout.setContentsMargins(45,0,65,0)
+        button_layout.setContentsMargins(45, 0, 65, 0)
 
     def edit_form_clicked(self):
         self.edit_form_button_clicked.emit(5, self.index, self.form_name)
         self.accept()
+
 
 class DeleteMessageBox(QDialog):
     continue_button_clicked = pyqtSignal(int, str)
@@ -212,11 +217,12 @@ class DeleteMessageBox(QDialog):
             """
         )
         button_layout.addWidget(continue_button, alignment=Qt.AlignCenter)
-        button_layout.setContentsMargins(55,0,65,0)
+        button_layout.setContentsMargins(55, 0, 65, 0)
 
     def continue_clicked(self):
         self.continue_button_clicked.emit(self.index, self.form_name)
         self.close()
+
 
 class DeleteButtonWidget(QWidget):
     # Define a new signal
@@ -699,7 +705,7 @@ class FormWidget(QWidget):
             }
             """
         )
-        self.add_button.setFixedSize(170,65)
+        self.add_button.setFixedSize(170, 65)
         self.add_button.clicked.connect(self.add_file)
 
         self.clear_button = QPushButton("Clear")
@@ -720,21 +726,23 @@ class FormWidget(QWidget):
             }
             """
         )
-        self.clear_button.setFixedSize(170,65)
+        self.clear_button.setFixedSize(170, 65)
         self.clear_button.clicked.connect(self.clear)
 
         add_clear_button_layout.addWidget(self.clear_button)
-        add_clear_button_layout.addItem(QSpacerItem(20, 25, QSizePolicy.Minimum, QSizePolicy.Fixed))
+        add_clear_button_layout.addItem(
+            QSpacerItem(20, 25, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
         add_clear_button_layout.addWidget(self.add_button)
 
         self.add_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.clear_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
         add_clear_button_layout.setAlignment(Qt.AlignRight)
-        add_clear_button_layout.setContentsMargins(0,0,90,0)
+        add_clear_button_layout.setContentsMargins(0, 0, 90, 0)
 
         form_layout.addLayout(add_clear_button_layout)
-        
+
         form_layout.addSpacerItem(
             QSpacerItem(20, 15, QSizePolicy.Minimum, QSizePolicy.Fixed)
         )
@@ -833,6 +841,7 @@ class FormWidget(QWidget):
             )
             message_box.exec_()
 
+
 class EditFormWidget(QWidget):
     title_input_clicked = pyqtSignal()
     description_input_clicked = pyqtSignal()
@@ -870,7 +879,7 @@ class EditFormWidget(QWidget):
         form_layout.addSpacerItem(
             QSpacerItem(20, 10, QSizePolicy.Minimum, QSizePolicy.Fixed)
         )
-        
+
         # Create a QGraphicsDropShadowEffect
         shadow_effect = QGraphicsDropShadowEffect()
         shadow_effect.setBlurRadius(50)
@@ -879,7 +888,7 @@ class EditFormWidget(QWidget):
 
         # Apply the effect to the rectangle
         frame.setGraphicsEffect(shadow_effect)
-        
+
         # Title layout
         title_layout = QVBoxLayout()
         title_label = QLabel("Form Title:")
@@ -1097,7 +1106,7 @@ class EditFormWidget(QWidget):
             }
             """
         )
-        self.add_button.setFixedSize(170,65)
+        self.add_button.setFixedSize(170, 65)
         self.add_button.clicked.connect(self.add_file)
 
         self.clear_button = QPushButton("Clear")
@@ -1118,21 +1127,23 @@ class EditFormWidget(QWidget):
             }
             """
         )
-        self.clear_button.setFixedSize(170,65)
+        self.clear_button.setFixedSize(170, 65)
         self.clear_button.clicked.connect(self.clear)
 
         add_clear_button_layout.addWidget(self.clear_button)
-        add_clear_button_layout.addItem(QSpacerItem(20, 25, QSizePolicy.Minimum, QSizePolicy.Fixed))
+        add_clear_button_layout.addItem(
+            QSpacerItem(20, 25, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
         add_clear_button_layout.addWidget(self.add_button)
 
         self.add_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.clear_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
         add_clear_button_layout.setAlignment(Qt.AlignRight)
-        add_clear_button_layout.setContentsMargins(0,0,90,0)
+        add_clear_button_layout.setContentsMargins(0, 0, 90, 0)
 
         form_layout.addLayout(add_clear_button_layout)
-        
+
         form_layout.addSpacerItem(
             QSpacerItem(20, 15, QSizePolicy.Minimum, QSizePolicy.Fixed)
         )
@@ -1329,7 +1340,9 @@ class UploadFormWidget(QWidget):
 
         # Set the layout of UploadFormWidget
         self.setLayout(QVBoxLayout(self))
-        self.layout().addWidget(self.frame)  # Add the frame to UploadFormWidget's layout
+        self.layout().addWidget(
+            self.frame
+        )  # Add the frame to UploadFormWidget's layout
 
     def open_file_explorer(self):
         options = QFileDialog.Options()
@@ -1464,7 +1477,9 @@ class UploadProcessWidget(QWidget):
 
         # Set the layout of UploadFormWidget
         self.setLayout(QVBoxLayout(self))
-        self.layout().addWidget(self.frame)  # Add the frame to UploadFormWidget's layout
+        self.layout().addWidget(
+            self.frame
+        )  # Add the frame to UploadFormWidget's layout
 
     def open_file_explorer(self):
         options = QFileDialog.Options()
@@ -1526,7 +1541,7 @@ class CustomButton(QPushButton):
             font-size: 14px;
             font-weight: bold;
             color: #19323C;
-            margin-right: 25px;
+            padding-right: 3px;
             """
         )
 
@@ -1537,13 +1552,177 @@ class CustomButton(QPushButton):
 
         self.image_label = QLabel()
         self.image_label.setPixmap(scaled_pixmap)
-        self.image_label.setStyleSheet("margin-left: 15px;")
+        self.image_label.setStyleSheet("margin-left: 25px;")
 
         layout.addWidget(self.image_label)
-        layout.addWidget(self.label, alignment=Qt.AlignRight)
+        layout.addWidget(self.label, alignment=Qt.AlignLeft)
 
         self.setFocusPolicy(Qt.NoFocus)
         self.setLayout(layout)
+        
+import sqlite3
+import datetime
+from PyQt5.QtWidgets import QPushButton, QVBoxLayout, QMenu, QAction
+
+class DropButton(QPushButton):
+    def __init__(self):
+        super().__init__()
+
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+
+        # Create a QMenu
+        self.menu = QMenu(self)
+
+        # Create actions for the menu
+        self.action1 = QAction("Weekly", self)
+        self.action2 = QAction("Monthly", self)
+        self.action3 = QAction("Yearly", self)
+
+        # Connect actions to their respective slots
+        self.action1.triggered.connect(self.sort_weekly)
+        self.action2.triggered.connect(self.sort_monthly)
+        self.action3.triggered.connect(self.sort_yearly)
+
+        # Add actions to the menu
+        self.menu.addAction(self.action1)
+        self.menu.addAction(self.action2)
+        self.menu.addAction(self.action3)
+
+        self.setMenu(self.menu)
+
+        # Use a stylesheet to make the menu appear below the button
+        self.menu.setStyleSheet("""
+            QMenu {
+                left: 0;
+            }
+        """)
+
+        # Set initial state to "Weekly"
+        self.setText("Weekly")
+        self.sort_weekly()
+
+    def sort_weekly(self):
+        self.setText("Weekly")
+
+        # Connect to the database
+        conn = sqlite3.connect('kiosk.db')
+        cursor = conn.cursor()
+
+        # Get the current week's start and end dates
+        current_date = datetime.datetime.now()
+        start_of_week = current_date - datetime.timedelta(days=current_date.weekday())
+        end_of_week = start_of_week + datetime.timedelta(days=6)
+
+        # Execute the SQL query to sum the total amount based on the current week
+        cursor.execute("""
+            SELECT SUM(total_amount) AS total_amount
+            FROM kiosk_print_results
+            WHERE date_printed BETWEEN ? AND ?
+        """, (start_of_week.strftime('%Y-%m-%d'), end_of_week.strftime('%Y-%m-%d')))
+
+        # Fetch the result
+        total_amount = cursor.fetchone()[0]
+
+        # Print the result
+        print(f"Total Amount for Current Week: {total_amount}")
+
+        # Close the cursor and database connection
+        cursor.close()
+        conn.close()
+
+    def sort_monthly(self):
+        self.setText("Monthly")
+
+        # Connect to the database
+        conn = sqlite3.connect('kiosk.db')
+        cursor = conn.cursor()
+
+        # Get the current month and year
+        current_month = datetime.datetime.now().strftime('%Y-%m')
+
+        # Execute the SQL query to sum the total amount based on the current month
+        cursor.execute("""
+            SELECT SUM(total_amount) AS total_amount
+            FROM kiosk_print_results
+            WHERE strftime('%Y-%m', date_printed) = ?
+        """, (current_month,))
+
+        # Fetch the result
+        total_amount = cursor.fetchone()[0]
+
+        # Print the result
+        print(f"Total Amount for Current Month: {total_amount}")
+
+        # Close the cursor and database connection
+        cursor.close()
+        conn.close()
+
+    def sort_yearly(self):
+        self.setText("Yearly")
+
+        # Connect to the database
+        conn = sqlite3.connect('kiosk.db')
+        cursor = conn.cursor()
+
+        # Get the current year
+        current_year = datetime.datetime.now().strftime('%Y')
+
+        # Execute the SQL query to sum the total amount based on the current year
+        cursor.execute("""
+            SELECT SUM(total_amount) AS total_amount
+            FROM kiosk_print_results
+            WHERE strftime('%Y', date_printed) = ?
+        """, (current_year,))
+
+        # Fetch the result
+        total_amount = cursor.fetchone()[0]
+
+        # Print the result
+        print(f"Total Amount for Current Year: {total_amount}")
+
+        # Close the cursor and database connection
+        cursor.close()
+        conn.close()
+
+    
+
+
+class TotalAmountWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+
+        # Create a QFrame
+        frame = QFrame(self)
+        frame.setFrameShape(QFrame.StyledPanel)
+
+        # Create a layout for the frame
+        main_layout = QVBoxLayout(frame)
+
+        # Create labels
+        top_layout = QHBoxLayout()
+        image_label = QLabel()
+        
+        button = DropButton()
+        button.setFixedSize(120,40)
+        
+        top_layout.addWidget(image_label)
+        top_layout.addWidget(button)
+        
+        # self.total = button.return_results()
+        
+        text_label = QLabel('Total Amount of Forms Printed:')    
+        total_label = QLabel("")    
+
+        main_layout.addLayout(top_layout)
+        main_layout.addWidget(total_label)
+        main_layout.addWidget(text_label)
+        
+        frame.setLayout(main_layout)
+        self.setLayout(QVBoxLayout(self))
+        self.layout().addWidget(frame)
+        
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
 
 class AdminWindowWidget(QWidget):
@@ -1564,28 +1743,6 @@ class AdminWindowWidget(QWidget):
         self.virtual_keyboard.setWindowFlags(Qt.Window | Qt.WindowStaysOnTopHint)
         self.virtual_keyboard.hide()
 
-        # add all widgets
-
-        self.btn_1 = CustomButton("Dashboard", "./img/static/dashboard.png", self)
-        self.btn_1.setFixedHeight(80)
-        self.btn_2 = CustomButton("Add Forms", "./img/static/add_form.png", self)
-        self.btn_2.setFixedHeight(80)
-        self.btn_3 = CustomButton("Edit Forms", "./img/static/edit_form.png", self)
-        self.btn_3.setFixedHeight(80)
-        self.btn_4 = CustomButton("Delete Forms", "./img/static/delete_form.png", self)
-        self.btn_4.setFixedHeight(80)
-        self.btn_5 = CustomButton("Settings", "./img/static/settings.png", self)
-        self.btn_5.setFixedHeight(80)
-        self.btn_6 = CustomButton("Logout", "./img/static/logout.png", self)
-        self.btn_6.setFixedHeight(80)
-
-        self.btn_1.clicked.connect(self.button1)
-        self.btn_2.clicked.connect(self.button2)
-        self.btn_3.clicked.connect(self.button3)
-        self.btn_4.clicked.connect(self.button4)
-        self.btn_5.clicked.connect(self.button5)
-        self.btn_6.clicked.connect(self.logout)
-
         # add tabs
         self.tab1 = self.ui1()
         self.tab2 = self.ui2()
@@ -1594,11 +1751,17 @@ class AdminWindowWidget(QWidget):
         self.tab5 = self.ui5()
         self.tab6 = self.ui6()
 
+        self.setup_ui()
+
+        self.btn_1.clicked.connect(self.button1)
+        self.btn_2.clicked.connect(self.button2)
+        self.btn_3.clicked.connect(self.button3)
+        self.btn_4.clicked.connect(self.button4)
+        self.btn_5.clicked.connect(self.button5)
+        self.btn_6.clicked.connect(self.logout)
 
         self.active_button = self.btn_1
-        # self.update_button_styles()
-
-        self.setup_ui()
+        self.update_button_styles()
 
     def setup_ui(self):
         # connect database
@@ -1691,17 +1854,60 @@ class AdminWindowWidget(QWidget):
 
         layout.addLayout(rectangle_layout)
 
-        left_layout = QVBoxLayout()
-        left_layout.addWidget(self.btn_1)
-        left_layout.addWidget(self.btn_2)
-        left_layout.addWidget(self.btn_3)
-        left_layout.addWidget(self.btn_4)
-        left_layout.addWidget(self.btn_5)
-        left_layout.addWidget(self.btn_6)
-        left_layout.addStretch(5)
-        left_layout.setSpacing(20)
+        self.btn_1 = CustomButton("Dashboard", "./img/static/dashboard.png", self)
+        self.btn_1.setFixedHeight(80)
+        self.btn_2 = CustomButton("Add Forms", "./img/static/add_form.png", self)
+        self.btn_2.setFixedHeight(80)
+        self.btn_3 = CustomButton("Edit Forms", "./img/static/edit_form.png", self)
+        self.btn_3.setFixedHeight(80)
+        self.btn_4 = CustomButton("Delete Forms", "./img/static/delete_form.png", self)
+        self.btn_4.setFixedHeight(80)
+        self.btn_5 = CustomButton("Settings", "./img/static/settings.png", self)
+        self.btn_5.setFixedHeight(80)
+        self.btn_6 = CustomButton("Logout", "./img/static/logout.png", self)
+        self.btn_6.setFixedHeight(80)
+
+        self.btn_1.setStyleSheet(
+            """
+            QPushButton {
+                border: none;
+                background-color: #D8C995;
+                border-radius: 10px;
+            }
+            """
+        )
+
+        default_btn_css = """
+            QPushButton {
+                border: none;
+                border-radius: 10px;
+                background-color: transparent;
+            }
+        """
+
+        self.btn_2.setStyleSheet(default_btn_css)
+        self.btn_3.setStyleSheet(default_btn_css)
+        self.btn_4.setStyleSheet(default_btn_css)
+        self.btn_5.setStyleSheet(default_btn_css)
+        self.btn_6.setStyleSheet(default_btn_css)
+
+        self.left_layout = QVBoxLayout()
+        self.sidebar_buttons = [
+            self.btn_1,
+            self.btn_2,
+            self.btn_3,
+            self.btn_4,
+            self.btn_5,
+            self.btn_6,
+        ]
+
+        for button in self.sidebar_buttons:
+            self.left_layout.addWidget(button)
+
+        self.left_layout.addStretch(5)
+        self.left_layout.setSpacing(20)
         left_widget = QWidget()
-        left_widget.setLayout(left_layout)
+        left_widget.setLayout(self.left_layout)
         left_widget.setFixedWidth(250)
 
         self.right_widget = QTabWidget()
@@ -1751,19 +1957,29 @@ class AdminWindowWidget(QWidget):
     # buttons
 
     def button1(self):
+        self.active_button = self.btn_1
         self.right_widget.setCurrentIndex(0)
+        self.update_button_styles()
 
     def button2(self):
+        self.active_button = self.btn_2
         self.right_widget.setCurrentIndex(1)
+        self.update_button_styles()
 
     def button3(self):
+        self.active_button = self.btn_3
         self.right_widget.setCurrentIndex(2)
+        self.update_button_styles()
 
     def button4(self):
+        self.active_button = self.btn_4
         self.right_widget.setCurrentIndex(3)
+        self.update_button_styles()
 
     def button5(self):
+        self.active_button = self.btn_5
         self.right_widget.setCurrentIndex(4)
+        self.update_button_styles()
 
     # -----------------
     # pages
@@ -1772,128 +1988,29 @@ class AdminWindowWidget(QWidget):
         main_layout = QVBoxLayout()
 
         title_label = QLabel("Dashboard")
+        title_label.setStyleSheet(
+            """
+            font-family: Montserrat;
+            font-size: 28px;
+            font-weight: bold;
+            color: #19323C;
+            margin-top: 10px;
+            margin-left: 8px;
+            """
+        )
         main_layout.addWidget(title_label)
         main_layout.addSpacerItem(
-            QSpacerItem(20, 45, QSizePolicy.Minimum, QSizePolicy.Fixed)
+            QSpacerItem(20, 25, QSizePolicy.Minimum, QSizePolicy.Fixed)
         )
+        
+        total_amount_widget = TotalAmountWidget()
+        total_amount_widget.setFixedSize(380, 140)
+        main_layout.addWidget(total_amount_widget)
 
-        dashboard_layout = QHBoxLayout()
-
-        # Add rectangle frame with labels
-        rectangle_frame = QFrame()
-        rectangle_frame.setFixedSize(380, 150)
-        rectangle_frame.setFrameShape(QFrame.StyledPanel)
-        rectangle_frame.setStyleSheet(
-            "background-color: #FFFFFF; border: 2px solid #000000; border-radius: 5px;"
-        )
-        rectangle_layout = QHBoxLayout(rectangle_frame)
-
-        label1 = QLabel("Label 1")
-        label2 = QLabel("Label 2")
-        label3 = QLabel("Label 3")
-
-        rectangle_layout.addWidget(label1)
-
-        # Create a QVBoxLayout for label2 and label3
-        text_layout = QVBoxLayout()
-        text_layout.addWidget(label2)
-        text_layout.addWidget(label3)
-
-        # Add text_layout to rectangle_layouts
-        rectangle_layout.addLayout(text_layout)
-
-        # Set size policy of the rectangle frame
-        rectangle_frame.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-
-        dashboard_layout.addWidget(rectangle_frame)
-
-        # Add second rectangle frame with labels
-        rectangle_frame2 = QFrame()
-        rectangle_frame2.setFixedSize(380, 150)
-        rectangle_frame2.setFrameShape(QFrame.StyledPanel)
-        rectangle_frame2.setStyleSheet(
-            "background-color: #FFFFFF; border: 2px solid #000000; border-radius: 5px;"
-        )
-        rectangle_layout2 = QHBoxLayout(rectangle_frame2)
-
-        label4 = QLabel("Label 4")
-        label5 = QLabel("Label 5")
-        label6 = QLabel("Label 6")
-
-        rectangle_layout2.addWidget(label4)
-
-        # Create a QVBoxLayout for label5 and label6
-        text_layout2 = QVBoxLayout()
-        text_layout2.addWidget(label5)
-        text_layout2.addWidget(label6)
-
-        # Add text_layout2 to rectangle_layout2
-        rectangle_layout2.addLayout(text_layout2)
-
-        # Set size policy of the second rectangle frame
-        rectangle_frame2.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-
-        dashboard_layout.addWidget(rectangle_frame2)
-
-        # Add second rectangle frame with labels
-        rectangle_frame3 = QFrame()
-        rectangle_frame3.setFixedSize(380, 150)
-        rectangle_frame3.setFrameShape(QFrame.StyledPanel)
-        rectangle_frame3.setStyleSheet(
-            "background-color: #FFFFFF; border: 2px solid #000000; border-radius: 5px;"
-        )
-        rectangle_layout3 = QHBoxLayout(rectangle_frame3)
-
-        label7 = QLabel("Label 4")
-        label8 = QLabel("Label 5")
-        label9 = QLabel("Label 6")
-
-        rectangle_layout3.addWidget(label7)
-
-        # Create a QVBoxLayout for label5 and label6
-        text_layout3 = QVBoxLayout()
-        text_layout3.addWidget(label8)
-        text_layout3.addWidget(label9)
-
-        # Add text_layout2 to rectangle_layout2
-        rectangle_layout3.addLayout(text_layout3)
-
-        # Set size policy of the second rectangle frame
-        rectangle_frame3.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-
-        dashboard_layout.addWidget(rectangle_frame3)
-        dashboard_layout.setAlignment(Qt.AlignLeft)
-
-        main_layout.addLayout(dashboard_layout)
         main_layout.addSpacerItem(
             QSpacerItem(20, 25, QSizePolicy.Minimum, QSizePolicy.Fixed)
         )
-
-        button_layout = QHBoxLayout()
-
-        self.btn_year = QPushButton("Year")
-        self.btn_month = QPushButton("Month")
-        self.btn_day = QPushButton("Day")
-
-        self.btn_year.setFixedSize(180, 50)
-        self.btn_month.setFixedSize(180, 50)
-        self.btn_day.setFixedSize(180, 50)
-
-        self.btn_year.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.btn_month.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.btn_day.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-
-        button_layout.addWidget(self.btn_year)
-        button_layout.addWidget(self.btn_month)
-        button_layout.addWidget(self.btn_day)
-
-        button_layout.setContentsMargins(780, 0, 0, 0)
-
-        main_layout.addLayout(button_layout, Qt.AlignRight)
-        main_layout.addSpacerItem(
-            QSpacerItem(20, 25, QSizePolicy.Minimum, QSizePolicy.Fixed)
-        )
-
+        
         # Create a table
         self.tableWidget = QTableWidget()
         self.tableWidget.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
@@ -1990,7 +2107,7 @@ class AdminWindowWidget(QWidget):
             margin-left: 8px;
             """
         )
-        
+
         main_layout.addWidget(edit_label)
         main_layout.addSpacerItem(
             QSpacerItem(20, 25, QSizePolicy.Minimum, QSizePolicy.Fixed)
@@ -2073,7 +2190,7 @@ class AdminWindowWidget(QWidget):
         )
 
         main_layout.addWidget(delete_label)
-        
+
         main_layout.addSpacerItem(
             QSpacerItem(20, 25, QSizePolicy.Minimum, QSizePolicy.Fixed)
         )
@@ -2429,7 +2546,7 @@ class AdminWindowWidget(QWidget):
 
     def ui6(self):
         main_layout = QVBoxLayout()
-        
+
         edit_form_label = QLabel("Edit School Forms")
         edit_form_label.setStyleSheet(
             """
@@ -2460,6 +2577,30 @@ class AdminWindowWidget(QWidget):
         main = QWidget()
         main.setLayout(main_layout)
         return main
+
+    def update_button_styles(self):
+        # Reset style for all buttons
+        for button in self.sidebar_buttons:
+            button.setStyleSheet(
+                """
+                QPushButton {
+                    border: none;
+                    border-radius: 10px;
+                    background-color: transparent;
+                }
+                """
+            )
+
+        # Set active button style
+        self.active_button.setStyleSheet(
+            """
+            QPushButton {
+                border: none;
+                background-color: #D8C995;
+                border-radius: 10px;
+            }
+            """
+        )
 
     def show_virtual_keyboard(self, title_input):
         self.virtual_keyboard.display(title_input)
@@ -2600,6 +2741,7 @@ class AdminWindowWidget(QWidget):
                 for row_num, row_data in enumerate(data):
                     for col_num, col_data in enumerate(row_data):
                         item = QTableWidgetItem(str(col_data))
+                        item.setTextAlignment(Qt.AlignCenter)
                         self.tableWidget.setItem(row_num, col_num, item)
 
             header = self.tableWidget.horizontalHeader()
@@ -2670,7 +2812,7 @@ class AdminWindowWidget(QWidget):
         self.delete_message_box = DeleteMessageBox(index, form_name, parent=self)
         self.delete_message_box.continue_button_clicked.connect(self.delete_form)
         self.delete_message_box.exec_()
-    
+
     def delete_form(self, index, form_name):
         button_widget = self.sender()
         # Remove the button widget from the layout
