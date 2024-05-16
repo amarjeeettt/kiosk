@@ -14,15 +14,16 @@ from PyQt5.QtCore import Qt, pyqtSignal
 class AdminLoginWidget(QWidget):
     home_screen_backbt_clicked = pyqtSignal()
     login_clicked = pyqtSignal()
+
     def __init__(self, parent):
         super().__init__(parent)
-        
+
         self.setup_ui()
 
     def setup_ui(self):
         layout = QVBoxLayout(self)
         # layout.setAlignment(Qt.AlignCenter)
-        
+
         # Add back button to the layout
         back_button_layout = QHBoxLayout()
         self.back_bt = QPushButton("Back")
@@ -50,7 +51,7 @@ class AdminLoginWidget(QWidget):
         self.back_bt.clicked.connect(self.go_back)
         back_button_layout.addWidget(self.back_bt, alignment=Qt.AlignLeft)
         layout.addLayout(back_button_layout)
-        
+
         # Connect database
         conn = sqlite3.connect("kiosk.db")
         cursor = conn.cursor()
@@ -59,7 +60,7 @@ class AdminLoginWidget(QWidget):
         self.admin_password = cursor.fetchone()[0]
 
         conn.close()
-        
+
         # Create a white background square layout
         self.square_layout = QWidget()
         self.square_layout.setStyleSheet(
@@ -111,10 +112,9 @@ class AdminLoginWidget(QWidget):
         # Add input field and login button to the keypad layout
         self.keypad_layout.addWidget(self.input_edit, 0, 0, 1, 3)
         self.keypad_layout.addWidget(self.login_button, 5, 1)
-        
-        
+
         layout.addWidget(self.square_layout, alignment=Qt.AlignCenter)
-        
+
     def apply_minimalist_style(self, button):
         button.setStyleSheet(
             "QPushButton {"
@@ -166,7 +166,7 @@ class AdminLoginWidget(QWidget):
         else:
             current_text = self.input_edit.text()
             self.input_edit.setText(current_text + clicked_text)
-    
+
     def go_back(self):
         self.setVisible(False)
         self.input_edit.clear()

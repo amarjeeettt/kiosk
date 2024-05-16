@@ -26,15 +26,15 @@ def upload_form_file(filepath, form_title):
 
         # Construct the destination path
         destination_path = os.path.join(destination_directory, filename)
-        
+
         # Remove the existing file if it exists
         if os.path.exists(destination_path):
             os.remove(destination_path)
-        
+
         # Copy the file to the destination directory
         shutil.copy(filepath, destination_path)
         print(f"File '{filename}' uploaded to '{destination_path}'")
-        
+
         new_form_name = os.path.join(destination_directory, f"{form_title}.pdf")
         rename_file(destination_path, new_form_name)
         convert_pdf_to_jpg(new_form_name, form_title)
@@ -59,7 +59,7 @@ def upload_process_file(filepath, form_title):
 
         # Construct the destination path
         destination_path = os.path.join(destination_directory, filename)
-        
+
         if os.path.exists(destination_path):
             os.remove(destination_path)
 

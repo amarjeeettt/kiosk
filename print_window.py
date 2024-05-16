@@ -17,8 +17,9 @@ from PyQt5.QtCore import Qt, QTimer, QRectF, pyqtSignal
 from PyQt5.QtGui import QPixmap, QMovie, QPainter, QColor, QPen
 
 
-
 class PrintMessageBox(QDialog):
+    go_back_to_home = pyqtSignal()
+
     def __init__(self, title, num_copy, num_pages, total, is_total_equal, parent=None):
         super().__init__(parent)
         self.setFixedSize(600, 900)
@@ -48,11 +49,20 @@ class PrintMessageBox(QDialog):
         self.reject()
 
     def create_print_widget(self):
-        self.print_progress_widget = PrintInProgress(self, self.title, self.num_copy, self.num_pages, self.total)
+        self.print_progress_widget = PrintInProgress(
+            self, self.title, self.num_copy, self.num_pages, self.total
+        )
         self.layout.addWidget(self.print_progress_widget)
+        self.print_progress_widget.go_back.connect(self.go_back_home)
+
+    def go_back_home(self):
+        self.go_back_to_home.emit()
+        self.close()
 
 
 class PrintInProgress(QWidget):
+    go_back = pyqtSignal()
+
     def __init__(self, parent, title, num_copy, num_pages, total):
         super().__init__(parent)
         self.setup_ui(title, num_copy, num_pages, total)
@@ -104,28 +114,32 @@ class PrintInProgress(QWidget):
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_label)
         self.timer.start(500)
-        
-        QTimer.singleShot(3000, lambda: self.print_document(title, num_copy, num_pages, total))
-        
-    
+
+        QTimer.singleShot(
+            3000, lambda: self.print_document(title, num_copy, num_pages, total)
+        )
+
     def print_document(self, title, num_copy, num_pages, total):
         bondpaper_left = num_copy * num_pages
-        
-        try: 
+
+        try:
             conn = cups.Connection()
             printers = conn.getPrinters()
-            
+
             if not printers:
-                raise Exception('No Printers Available.')
-            
+                raise Exception("No Printers Available.")
+
             printer_name = list(printers.keys())[0]
-            
+
             printer_attributes = conn.getPrinterAttributes(printer_name)
-            if 'printer-state' not in printer_attributes or printer_attributes['printer-state'] != 3:
-                raise Exception('Printer is not connected or offline.')
-            
+            if (
+                "printer-state" not in printer_attributes
+                or printer_attributes["printer-state"] != 3
+            ):
+                raise Exception("Printer is not connected or offline.")
+
             file_path = f"./forms/{title}.pdf"
-            
+
             # Define printer options (media)
             printer_options = {
                 "media": "legal",  # Set media to legal size
@@ -137,13 +151,13 @@ class PrintInProgress(QWidget):
                         printer_name, file_path, "Print Job", printer_options
                     )
                     print("Print job submitted with ID:", job_id)
-                    
+
                     if self.check_print_job_status(job_id):
                         self.print_result = "Success"
                     else:
                         self.print_result = "Failed"
                         break
-                    
+
                 except (cups.IPPError, cups.ServerError, cups.IPPConnectionError) as e:
                     self.print_result = "Failed"
                     raise Exception(e)
@@ -159,9 +173,9 @@ class PrintInProgress(QWidget):
             with sqlite3.connect("kiosk.db") as conn_sqlite:
                 cursor = conn_sqlite.cursor()
 
-                if self.print_result == 'Success':
+                if self.print_result == "Success":
                     cursor.execute(
-                        "UPDATE kiosk_settings SET bondpaper_quantity = bondpaper_quantity - ?, coins_left = 0", 
+                        "UPDATE kiosk_settings SET bondpaper_quantity = bondpaper_quantity - ?, coins_left = 0",
                         (bondpaper_left,),
                     )
                     self.print_success()
@@ -184,51 +198,92 @@ class PrintInProgress(QWidget):
                 self.bondpaper_quantity = cursor.fetchone()[0]
 
                 print(self.bondpaper_quantity)
-    
+
     def check_print_job_status(self, job_id):
         try:
-            completed_jobs = subprocess.check_output(["lpstat", "-W", "completed", "-o"]).decode("utf-8")
+            completed_jobs = subprocess.check_output(
+                ["lpstat", "-W", "completed", "-o"]
+            ).decode("utf-8")
             if job_id in completed_jobs:
                 print(f"Print job with ID {job_id} was successful!")
                 return True
             else:
-                print(f"Print job with ID {job_id} was not found or encountered an error.")
+                print(
+                    f"Print job with ID {job_id} was not found or encountered an error."
+                )
                 return False
         except subprocess.CalledProcessError as e:
             print("Error executing lpstat command:", e)
             return False
-    
+
     def print_success(self):
         self.movie.stop()
         pixmap = QPixmap("./img/static/print_success.png")
-        pixmap = pixmap.scaledToWidth(
-            256, Qt.SmoothTransformation
-        )
+        pixmap = pixmap.scaledToWidth(256, Qt.SmoothTransformation)
         self.gif_label.setAlignment(Qt.AlignCenter)
         self.gif_label.setPixmap(pixmap)
-        
-        self.message_title.setText('Printed Successfully')
+        self.gif_label.setStyleSheet("margin-top: 145px;")
+
+        self.message_title.setText("Printed Successfully")
+        self.setStyleSheet(
+            """
+            font-size: 18px; 
+            font-family: Open Sans; 
+            font-weight: bold; 
+            color: #19323C; 
+            margin-bottom: 10px; 
+            """
+        )
         self.loading_widget.hide()
-        self.message_label.setText('Returning to home screen.')
-        
-        #QTimer.singleShot()
-    
+        self.message_label.setText("Returning to home screen.")
+        self.message_label.setStyleSheet(
+            """
+            font-size: 14px; 
+            font-family: Open Sans; 
+            text-align: center; 
+            padding-left: 30px; 
+            padding-right: 30px; 
+            margin-bottom: 240px;
+            """
+        )
+
+        QTimer.singleShot(3000, lambda: self.go_back.emit())
+
     def print_failed(self):
         self.movie.stop()
         pixmap = QPixmap("./img/static/print_failed.png")
-        pixmap = pixmap.scaledToWidth(
-            256, Qt.SmoothTransformation
-        )
-        self.gif_label.setAlignment(Qt.AlignCenter) 
+        pixmap = pixmap.scaledToWidth(256, Qt.SmoothTransformation)
+        self.gif_label.setAlignment(Qt.AlignCenter)
         self.gif_label.setPixmap(pixmap)
-        
-        self.message_title.setText('Failed to Print')
+        self.gif_label.setStyleSheet("margin-top: 145px;")
+
+        self.message_title.setText("Failed to Print")
+        self.setStyleSheet(
+            """
+            font-size: 18px; 
+            font-family: Open Sans; 
+            font-weight: bold; 
+            color: #19323C; 
+            margin-bottom: 10px; 
+            """
+        )
         self.loading_widget.hide()
-        self.message_label.setText('Returning to home screen.')
-        
-        #QTimer.singleShot()
-    
-    
+        self.message_label.setText(
+            "Please contact the admin for further assitance.\n\nReturning to home screen."
+        )
+        self.message_label.setStyleSheet(
+            """
+            font-size: 14px; 
+            font-family: Open Sans; 
+            text-align: center; 
+            padding-left: 30px; 
+            padding-right: 30px; 
+            margin-bottom: 240px;
+            """
+        )
+
+        QTimer.singleShot(3000, lambda: self.go_back.emit())
+
     def update_label(self):
         text = self.message_label.text()
         if text.endswith("...."):
@@ -236,6 +291,7 @@ class PrintInProgress(QWidget):
         else:
             text += "."  # Add a period
         self.message_label.setText(text)
+
 
 class WarningPrint(QWidget):
     cancel_bt_clicked = pyqtSignal()

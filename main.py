@@ -14,7 +14,7 @@ from home_screen_widget import HomeScreenWidget
 from admin_login import AdminLoginWidget
 from admin_window import AdminWindowWidget
 from view_form import ViewFormWidget
-from print_preview import  PrintPreviewWidget
+from print_preview import PrintPreviewWidget
 from view_process import ViewProcessWidget
 from print_form import PrintFormWidget
 
@@ -30,18 +30,17 @@ class MainWindow(QMainWindow):
 
         self.home_screen_widget = HomeScreenWidget(self)
         self.admin_bt = QPushButton("", self)
-        self.cancel_bt = QPushButton("Cancel", self)
-        
+
         self.setup_ui()
 
     def setup_ui(self):
         self.layout = QVBoxLayout(self.centralWidget)
-        
+
         # Adding HomeScreenWindow
         self.layout.addWidget(self.home_screen_widget)
-        self.home_screen_widget.setVisible(False)
+        self.home_screen_widget.setVisible(True)
         self.home_screen_widget.home_screen_clicked.connect(self.show_form_list)
-        
+
         # Set properties of the admin button
         self.admin_bt.setGeometry(1430, 813, 200, 65)
         self.admin_bt.setIconSize(QSize(65, 65))
@@ -50,123 +49,90 @@ class MainWindow(QMainWindow):
             "QPushButton {background-color: transparent; border: none; image: url('img/admin_bt.svg');}"
             "QPushButton:pressed {background-color: transparent; border: none; image: url('img/admin_bt_pressed.svg');}"
         )
-        self.admin_bt.hide()
+        self.admin_bt.show()
         self.admin_bt.clicked.connect(self.show_admin_login)
-        
-        # Set Properties of the cancel button
-        self.cancel_bt.setGeometry(893, 0, 125, 90)
-        self.cancel_bt.setFocusPolicy(Qt.NoFocus)
-        self.cancel_bt.setStyleSheet(
-            """
-            QPushButton { 
-                background-color: #7C2F3E; 
-                color: #FAEBD7; 
-                font-family: Montserrat;
-                font-size: 18px;
-                font-weight: bold; 
-                padding-bottom: 10px;
-                border-bottom-left-radius: 50px; 
-                border-bottom-right-radius: 50px; 
-            }
-            QPushButton:pressed {
-                background-color: #D8973C;
-            }
-            """
-        )
-        self.cancel_bt.hide()
-        self.cancel_bt.clicked.connect(self.go_back_print_preview_print_form)
-        
-        self.admin_window = AdminWindowWidget(self)
-        self.layout.addWidget(self.admin_window)
-        
+
     def go_back_to_home(self):
         self.home_screen_widget.setVisible(True)
         self.admin_bt.show()
-    
+
     def show_admin_login(self):
-        
         self.admin_login = AdminLoginWidget(self)
         self.layout.addWidget(self.admin_login)
-        
+
         self.admin_bt.hide()
         self.home_screen_widget.setVisible(False)
-        
+
         self.admin_login.show()
-        
+
         self.admin_login.login_clicked.connect(self.show_admin_window)
         self.admin_login.home_screen_backbt_clicked.connect(self.go_back_to_home)
-    
+
     def show_admin_window(self):
-        
         self.admin_window = AdminWindowWidget(self)
         self.layout.addWidget(self.admin_window)
-        
+
         self.admin_bt.hide()
         self.admin_login.setVisible(False)
-        
-        self.admin_window.show()
-        
-        self.admin_window.home_screen_backbt_clicked.connect(self.go_back_to_home)
-    
-    def show_form_list(self):
 
+        self.admin_window.show()
+
+        self.admin_window.home_screen_backbt_clicked.connect(self.go_back_to_home)
+
+    def show_form_list(self):
         self.view_form = ViewFormWidget(self)
         self.layout.addWidget(self.view_form)
 
         self.admin_bt.hide()
-        
+
         self.view_form.show()
         self.view_form.view_button_clicked.connect(self.show_print_preview)
 
-
     @pyqtSlot(str, int)
     def show_print_preview(self, title, page_number):
-        
         self.print_preview = PrintPreviewWidget(self, title, page_number)
         self.layout.addWidget(self.print_preview)
-        
+
         self.admin_bt.hide()
         self.view_form.setVisible(False)
-        
+
         self.print_preview.show()
         self.print_preview.view_form_backbt_clicked.connect(self.show_form_list)
         self.print_preview.view_process_clicked.connect(self.show_view_process)
         self.print_preview.print_form_clicked.connect(self.show_print_form)
-        
-    @pyqtSlot(str, int, int, int)  
+
+    @pyqtSlot(str, int, int, int)
     def show_print_form(self, title, num_copy, num_pages, total):
-        
         self.print_form = PrintFormWidget(self, title, num_copy, num_pages, total)
         self.layout.addWidget(self.print_form)
-        
+
         self.admin_bt.hide()
         self.print_preview.setVisible(False)
-        
+
         self.print_form.show()
-        self.cancel_bt.show()
-       
-    @pyqtSlot(str) 
+
+        self.print_form.cancel_clicked.connect(self.go_back_print_preview_print_form)
+        self.print_form.go_back_home.connect(self.go_back_to_home)
+
+    @pyqtSlot(str)
     def show_view_process(self, title):
-        
         self.view_process = ViewProcessWidget(self, title)
         self.layout.addWidget(self.view_process)
-        
+
         self.admin_bt.hide()
         self.print_preview.setVisible(False)
-        
-        self.view_process.show()
-        self.view_process.print_preview_backbt_clicked.connect(self.go_back_print_preview)
 
-                
+        self.view_process.show()
+        self.view_process.print_preview_backbt_clicked.connect(
+            self.go_back_print_preview
+        )
+
     def go_back_print_preview(self):
         self.print_preview.show()
-    
+
     def go_back_print_preview_print_form(self):
-        self.print_form.hide()
-        self.cancel_bt.hide()
-        
         self.print_preview.show()
-    
+
     def set_background_image(self):
         # Get screen resolution
         screen_resolution = QDesktopWidget().screenGeometry()
@@ -175,7 +141,9 @@ class MainWindow(QMainWindow):
         pixmap = QPixmap("./img/background.jpg")
 
         # Resize the background image to fit the screen resolution
-        pixmap = pixmap.scaled(screen_resolution.width(), screen_resolution.height(), Qt.IgnoreAspectRatio)
+        pixmap = pixmap.scaled(
+            screen_resolution.width(), screen_resolution.height(), Qt.IgnoreAspectRatio
+        )
 
         # Create a label to display the background image
         background_label = QLabel(self)

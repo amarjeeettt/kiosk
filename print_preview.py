@@ -18,17 +18,17 @@ class PrintPreviewWidget(QWidget):
     view_form_backbt_clicked = pyqtSignal()
     view_process_clicked = pyqtSignal(str)
     print_form_clicked = pyqtSignal(str, int, int, int)
+
     def __init__(self, parent, title, page_number):
         super().__init__(parent)
-        
+
         self.setup_ui(title, page_number)
-        
+
     def setup_ui(self, title, page_number):
-        
         # Connect database
         conn = sqlite3.connect("kiosk.db")
         cursor = conn.cursor()
-        
+
         cursor.execute("SELECT base_price FROM kiosk_settings LIMIT 1")
         self.base_price = cursor.fetchone()[0]
 
@@ -36,14 +36,13 @@ class PrintPreviewWidget(QWidget):
         self.bondpaper_quantity = cursor.fetchone()[0]
 
         conn.close()
-        
+
         self.title = title
         self.page_number = page_number
-        
-        
+
         main_layout = QHBoxLayout(self)
-        main_layout.setContentsMargins(0,55,0,0)
-        
+        main_layout.setContentsMargins(0, 55, 0, 0)
+
         left_window = QWidget()
         left_window.setFixedWidth(200)
         left_layout = QVBoxLayout(left_window)  # Use QVBoxLayout
@@ -74,7 +73,7 @@ class PrintPreviewWidget(QWidget):
         back_bt.clicked.connect(self.go_back)
         # Apply margin to the left button
         left_layout.addWidget(back_bt)
-        
+
         # Center image
         self.index = 1
 
@@ -116,7 +115,7 @@ class PrintPreviewWidget(QWidget):
         center_layout.addWidget(top_margin_label)  # Add margin above the image
         center_layout.addWidget(self.center_image)
         center_layout.addWidget(self.bottom_label)
-        
+
         # Right label
         form_label = self.title
         right_label = QLabel(form_label)
@@ -385,13 +384,13 @@ class PrintPreviewWidget(QWidget):
         # Add spacer item between center image and right layout
         spacer_left = QSpacerItem(120, 20, QSizePolicy.Preferred, QSizePolicy.Minimum)
         spacer_right = QSpacerItem(140, 20, QSizePolicy.Preferred, QSizePolicy.Minimum)
-        spacer = QSpacerItem(100, 20, QSizePolicy.Preferred, QSizePolicy.Minimum)        
-          
+        spacer = QSpacerItem(100, 20, QSizePolicy.Preferred, QSizePolicy.Minimum)
+
         main_layout.addWidget(left_window)
         main_layout.addItem(spacer_left)
         main_layout.addLayout(center_layout)
         main_layout.addItem(spacer_right)
-        
+
         # Add right_layout as a widget with alignment
         widget = QWidget()
         widget.setLayout(right_layout)
@@ -400,7 +399,7 @@ class PrintPreviewWidget(QWidget):
         )  # Align right layout to top
 
         main_layout.addItem(spacer)
-        
+
         # Variables for swipe detection
         self.start_pos = QPoint()
         self.end_pos = QPoint()
@@ -409,8 +408,7 @@ class PrintPreviewWidget(QWidget):
         if self.page_number <= 1:
             self.center_image.mousePressEvent = lambda event: None
             self.center_image.mouseReleaseEvent = lambda event: None
-    
-    
+
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
             self.start_pos = event.pos()
@@ -511,15 +509,15 @@ class PrintPreviewWidget(QWidget):
 
         # Apply the mask to the image
         self.image.setAlphaChannel(mask)
-    
+
     def process_bt_clicked(self, title):
         self.view_process_clicked.emit(title)
-        
+
     def print_form_bt_clicked(self, title, page_number):
-        self.print_form_clicked.emit(title, int(self.value), page_number, int(self.total))
-    
+        self.print_form_clicked.emit(
+            title, int(self.value), page_number, int(self.total)
+        )
+
     def go_back(self):
         self.setVisible(False)
         self.view_form_backbt_clicked.emit()
-        
-        

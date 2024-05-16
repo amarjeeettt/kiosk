@@ -14,11 +14,10 @@ class ViewProcessWidget(QWidget):
 
     def __init__(self, parent, title):
         super().__init__(parent)
-        
+
         self.setup_ui(title)
-        
+
     def setup_ui(self, title):
-        
         self.title = title
         print(self.title)
 
@@ -58,8 +57,7 @@ class ViewProcessWidget(QWidget):
         layout.addLayout(back_button_layout)
 
         layout.addWidget(label)
-        
-    
+
     def go_back(self):
         self.setVisible(False)
         self.print_preview_backbt_clicked.emit()

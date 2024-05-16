@@ -5,6 +5,7 @@ from PyQt5.QtGui import QPixmap
 
 class HomeScreenWidget(QWidget):
     home_screen_clicked = pyqtSignal()
+
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -34,8 +35,7 @@ class HomeScreenWidget(QWidget):
             "color: #A93F55; font-family: Roboto; font-size: 20px; font-weight: bold; letter-spacing: 3px; "
         )
         layout.addWidget(sub_label)
-        
-    
+
     def mousePressEvent(self, event):
         self.setVisible(False)
         self.home_screen_clicked.emit()

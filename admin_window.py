@@ -2648,25 +2648,25 @@ class AdminWindowWidget(QWidget):
         )
 
         dashboard_layout = QHBoxLayout()
-        
+
         # Create a QGraphicsDropShadowEffect
         shadow_effect1 = QGraphicsDropShadowEffect()
         shadow_effect1.setBlurRadius(50)
         shadow_effect1.setColor(Qt.gray)
         shadow_effect1.setOffset(0, 0)  # Adjust the shadow's offset as needed
-        
+
         # Create a QGraphicsDropShadowEffect
         shadow_effect2 = QGraphicsDropShadowEffect()
         shadow_effect2.setBlurRadius(50)
         shadow_effect2.setColor(Qt.gray)
         shadow_effect2.setOffset(0, 0)  # Adjust the shadow's offset as needed
-        
+
         # Create a QGraphicsDropShadowEffect
         shadow_effect3 = QGraphicsDropShadowEffect()
         shadow_effect3.setBlurRadius(50)
         shadow_effect3.setColor(Qt.gray)
         shadow_effect3.setOffset(0, 0)  # Adjust the shadow's offset as needed
-        
+
         # Create a QGraphicsDropShadowEffect
         shadow_effect4 = QGraphicsDropShadowEffect()
         shadow_effect4.setBlurRadius(50)
@@ -2681,21 +2681,21 @@ class AdminWindowWidget(QWidget):
         dashboard_layout.addWidget(total_form_widget)
 
         total_amount_widget = TotalAmountWidget()
-        
+
         # Apply the effect to the rectangle
         total_amount_widget.setGraphicsEffect(shadow_effect2)
         total_amount_widget.setFixedSize(400, 140)
         dashboard_layout.addWidget(total_amount_widget)
 
         total_success_widget = TotalSuccessWidget()
-        
+
         # Apply the effect to the rectangle
         total_success_widget.setGraphicsEffect(shadow_effect3)
         total_success_widget.setFixedSize(240, 140)
         dashboard_layout.addWidget(total_success_widget)
 
         total_failed_widget = TotalFailedWidget()
-        
+
         # Apply the effect to the rectangle
         total_failed_widget.setGraphicsEffect(shadow_effect4)
         total_failed_widget.setFixedSize(240, 140)

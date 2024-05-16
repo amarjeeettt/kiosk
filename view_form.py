@@ -48,6 +48,7 @@ class SmoothScrollArea(QScrollArea):
 class ButtonWidget(QWidget):
     # Define a new signal
     buttonClicked = pyqtSignal(str, str)
+
     def __init__(self, title_label, page_number_label, description_label, category):
         super().__init__()
         self.title_text = title_label
@@ -157,9 +158,10 @@ class ButtonWidget(QWidget):
         # Emit the signal with necessary data
         self.buttonClicked.emit(self.title_label.text(), self.page_number_label.text())
 
-        
+
 class ViewFormWidget(QWidget):
     view_button_clicked = pyqtSignal(str, int)
+
     def __init__(self, parent):
         super().__init__(parent)
         self.setup_ui()
@@ -377,7 +379,7 @@ class ViewFormWidget(QWidget):
             row = i // num_columns
             col = i % num_columns
             self.grid_layout.addWidget(button_widget, row, col)
-            
+
             # Connect the buttonClicked signal to the handleButtonClicked slot
             button_widget.buttonClicked.connect(self.handleButtonClicked)
 
@@ -506,17 +508,16 @@ class ViewFormWidget(QWidget):
         else:
             self.grid_layout.setAlignment(Qt.AlignTop | Qt.AlignCenter)
             self.grid_layout.setContentsMargins(0, 0, 0, 0)
-        
-        self.grid_layout.setHorizontalSpacing(60) 
-    
-    
-     # Function to handle the emitted signal
+
+        self.grid_layout.setHorizontalSpacing(60)
+
+    # Function to handle the emitted signal
     def handleButtonClicked(self, title, page_number):
         print("Title:", title)
         print("Page number:", int(page_number))
-        
+
         self.view_button_clicked.emit(title, int(page_number))
-    
+
 
 def fetch_button_labels():
     conn = sqlite3.connect("kiosk.db")

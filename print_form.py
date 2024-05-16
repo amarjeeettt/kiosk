@@ -18,19 +18,20 @@ from print_window import PrintMessageBox
 
 
 class PrintFormWidget(QWidget):
+    go_back_home = pyqtSignal()
+    cancel_clicked = pyqtSignal()
 
     def __init__(self, parent, title, num_copy, num_pages, total):
         super().__init__(parent)
-        
+
         self.setup_ui(title, num_copy, num_pages, total)
-        
+
     def setup_ui(self, title, num_copy, num_pages, total):
-        
         self.title = title
         self.num_copy = num_copy
         self.num_pages = num_pages
         self.total = total
-        
+
         # Connect database
         conn = sqlite3.connect("kiosk.db")
         cursor = conn.cursor()
@@ -39,15 +40,43 @@ class PrintFormWidget(QWidget):
         self.coins_left = cursor.fetchone()[0]
 
         conn.close()
-        
+
         self.counter = self.coins_left
         self.bondpaper_quantity = None
 
         # Create a layout for the central widget
         layout = QVBoxLayout(self)
 
+        # Create the button
+        self.cancel_bt = QPushButton("Cancel")
+        self.cancel_bt.setFixedSize(125, 90)
+        self.cancel_bt.setStyleSheet(
+            """
+            QPushButton { 
+                background-color: #7C2F3E; 
+                color: #FAEBD7; 
+                font-family: Montserrat;
+                font-size: 18px;
+                font-weight: bold; 
+                padding-bottom: 10px;
+                border-bottom-left-radius: 50px; 
+                border-bottom-right-radius: 50px; 
+            }
+            QPushButton:pressed {
+                background-color: #D8973C;
+            }
+            """
+        )
+        self.cancel_bt.clicked.connect(self.go_back)
+
+        layout.addWidget(self.cancel_bt, alignment=Qt.AlignCenter)
+
         squares_layout = QHBoxLayout()
-        
+
+        squares_layout.addSpacerItem(
+            QSpacerItem(20, 40, QSizePolicy.Preferred, QSizePolicy.Minimum)
+        )
+
         square1 = QWidget()
         square1.setStyleSheet(
             """
@@ -57,7 +86,7 @@ class PrintFormWidget(QWidget):
         )
         square1_layout = QVBoxLayout()
         square1.setLayout(square1_layout)
-        
+
         top_total_label = QLabel("Total")
         top_total_label.setStyleSheet(
             """
@@ -152,13 +181,10 @@ class PrintFormWidget(QWidget):
         square2.setGraphicsEffect(shadow_effect2)
 
         squares_layout.addWidget(square2)
+        squares_layout.setContentsMargins(0, 0, 0, 0)
 
-        layout.addSpacerItem(
-            QSpacerItem(40, 40, QSizePolicy.Minimum, QSizePolicy.Preferred)
-        )
-        
         rectangle_layout = QHBoxLayout()
-        
+
         rectangle = QFrame()
         rectangle.setFrameShape(QFrame.StyledPanel)
         rectangle.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
@@ -176,14 +202,14 @@ class PrintFormWidget(QWidget):
         shadow_effect.setBlurRadius(30)
         shadow_effect.setColor(Qt.gray)
         shadow_effect.setOffset(0, 12)
-        
+
         rectangle.setGraphicsEffect(shadow_effect)
-        
+
         rectangle_layout.addWidget(rectangle)
-        
+
         rectangle_inner_layout = QHBoxLayout()
         rectangle.setLayout(rectangle_inner_layout)
-        
+
         text_label = QLabel("Please Pay\nExact Amount")
         text_label.setWordWrap(True)
         text_label.setStyleSheet(
@@ -196,7 +222,7 @@ class PrintFormWidget(QWidget):
             """
         )
         rectangle_inner_layout.addWidget(text_label, alignment=Qt.AlignVCenter)
-        
+
         line = QFrame()
         line.setFrameShape(QFrame.VLine)
         line.setFixedHeight(90)
@@ -208,7 +234,7 @@ class PrintFormWidget(QWidget):
             """
         )
         rectangle_inner_layout.addWidget(line, alignment=Qt.AlignCenter)
-        
+
         self.print_bt = QPushButton("Print")
         self.print_bt.setFixedSize(250, 80)
         self.print_bt.setStyleSheet(
@@ -242,19 +268,23 @@ class PrintFormWidget(QWidget):
         # Add spacer item to push the line to the center
         rectangle_inner_layout.addSpacerItem(
             QSpacerItem(40, 20, QSizePolicy.Preferred, QSizePolicy.Minimum)
-        )        
-        
+        )
+        rectangle_layout.setContentsMargins(0, 0, 0, 80)
+
         layout.addLayout(squares_layout)
+        layout.addSpacerItem(
+            QSpacerItem(40, 60, QSizePolicy.Preferred, QSizePolicy.Minimum)
+        )
         layout.addLayout(rectangle_layout)
-        
+
         # self.counter_thread = CounterThread()
         # self.counter_thread.counter_changed.connect(
         #    lambda counter: self.update_counter(counter)
         # )
         # self.counter_thread.start()
-        
+
         self.check_total_counter_match()
-        
+
     def update_counter(self, counter):
         self.counter = counter
         self.amount_label.setText(f"₱{self.counter:0.2f}")
@@ -282,19 +312,45 @@ class PrintFormWidget(QWidget):
             self.print_bt.setEnabled(False)
 
     def open_print_window(self):
-        
+        # self.counter_thread.stop()
         if self.counter > self.total:
-            message_box = PrintMessageBox(self.title, self.num_copy, self.num_pages, self.total, False, parent=self,)
+            message_box = PrintMessageBox(
+                self.title,
+                self.num_copy,
+                self.num_pages,
+                self.total,
+                False,
+                parent=self,
+            )
             parent_pos = self.mapToGlobal(self.rect().center())
             message_box.move(parent_pos - message_box.rect().center())
+            message_box.go_back_to_home.connect(self.go_back_home_screen)
             message_box.exec_()
-        
+
         elif self.counter == self.total:
-            message_box = PrintMessageBox(self.title, self.num_copy, self.num_pages, self.total, True, parent=self,)
+            message_box = PrintMessageBox(
+                self.title,
+                self.num_copy,
+                self.num_pages,
+                self.total,
+                True,
+                parent=self,
+            )
             parent_pos = self.mapToGlobal(self.rect().center())
             message_box.move(parent_pos - message_box.rect().center())
+            message_box.go_back_to_home.connect(self.go_back_home_screen)
             message_box.exec_()
-            
+
+    def go_back(self):
+        self.setVisible(False)
+        self.cancel_clicked.emit()
+        # self.counter_thread.stop()
+
+    def go_back_home_screen(self):
+        self.close()
+        self.go_back_home.emit()
+        # self.counter_thread.stop()
+
 
 class CounterThread(QThread):
     counter_changed = pyqtSignal(int)
