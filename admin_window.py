@@ -1347,7 +1347,7 @@ class UploadFormWidget(QWidget):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog  # Use native dialog on macOS
         file_path, _ = QFileDialog.getOpenFileName(
-            self, "Open File", "", "Document (*.pdf)", options=options
+            self, "Open File", "/media/amarjeet/", "Document (*.pdf)", options=options
         )
         if file_path:
             file_name = os.path.basename(file_path)
@@ -1484,7 +1484,7 @@ class UploadProcessWidget(QWidget):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog  # Use native dialog on macOS
         file_path, _ = QFileDialog.getOpenFileName(
-            self, "Open File", "", "Images (*.png *.jpg *.jpeg *.bmp)", options=options
+            self, "Open File", "/media/amarjeet/", "Images (*.png *.jpg *.jpeg *.bmp)", options=options
         )
         if file_path:
             file_name = os.path.basename(file_path)

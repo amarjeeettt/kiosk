@@ -277,11 +277,11 @@ class PrintFormWidget(QWidget):
         )
         layout.addLayout(rectangle_layout)
 
-        # self.counter_thread = CounterThread()
-        # self.counter_thread.counter_changed.connect(
-        #    lambda counter: self.update_counter(counter)
-        # )
-        # self.counter_thread.start()
+        self.counter_thread = CounterThread()
+        self.counter_thread.counter_changed.connect(
+            lambda counter: self.update_counter(counter)
+        )
+        self.counter_thread.start()
 
         self.check_total_counter_match()
 
@@ -312,7 +312,7 @@ class PrintFormWidget(QWidget):
             self.print_bt.setEnabled(False)
 
     def open_print_window(self):
-        # self.counter_thread.stop()
+        self.counter_thread.stop()
         if self.counter > self.total:
             message_box = PrintMessageBox(
                 self.title,
@@ -344,12 +344,12 @@ class PrintFormWidget(QWidget):
     def go_back(self):
         self.setVisible(False)
         self.cancel_clicked.emit()
-        # self.counter_thread.stop()
+        self.counter_thread.stop()
 
     def go_back_home_screen(self):
         self.close()
         self.go_back_home.emit()
-        # self.counter_thread.stop()
+        self.counter_thread.stop()
 
 
 class CounterThread(QThread):
@@ -357,7 +357,7 @@ class CounterThread(QThread):
 
     def __init__(self):
         super().__init__()
-        self.coinslot = Button(11)
+        self.coinslot = Button(22)
         self.stop_event = Event()
 
     def run(self):

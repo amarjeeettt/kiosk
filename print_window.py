@@ -1,6 +1,7 @@
 import cups
 import sqlite3
 import subprocess
+import time
 from datetime import datetime
 from PyQt5.QtWidgets import (
     QWidget,
@@ -129,38 +130,29 @@ class PrintInProgress(QWidget):
             if not printers:
                 raise Exception("No Printers Available.")
 
-            printer_name = list(printers.keys())[0]
-
-            printer_attributes = conn.getPrinterAttributes(printer_name)
-            if (
-                "printer-state" not in printer_attributes
-                or printer_attributes["printer-state"] != 3
-            ):
-                raise Exception("Printer is not connected or offline.")
-
             file_path = f"./forms/{title}.pdf"
 
             # Define printer options (media)
             printer_options = {
                 "media": "legal",  # Set media to legal size
             }
+            
+            test = list(printers.keys())[1]
+            
+            for printer_name, printer_attributes in printers.items():
+                if "printer-state" in printer_attributes and printer_attributes["printer-state"] == 3:
+                    idle_printer_name = printer_name
+                    
 
+            # Submit print jobs
             for _ in range(num_copy):
-                try:
-                    job_id = conn.printFile(
-                        printer_name, file_path, "Print Job", printer_options
-                    )
-                    print("Print job submitted with ID:", job_id)
-
-                    if self.check_print_job_status(job_id):
-                        self.print_result = "Success"
-                    else:
-                        self.print_result = "Failed"
-                        break
-
-                except (cups.IPPError, cups.ServerError, cups.IPPConnectionError) as e:
+                job_id = conn.printFile(test, file_path, "Print Job", {})
+                print(f"Print job submitted to {idle_printer_name} with ID:", job_id)
+            
+                if job_id is not None:
+                    self.print_result = "Success"
+                else:
                     self.print_result = "Failed"
-                    raise Exception(e)
 
         except Exception as e:
             print("Error during printing:", e)
@@ -179,7 +171,7 @@ class PrintInProgress(QWidget):
                         (bondpaper_left,),
                     )
                     self.print_success()
-                else:
+                elif self.print_result == 'Failed':
                     self.print_failed()
 
                 cursor.execute(
@@ -201,20 +193,16 @@ class PrintInProgress(QWidget):
 
     def check_print_job_status(self, job_id):
         try:
-            completed_jobs = subprocess.check_output(
-                ["lpstat", "-W", "completed", "-o"]
-            ).decode("utf-8")
-            if job_id in completed_jobs:
-                print(f"Print job with ID {job_id} was successful!")
-                return True
-            else:
-                print(
-                    f"Print job with ID {job_id} was not found or encountered an error."
-                )
-                return False
+            completed_jobs_output = subprocess.check_output(["lpstat", "-W", "completed", "-o"]).decode("utf-8")
+            completed_jobs_output_lines = completed_jobs_output.split("\n")
+            for line in completed_jobs_output_lines:
+                if job_id == line.strip().split():  # Assuming job ID is the first field
+                    return True
+            return False
         except subprocess.CalledProcessError as e:
             print("Error executing lpstat command:", e)
             return False
+
 
     def print_success(self):
         self.movie.stop()
