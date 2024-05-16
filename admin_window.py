@@ -24,12 +24,11 @@ from PyQt5.QtWidgets import (
     QTextEdit,
     QFileDialog,
     QDialog,
-    QToolButton,
     QMenu,
     QAction,
 )
 from PyQt5.QtCore import Qt, QSize, pyqtSignal
-from PyQt5.QtGui import QPixmap, QIcon
+from PyQt5.QtGui import QPixmap, QIcon, QColor, QPalette
 from virtual_keyboard import AlphaNeumericVirtualKeyboard
 from helpers import upload_form_file, upload_process_file
 from custom_message_box import CustomMessageBox
@@ -1559,12 +1558,13 @@ class CustomButton(QPushButton):
 
         self.setFocusPolicy(Qt.NoFocus)
         self.setLayout(layout)
-        
-import sqlite3
-import datetime
-from PyQt5.QtWidgets import QPushButton, QVBoxLayout, QMenu, QAction
 
-class DropButton(QPushButton):
+
+class TotalAmountDropButton(QPushButton):
+    weekly_selected = pyqtSignal(float)
+    monthly_selected = pyqtSignal(float)
+    yearly_selected = pyqtSignal(float)
+
     def __init__(self):
         super().__init__()
 
@@ -1592,11 +1592,13 @@ class DropButton(QPushButton):
         self.setMenu(self.menu)
 
         # Use a stylesheet to make the menu appear below the button
-        self.menu.setStyleSheet("""
+        self.menu.setStyleSheet(
+            """
             QMenu {
                 left: 0;
             }
-        """)
+        """
+        )
 
         # Set initial state to "Weekly"
         self.setText("Weekly")
@@ -1606,7 +1608,7 @@ class DropButton(QPushButton):
         self.setText("Weekly")
 
         # Connect to the database
-        conn = sqlite3.connect('kiosk.db')
+        conn = sqlite3.connect("kiosk.db")
         cursor = conn.cursor()
 
         # Get the current week's start and end dates
@@ -1615,77 +1617,480 @@ class DropButton(QPushButton):
         end_of_week = start_of_week + datetime.timedelta(days=6)
 
         # Execute the SQL query to sum the total amount based on the current week
-        cursor.execute("""
-            SELECT SUM(total_amount) AS total_amount
+        cursor.execute(
+            """
+            SELECT COALESCE(SUM(total_amount), 0) AS total_amount
             FROM kiosk_print_results
-            WHERE date_printed BETWEEN ? AND ?
-        """, (start_of_week.strftime('%Y-%m-%d'), end_of_week.strftime('%Y-%m-%d')))
+            WHERE date(date_printed) BETWEEN ? AND ? AND result = 'Success'
+            """,
+            (start_of_week.strftime("%Y-%m-%d"), end_of_week.strftime("%Y-%m-%d")),
+        )
 
         # Fetch the result
-        total_amount = cursor.fetchone()[0]
-
-        # Print the result
-        print(f"Total Amount for Current Week: {total_amount}")
+        self.total_amount = cursor.fetchone()[0]
 
         # Close the cursor and database connection
         cursor.close()
         conn.close()
+
+        self.weekly_selected.emit(self.total_amount)
+
+    def get_weekly_amount(self):
+        return float(self.total_amount)
 
     def sort_monthly(self):
         self.setText("Monthly")
 
         # Connect to the database
-        conn = sqlite3.connect('kiosk.db')
+        conn = sqlite3.connect("kiosk.db")
         cursor = conn.cursor()
 
         # Get the current month and year
-        current_month = datetime.datetime.now().strftime('%Y-%m')
+        current_month = datetime.datetime.now().strftime("%Y-%m")
 
         # Execute the SQL query to sum the total amount based on the current month
-        cursor.execute("""
-            SELECT SUM(total_amount) AS total_amount
+        cursor.execute(
+            """
+            SELECT COALESCE(SUM(total_amount), 0) AS total_amount
             FROM kiosk_print_results
-            WHERE strftime('%Y-%m', date_printed) = ?
-        """, (current_month,))
+            WHERE strftime('%Y-%m', date_printed) = ? AND result = 'Success'
+            """,
+            (current_month,),
+        )
 
         # Fetch the result
         total_amount = cursor.fetchone()[0]
 
-        # Print the result
-        print(f"Total Amount for Current Month: {total_amount}")
-
         # Close the cursor and database connection
         cursor.close()
         conn.close()
+
+        self.monthly_selected.emit(total_amount)
 
     def sort_yearly(self):
         self.setText("Yearly")
 
         # Connect to the database
-        conn = sqlite3.connect('kiosk.db')
+        conn = sqlite3.connect("kiosk.db")
         cursor = conn.cursor()
 
         # Get the current year
-        current_year = datetime.datetime.now().strftime('%Y')
+        current_year = datetime.datetime.now().strftime("%Y")
 
         # Execute the SQL query to sum the total amount based on the current year
-        cursor.execute("""
-            SELECT SUM(total_amount) AS total_amount
+        cursor.execute(
+            """
+            SELECT COALESCE(SUM(total_amount), 0) AS total_amount
             FROM kiosk_print_results
-            WHERE strftime('%Y', date_printed) = ?
-        """, (current_year,))
+            WHERE strftime('%Y', date_printed) = ? AND result = 'Success'
+            """,
+            (current_year,),
+        )
 
         # Fetch the result
         total_amount = cursor.fetchone()[0]
-
-        # Print the result
-        print(f"Total Amount for Current Year: {total_amount}")
 
         # Close the cursor and database connection
         cursor.close()
         conn.close()
 
-    
+        self.yearly_selected.emit(total_amount)
+
+
+class TotalFormDropButton(QPushButton):
+    weekly_selected = pyqtSignal(str)
+    monthly_selected = pyqtSignal(str)
+    yearly_selected = pyqtSignal(str)
+
+    def __init__(self):
+        super().__init__()
+
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+
+        # Create a QMenu
+        self.menu = QMenu()
+
+        # Create actions for the menu
+        self.action1 = QAction("Weekly", self)
+        self.action2 = QAction("Monthly", self)
+        self.action3 = QAction("Yearly", self)
+
+        # Connect actions to their respective slots
+        self.action1.triggered.connect(self.sort_weekly)
+        self.action2.triggered.connect(self.sort_monthly)
+        self.action3.triggered.connect(self.sort_yearly)
+
+        # Add actions to the menu
+        self.menu.addAction(self.action1)
+        self.menu.addAction(self.action2)
+        self.menu.addAction(self.action3)
+
+        self.setMenu(self.menu)
+
+        # Set initial state to "Weekly"
+        self.setText("Weekly")
+        self.sort_weekly()
+
+    def sort_weekly(self):
+        self.setText("Weekly")
+
+        # Connect to the database
+        conn = sqlite3.connect("kiosk.db")
+        cursor = conn.cursor()
+
+        # Get the start and end dates for the current week
+        today = datetime.datetime.now()
+        start_of_week = today - datetime.timedelta(days=today.weekday())
+        end_of_week = start_of_week + datetime.timedelta(days=6)
+
+        cursor.execute(
+            """
+            SELECT COALESCE(
+                    (SELECT form_name
+                        FROM kiosk_print_results
+                        WHERE strftime('%Y-%m-%d', date_printed) BETWEEN ? AND ? 
+                            AND result = 'Success'
+                        GROUP BY form_name
+                        ORDER BY SUM(number_of_copies) DESC
+                        LIMIT 1
+                    ), 'None'
+                )
+        """,
+            (start_of_week.strftime("%Y-%m-%d"), end_of_week.strftime("%Y-%m-%d")),
+        )
+
+        self.total_form = cursor.fetchone()[0]
+
+        cursor.close()
+        conn.close()
+
+        self.weekly_selected.emit(self.total_form)
+
+    def get_weekly_amount(self):
+        return self.total_form
+
+    def sort_monthly(self):
+        self.setText("Monthly")
+
+        # Connect to the database
+        conn = sqlite3.connect("kiosk.db")
+        cursor = conn.cursor()
+
+        current_month = datetime.datetime.now().strftime("%Y-%m")
+
+        cursor.execute(
+            """
+            SELECT COALESCE(
+                    (SELECT form_name
+                        FROM kiosk_print_results
+                        WHERE strftime('%Y-%m', date_printed) = ? 
+                            AND result = 'Success'
+                        GROUP BY form_name
+                        ORDER BY SUM(number_of_copies) DESC
+                        LIMIT 1
+                    ), 'None'
+                )
+        """,
+            (current_month,),
+        )
+
+        total_form = cursor.fetchone()[0]
+
+        cursor.close()
+        conn.close()
+
+        self.monthly_selected.emit(total_form)
+
+    def sort_yearly(self):
+        self.setText("Yearly")
+
+        # Connect to the database
+        conn = sqlite3.connect("kiosk.db")
+        cursor = conn.cursor()
+
+        current_year = datetime.datetime.now().strftime("%Y")
+
+        cursor.execute(
+            """
+            SELECT COALESCE(
+                    (SELECT form_name
+                        FROM kiosk_print_results
+                        WHERE strftime('%Y', date_printed) = ? 
+                            AND result = 'Success'
+                        GROUP BY form_name
+                        ORDER BY SUM(number_of_copies) DESC
+                        LIMIT 1
+                    ), 'None'
+                )
+        """,
+            (current_year,),
+        )
+
+        total_form = cursor.fetchone()[0]
+
+        cursor.close()
+        conn.close()
+
+        self.yearly_selected.emit(total_form)
+
+
+class TotalFailedDropButton(QPushButton):
+    weekly_selected = pyqtSignal(int)
+    monthly_selected = pyqtSignal(int)
+    yearly_selected = pyqtSignal(int)
+
+    def __init__(self):
+        super().__init__()
+
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+
+        # Create a QMenu
+        self.menu = QMenu(self)
+
+        # Create actions for the menu
+        self.action1 = QAction("Weekly", self)
+        self.action2 = QAction("Monthly", self)
+        self.action3 = QAction("Yearly", self)
+
+        # Connect actions to their respective slots
+        self.action1.triggered.connect(self.sort_weekly)
+        self.action2.triggered.connect(self.sort_monthly)
+        self.action3.triggered.connect(self.sort_yearly)
+
+        # Add actions to the menu
+        self.menu.addAction(self.action1)
+        self.menu.addAction(self.action2)
+        self.menu.addAction(self.action3)
+
+        self.setMenu(self.menu)
+
+        # Use a stylesheet to make the menu appear below the button
+        self.menu.setStyleSheet(
+            """
+            QMenu {
+                left: 0;
+            }
+        """
+        )
+
+        # Set initial state to "Weekly"
+        self.setText("Weekly")
+        self.sort_weekly()
+
+    def sort_weekly(self):
+        self.setText("Weekly")
+
+        # Connect to the database
+        conn = sqlite3.connect("kiosk.db")
+        cursor = conn.cursor()
+
+        # Get the start and end dates for the current week
+        today = datetime.datetime.now()
+        start_of_week = today - datetime.timedelta(days=today.weekday())
+        end_of_week = start_of_week + datetime.timedelta(days=6)
+
+        cursor.execute(
+            """
+            SELECT COUNT(*) AS total_failed_count
+            FROM kiosk_print_results
+            WHERE result = 'Failed'
+            AND date(date_printed) BETWEEN ? AND ?
+        """,
+            (start_of_week.strftime("%Y-%m-%d"), end_of_week.strftime("%Y-%m-%d")),
+        )
+
+        self.total_error = cursor.fetchone()[0]
+
+        cursor.close()
+        conn.close()
+
+        self.weekly_selected.emit(self.total_error)
+
+    def get_weekly_amount(self):
+        return self.total_error
+
+    def sort_monthly(self):
+        self.setText("Monthly")
+
+        # Connect to the database
+        conn = sqlite3.connect("kiosk.db")
+        cursor = conn.cursor()
+
+        current_month = datetime.datetime.now().strftime("%Y-%m")
+
+        cursor.execute(
+            """
+            SELECT COUNT(*) AS total_failed_count
+            FROM kiosk_print_results
+            WHERE result = 'Failed'
+            AND strftime('%Y-%m', date_printed) = ?
+        """,
+            (current_month,),
+        )
+
+        total_error = cursor.fetchone()[0]
+
+        cursor.close()
+        conn.close()
+
+        self.monthly_selected.emit(total_error)
+
+    def sort_yearly(self):
+        self.setText("Yearly")
+
+        # Connect to the database
+        conn = sqlite3.connect("kiosk.db")
+        cursor = conn.cursor()
+
+        current_year = datetime.datetime.now().strftime("%Y")
+
+        cursor.execute(
+            """
+            SELECT COUNT(*) AS total_failed_count
+            FROM kiosk_print_results
+            WHERE result = 'Failed'
+            AND strftime('%Y', date_printed) = ?
+        """,
+            (current_year,),
+        )
+
+        total_error = cursor.fetchone()[0]
+
+        cursor.close()
+        conn.close()
+
+        self.yearly_selected.emit(total_error)
+
+
+class TotalSuccessDropButton(QPushButton):
+    weekly_selected = pyqtSignal(int)
+    monthly_selected = pyqtSignal(int)
+    yearly_selected = pyqtSignal(int)
+
+    def __init__(self):
+        super().__init__()
+
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+
+        # Create a QMenu
+        self.menu = QMenu(self)
+
+        # Create actions for the menu
+        self.action1 = QAction("Weekly", self)
+        self.action2 = QAction("Monthly", self)
+        self.action3 = QAction("Yearly", self)
+
+        # Connect actions to their respective slots
+        self.action1.triggered.connect(self.sort_weekly)
+        self.action2.triggered.connect(self.sort_monthly)
+        self.action3.triggered.connect(self.sort_yearly)
+
+        # Add actions to the menu
+        self.menu.addAction(self.action1)
+        self.menu.addAction(self.action2)
+        self.menu.addAction(self.action3)
+
+        self.setMenu(self.menu)
+
+        # Use a stylesheet to make the menu appear below the button
+        self.menu.setStyleSheet(
+            """
+            QMenu {
+                left: 0;
+            }
+        """
+        )
+
+        # Set initial state to "Weekly"
+        self.setText("Weekly")
+        self.sort_weekly()
+
+    def sort_weekly(self):
+        self.setText("Weekly")
+
+        # Connect to the database
+        conn = sqlite3.connect("kiosk.db")
+        cursor = conn.cursor()
+
+        # Get the start and end dates for the current week
+        today = datetime.datetime.now()
+        start_of_week = today - datetime.timedelta(days=today.weekday())
+        end_of_week = start_of_week + datetime.timedelta(days=6)
+
+        cursor.execute(
+            """
+            SELECT COUNT(*) AS total_failed_count
+            FROM kiosk_print_results
+            WHERE result = 'Success'
+            AND date(date_printed) BETWEEN ? AND ?
+        """,
+            (start_of_week.strftime("%Y-%m-%d"), end_of_week.strftime("%Y-%m-%d")),
+        )
+
+        self.total_success = cursor.fetchone()[0]
+
+        cursor.close()
+        conn.close()
+
+        self.weekly_selected.emit(self.total_success)
+
+    def get_weekly_amount(self):
+        return self.total_success
+
+    def sort_monthly(self):
+        self.setText("Monthly")
+
+        # Connect to the database
+        conn = sqlite3.connect("kiosk.db")
+        cursor = conn.cursor()
+
+        current_month = datetime.datetime.now().strftime("%Y-%m")
+
+        cursor.execute(
+            """
+            SELECT COUNT(*) AS total_failed_count
+            FROM kiosk_print_results
+            WHERE result = 'Success'
+            AND strftime('%Y-%m', date_printed) = ?
+        """,
+            (current_month,),
+        )
+
+        total_success = cursor.fetchone()[0]
+
+        cursor.close()
+        conn.close()
+
+        self.monthly_selected.emit(total_success)
+
+    def sort_yearly(self):
+        self.setText("Yearly")
+
+        # Connect to the database
+        conn = sqlite3.connect("kiosk.db")
+        cursor = conn.cursor()
+
+        current_year = datetime.datetime.now().strftime("%Y")
+
+        cursor.execute(
+            """
+            SELECT COUNT(*) AS total_failed_count
+            FROM kiosk_print_results
+            WHERE result = 'Success'
+            AND strftime('%Y', date_printed) = ?
+        """,
+            (current_year,),
+        )
+
+        total_success = cursor.fetchone()[0]
+
+        cursor.close()
+        conn.close()
+
+        self.yearly_selected.emit(total_success)
 
 
 class TotalAmountWidget(QWidget):
@@ -1694,7 +2099,12 @@ class TotalAmountWidget(QWidget):
 
         # Create a QFrame
         frame = QFrame(self)
-        frame.setFrameShape(QFrame.StyledPanel)
+        frame.setAutoFillBackground(True)  # Enable background color
+
+        # Set background color (for example, light gray)
+        p = frame.palette()
+        p.setColor(frame.backgroundRole(), QColor(255, 255, 255))
+        frame.setPalette(p)
 
         # Create a layout for the frame
         main_layout = QVBoxLayout(frame)
@@ -1702,27 +2112,261 @@ class TotalAmountWidget(QWidget):
         # Create labels
         top_layout = QHBoxLayout()
         image_label = QLabel()
-        
-        button = DropButton()
-        button.setFixedSize(120,40)
-        
+
+        button = TotalAmountDropButton()
+        button.setFixedSize(120, 40)
+
+        button.weekly_selected.connect(self.change_total_label)
+        button.monthly_selected.connect(self.change_total_label)
+        button.yearly_selected.connect(self.change_total_label)
+
+        weekly_total = button.get_weekly_amount()
+
         top_layout.addWidget(image_label)
         top_layout.addWidget(button)
-        
-        # self.total = button.return_results()
-        
-        text_label = QLabel('Total Amount of Forms Printed:')    
-        total_label = QLabel("")    
+
+        text_label = QLabel("Total Amount Collected:")
+        text_label.setStyleSheet(
+            """
+            font-family: Roboto;
+            font-size: 10px;
+            margin-left: 17px;
+            color: #ADADAD;
+            border: none;
+            padding-bottom: 10px;
+            """
+        )
+
+        self.total_label = QLabel(f"₱ {weekly_total}")
+        self.total_label.setStyleSheet(
+            """
+            font-family: Montserrat;
+            font-weight: bold;
+            font-size: 13px;
+            margin-left: 15px;
+            padding-top: 7px;
+            border: none;
+            """
+        )
 
         main_layout.addLayout(top_layout)
-        main_layout.addWidget(total_label)
+        main_layout.addWidget(self.total_label)
         main_layout.addWidget(text_label)
-        
+
         frame.setLayout(main_layout)
         self.setLayout(QVBoxLayout(self))
         self.layout().addWidget(frame)
-        
+
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+    def change_total_label(self, total_amount):
+        self.total_label.setText(f"₱ {total_amount}")
+
+
+class TotalFormWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+
+        # Create a QFrame
+        frame = QFrame(self)
+        frame.setAutoFillBackground(True)  # Enable background color
+
+        # Set background color (for example, light gray)
+        p = frame.palette()
+        p.setColor(frame.backgroundRole(), QColor(255, 255, 255))
+        frame.setPalette(p)
+
+        # Create a layout for the frame
+        main_layout = QVBoxLayout(frame)
+
+        # Create labels
+        top_layout = QHBoxLayout()
+        image_label = QLabel()
+        image_label.setStyleSheet("border: none;")
+
+        button = TotalFormDropButton()
+        button.setFixedSize(120, 40)
+
+        button.weekly_selected.connect(self.change_total_label)
+        button.monthly_selected.connect(self.change_total_label)
+        button.yearly_selected.connect(self.change_total_label)
+
+        weekly_total = button.get_weekly_amount()
+
+        top_layout.addWidget(image_label)
+        top_layout.addWidget(button)
+
+        text_label = QLabel("Most Printed Form:")
+        text_label.setStyleSheet(
+            """
+            font-family: Roboto;
+            font-size: 10px;
+            margin-left: 17px;
+            color: #ADADAD;
+            border: none;
+            padding-bottom: 10px;
+            """
+        )
+
+        self.total_label = QLabel(f"{weekly_total}")
+        self.total_label.setWordWrap(True)
+        self.total_label.setStyleSheet(
+            """
+            font-family: Montserrat;
+            font-weight: bold;
+            font-size: 13px;
+            margin-left: 15px;
+            padding-top: 7px;
+            border: none;
+            """
+        )
+
+        main_layout.addLayout(top_layout)
+        main_layout.addWidget(self.total_label)
+        main_layout.addWidget(text_label)
+
+        frame.setLayout(main_layout)
+        self.setLayout(QVBoxLayout(self))
+        self.layout().addWidget(frame)
+
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+    def change_total_label(self, total_amount):
+        self.total_label.setText(f"{total_amount}")
+
+
+class TotalSuccessWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+
+        frame = QFrame(self)
+        frame.setAutoFillBackground(True)  # Enable background color
+
+        # Set background color (for example, light gray)
+        p = frame.palette()
+        p.setColor(frame.backgroundRole(), QColor(255, 255, 255))
+        frame.setPalette(p)
+
+        main_layout = QVBoxLayout(frame)
+
+        top_layout = QHBoxLayout()
+        image_label = QLabel()
+
+        button = TotalSuccessDropButton()
+        button.setFixedSize(120, 40)
+
+        button.weekly_selected.connect(self.change_total_label)
+        button.monthly_selected.connect(self.change_total_label)
+        button.yearly_selected.connect(self.change_total_label)
+
+        weekly_total = button.get_weekly_amount()
+
+        top_layout.addWidget(image_label)
+        top_layout.addWidget(button)
+
+        text_label = QLabel("Forms Printed Successfully:")
+        text_label.setStyleSheet(
+            """
+            font-family: Roboto;
+            font-size: 10px;
+            margin-left: 17px;
+            color: #ADADAD;
+            border: none;
+            padding-bottom: 10px;
+            """
+        )
+
+        self.total_label = QLabel(f"{weekly_total}")
+        self.total_label.setStyleSheet(
+            """
+            font-family: Montserrat;
+            font-weight: bold;
+            font-size: 13px;
+            margin-left: 15px;
+            padding-top: 7px;
+            border: none;
+            """
+        )
+
+        main_layout.addLayout(top_layout)
+        main_layout.addWidget(self.total_label)
+        main_layout.addWidget(text_label)
+
+        frame.setLayout(main_layout)
+        self.setLayout(QVBoxLayout(self))
+        self.layout().addWidget(frame)
+
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+    def change_total_label(self, total_amount):
+        self.total_label.setText(f"{total_amount}")
+
+
+class TotalFailedWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+
+        frame = QFrame(self)
+        frame.setAutoFillBackground(True)  # Enable background color
+
+        # Set background color (for example, light gray)
+        p = frame.palette()
+        p.setColor(frame.backgroundRole(), QColor(255, 255, 255))
+        frame.setPalette(p)
+
+        main_layout = QVBoxLayout(frame)
+
+        top_layout = QHBoxLayout()
+        image_label = QLabel()
+
+        button = TotalFailedDropButton()
+        button.setFixedSize(120, 40)
+
+        button.weekly_selected.connect(self.change_total_label)
+        button.monthly_selected.connect(self.change_total_label)
+        button.yearly_selected.connect(self.change_total_label)
+
+        weekly_total = button.get_weekly_amount()
+
+        top_layout.addWidget(image_label)
+        top_layout.addWidget(button)
+
+        text_label = QLabel("Forms Printed Uncessfully:")
+        text_label.setStyleSheet(
+            """
+            font-family: Roboto;
+            font-size: 10px;
+            margin-left: 17px;
+            color: #ADADAD;
+            border: none;
+            padding-bottom: 10px;
+            """
+        )
+
+        self.total_label = QLabel(f"{weekly_total}")
+        self.total_label.setStyleSheet(
+            """
+            font-family: Montserrat;
+            font-weight: bold;
+            font-size: 13px;
+            margin-left: 15px;
+            padding-top: 7px;
+            border: none;
+            """
+        )
+
+        main_layout.addLayout(top_layout)
+        main_layout.addWidget(self.total_label)
+        main_layout.addWidget(text_label)
+
+        frame.setLayout(main_layout)
+        self.setLayout(QVBoxLayout(self))
+        self.layout().addWidget(frame)
+
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+    def change_total_label(self, total_amount):
+        self.total_label.setText(f"{total_amount}")
 
 
 class AdminWindowWidget(QWidget):
@@ -2000,17 +2644,70 @@ class AdminWindowWidget(QWidget):
         )
         main_layout.addWidget(title_label)
         main_layout.addSpacerItem(
-            QSpacerItem(20, 25, QSizePolicy.Minimum, QSizePolicy.Fixed)
+            QSpacerItem(20, 15, QSizePolicy.Minimum, QSizePolicy.Fixed)
         )
+
+        dashboard_layout = QHBoxLayout()
         
+        # Create a QGraphicsDropShadowEffect
+        shadow_effect1 = QGraphicsDropShadowEffect()
+        shadow_effect1.setBlurRadius(50)
+        shadow_effect1.setColor(Qt.gray)
+        shadow_effect1.setOffset(0, 0)  # Adjust the shadow's offset as needed
+        
+        # Create a QGraphicsDropShadowEffect
+        shadow_effect2 = QGraphicsDropShadowEffect()
+        shadow_effect2.setBlurRadius(50)
+        shadow_effect2.setColor(Qt.gray)
+        shadow_effect2.setOffset(0, 0)  # Adjust the shadow's offset as needed
+        
+        # Create a QGraphicsDropShadowEffect
+        shadow_effect3 = QGraphicsDropShadowEffect()
+        shadow_effect3.setBlurRadius(50)
+        shadow_effect3.setColor(Qt.gray)
+        shadow_effect3.setOffset(0, 0)  # Adjust the shadow's offset as needed
+        
+        # Create a QGraphicsDropShadowEffect
+        shadow_effect4 = QGraphicsDropShadowEffect()
+        shadow_effect4.setBlurRadius(50)
+        shadow_effect4.setColor(Qt.gray)
+        shadow_effect4.setOffset(0, 0)  # Adjust the shadow's offset as needed
+
+        total_form_widget = TotalFormWidget()
+
+        # Apply the effect to the rectangle
+        total_form_widget.setGraphicsEffect(shadow_effect1)
+        total_form_widget.setFixedSize(400, 140)
+        dashboard_layout.addWidget(total_form_widget)
+
         total_amount_widget = TotalAmountWidget()
-        total_amount_widget.setFixedSize(380, 140)
-        main_layout.addWidget(total_amount_widget)
+        
+        # Apply the effect to the rectangle
+        total_amount_widget.setGraphicsEffect(shadow_effect2)
+        total_amount_widget.setFixedSize(400, 140)
+        dashboard_layout.addWidget(total_amount_widget)
+
+        total_success_widget = TotalSuccessWidget()
+        
+        # Apply the effect to the rectangle
+        total_success_widget.setGraphicsEffect(shadow_effect3)
+        total_success_widget.setFixedSize(240, 140)
+        dashboard_layout.addWidget(total_success_widget)
+
+        total_failed_widget = TotalFailedWidget()
+        
+        # Apply the effect to the rectangle
+        total_failed_widget.setGraphicsEffect(shadow_effect4)
+        total_failed_widget.setFixedSize(240, 140)
+        dashboard_layout.addWidget(total_failed_widget)
+
+        dashboard_layout.setAlignment(Qt.AlignLeft)
+        main_layout.addLayout(dashboard_layout)
 
         main_layout.addSpacerItem(
-            QSpacerItem(20, 25, QSizePolicy.Minimum, QSizePolicy.Fixed)
+            QSpacerItem(20, 15, QSizePolicy.Minimum, QSizePolicy.Fixed)
         )
-        
+
         # Create a table
         self.tableWidget = QTableWidget()
         self.tableWidget.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
@@ -2037,6 +2734,9 @@ class AdminWindowWidget(QWidget):
             QTableWidget::item:selected {
                 background-color: #e0e0e0; /* Selected item color */
                 color: #000000;
+            }
+            QTableView QTableCornerButton::section {
+                background: #7C2F3E;
             }
             QHeaderView::section {
                 background-color: #7C2F3E; /* Header background color */
