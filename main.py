@@ -39,7 +39,7 @@ class MainWindow(QMainWindow):
 
         # Adding HomeScreenWindow
         self.layout.addWidget(self.home_screen_widget)
-        self.home_screen_widget.setVisible(False)
+        self.home_screen_widget.setVisible(True)
         self.home_screen_widget.home_screen_clicked.connect(self.show_form_list)
 
         # Set properties of the admin button
@@ -50,11 +50,11 @@ class MainWindow(QMainWindow):
             "QPushButton {background-color: transparent; border: none; image: url('img/admin_bt.svg');}"
             "QPushButton:pressed {background-color: transparent; border: none; image: url('img/admin_bt_pressed.svg');}"
         )
-        self.admin_bt.hide()
+        self.admin_bt.show()
         self.admin_bt.clicked.connect(self.show_admin_login)
         
-        self.admin_window = AdminWindowWidget(self)
-        self.layout.addWidget(self.admin_window)
+        #self.admin_window = AdminWindowWidget(self)
+        #self.layout.addWidget(self.admin_window)
         
     def go_back_to_home(self):
         self.home_screen_widget.setVisible(True)

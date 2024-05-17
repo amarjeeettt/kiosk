@@ -233,16 +233,18 @@ class ViewFormWidget(QWidget):
         printer_layout.setSpacing(15)
 
         # Set contents margins for each layout if needed
-        bondpaper_layout.setContentsMargins(30, 0, 30, 0)
-        bondpaper_layout.setContentsMargins(30, 0, 30, 0)
-        coins_layout.setContentsMargins(30, 0, 30, 0)
-        printer_layout.setContentsMargins(30, 0, 30, 0)
+        bondpaper_layout.setContentsMargins(15, 0, 15, 0)
+        coins_layout.setContentsMargins(15, 0, 15, 0)
+        printer_layout.setContentsMargins(15, 0, 15, 0)
 
         # Bondpaper widgets
+        bondapaper_warning = QPushButton("!")
+        bondapaper_warning.setFixedSize(45,45)
         bondpaper_img = QLabel()
         pixmap = QPixmap("./img/static/bondpaper_quantity.png")
         bondpaper_img.setPixmap(pixmap)
         bondpaper_label = QLabel(str(self.bondpaper_quantity))
+        bondpaper_layout.addWidget(bondapaper_warning)
         bondpaper_layout.addWidget(bondpaper_img)
         bondpaper_layout.addWidget(bondpaper_label)
 
@@ -255,10 +257,13 @@ class ViewFormWidget(QWidget):
         coins_layout.addWidget(coins_label)
 
         # Printer widgets
+        printer_warning = QPushButton("!")
+        printer_warning.setFixedSize(45,45)
         printer_img = QLabel()
         pixmap = QPixmap("./img/static/printer_img.png")
         printer_img.setPixmap(pixmap)
         printer_status_symbol = QLabel("X")
+        printer_layout.addWidget(printer_warning)
         printer_layout.addWidget(printer_img)
         printer_layout.addWidget(printer_status_symbol)
 
