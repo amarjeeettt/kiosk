@@ -1,35 +1,27 @@
-import sys
-import os
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget
+import cups
 
-class MainWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        self.initUI()
+def check_job_status(job_id):
+    # Get a connection to the CUPS server
+    conn = cups.Connection()
 
-    def initUI(self):
-        self.setWindowTitle("PyQt Restart Example")
-        self.setGeometry(100, 100, 300, 200)
+    # Get information about the specific job
+    job_info = conn.getJobs()
 
-        button = QPushButton("Restart", self)
-        button.clicked.connect(self.restart_application)
+    # Check if the job_id exists in the job_info dictionary
+    if job_id in job_info:
+        # Get the status of the job
+        job_status = job_info[job_id]['job-state']
+        
+        # Check if the job is completed
+        if job_status == cups.JOB_COMPLETED:
+            print(f"Job {job_id} is completed.")
+        else:
+            print(f"Job {job_id} is still in progress.")
+    else:
+        print(f"Job {job_id} not found.")
 
-        layout = QVBoxLayout()
-        layout.addWidget(button)
+    # Close the connection
+    conn.close()
 
-        container = QWidget()
-        container.setLayout(layout)
-        self.setCentralWidget(container)
-
-    def restart_application(self):
-        """Restart the application."""
-        # Save application state here if necessary
-        QApplication.quit()  # Close the application
-        # Execute the script again
-        os.execl(sys.executable, sys.executable, *sys.argv)
-
-if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    mainWindow = MainWindow()
-    mainWindow.show()
-    sys.exit(app.exec_())
+# Example usage: Check the status of a specific job (replace 123 with the desired job ID)
+check_job_status(123)
