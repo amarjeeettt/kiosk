@@ -2,6 +2,7 @@ import cups
 import sqlite3
 import subprocess
 import time
+import threading
 from datetime import datetime
 from PyQt5.QtWidgets import (
     QWidget,
@@ -130,29 +131,54 @@ class PrintInProgress(QWidget):
             if not printers:
                 raise Exception("No Printers Available.")
 
+            
+            idle_printer_name = None
+            for printer_name, printer_attributes in printers.items():
+                if "printer-state" in printer_attributes and printer_attributes["printer-state"] == 3:
+                    idle_printer_name = printer_name
+                    break
+                    
+            else:
+                raise Exception("No idle printer available")
+        
+            
+            print(idle_printer_name)
+            
             file_path = f"./forms/{title}.pdf"
 
             # Define printer options (media)
             printer_options = {
                 "media": "legal",  # Set media to legal size
             }
-            
-            for printer_name, printer_attributes in printers.items():
-                if "printer-state" in printer_attributes and printer_attributes["printer-state"] == 3:
-                    idle_printer_name = printer_name
-                else:
-                    raise Exception("Printer not available or offline")
                     
 
             # Submit print jobs
+            job_ids = []
             for _ in range(num_copy):
                 job_id = conn.printFile(idle_printer_name, file_path, "Print Job", {})
+                job_ids.append(job_id)
                 print(f"Print job submitted to {idle_printer_name} with ID:", job_id)
-            
+                
+                """
                 if job_id is not None:
                     self.print_result = "Success"
                 else:
                     self.print_result = "Failed"
+                """
+            
+            # Start a separate thread to check print job status
+            status_thread = threading.Thread(target=self.check_print_job_status, args=(job_id,))
+            status_thread.start()
+
+            for thread in threading.enumerate():
+                if thread != threading.current_thread():
+                    thread.join()
+            
+            # Check if all print jobs were successful
+            if all(job_id_completed for job_id_completed in job_ids):
+                self.print_result = "Success"
+            else:
+                self.print_result = "Failed"
 
         except Exception as e:
             print("Error during printing:", e)
@@ -193,15 +219,50 @@ class PrintInProgress(QWidget):
 
     def check_print_job_status(self, job_id):
         try:
-            completed_jobs_output = subprocess.check_output(["lpstat", "-W", "completed", "-o"]).decode("utf-8")
-            completed_jobs_output_lines = completed_jobs_output.split("\n")
-            for line in completed_jobs_output_lines:
-                if job_id == line.strip().split():  # Assuming job ID is the first field
-                    return True
-            return False
-        except subprocess.CalledProcessError as e:
-            print("Error executing lpstat command:", e)
-            return False
+            # Continuously check for active print jobs
+            while True:
+                active_result = subprocess.run(['lpstat', '-o'], capture_output=True, text=True)
+                active_output = active_result.stdout
+
+                if active_output:
+                    print("Active Print Jobs:")
+                    print(active_output)
+                    if str(job_id) in active_output:
+                        print(f"Job ID {job_id} is still active.")
+                    else:
+                        print(f"Job ID {job_id} is not active.")
+                        break # Job is not active
+                    # Wait for a few seconds before checking again
+                    timer = threading.Timer(3, delayed_function)
+
+                    # Start the timer
+                    timer.start()
+
+                    # You can do other things here while waiting for the timer to expire
+
+                    # Wait for the timer to finish
+                    timer.join()
+                else:
+                    print("No active print jobs found.")
+                    break  # No active print jobs
+
+            # Check for completed print jobs
+            completed_result = subprocess.run(['lpstat', '-W', 'completed'], capture_output=True, text=True)
+            completed_output = completed_result.stdout
+
+            if completed_output:
+                print("Completed Print Jobs:")
+                print(completed_output)
+                if str(job_id) in completed_output:
+                    print(f"Job ID {job_id} has been completed.")
+                else:
+                    print(f"Job ID {job_id} has not been completed.")
+            else:
+                print("No completed print jobs found.")
+
+        except Exception as e:
+            print(f"An error occurred while checking print job status: {e}")
+            return False  # Error occurred
 
 
     def print_success(self):

@@ -284,7 +284,8 @@ class PrintFormWidget(QWidget):
 
         conn.close()
 
-        self.counter = self.coins_left
+        # self.counter = self.coins_left
+        self.counter = 10
 
     def update_counter(self, counter):
         self.counter = counter
