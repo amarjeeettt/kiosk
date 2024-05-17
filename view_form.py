@@ -322,7 +322,7 @@ class ViewFormWidget(QWidget):
                 font-size: 16px; 
                 font-weight: bold; 
                 border: none; 
-                border-bottom: 2px solid blue; 
+                border-bottom: 2px solid #7C2F3E; 
                 padding-bottom: 5px; 
             }
             """
@@ -429,7 +429,7 @@ class ViewFormWidget(QWidget):
                 font-size: 16px; 
                 font-weight: bold; 
                 border: none; 
-                border-bottom: 2px solid blue; 
+                border-bottom: 2px solid #7C2F3E; 
                 padding-bottom: 5px; 
             }
         """

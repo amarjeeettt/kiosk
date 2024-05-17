@@ -32,16 +32,8 @@ class PrintFormWidget(QWidget):
         self.num_pages = num_pages
         self.total = total
 
-        # Connect database
-        conn = sqlite3.connect("kiosk.db")
-        cursor = conn.cursor()
-
-        cursor.execute("SELECT coins_left FROM kiosk_settings LIMIT 1")
-        self.coins_left = cursor.fetchone()[0]
-
-        conn.close()
-
-        self.counter = self.coins_left
+        # Connect to the database and retrieve the initial counter value
+        self.connect_db()
         self.bondpaper_quantity = None
 
         # Create a layout for the central widget
@@ -277,24 +269,36 @@ class PrintFormWidget(QWidget):
         )
         layout.addLayout(rectangle_layout)
 
-        self.counter_thread = CounterThread()
-        self.counter_thread.counter_changed.connect(
-            lambda counter: self.update_counter(counter)
-        )
-        self.counter_thread.start()
+        # self.counter_thread = CounterThread(self.counter)
+        # self.counter_thread.counter_changed.connect(self.update_counter)
+        # self.counter_thread.start()
 
         self.check_total_counter_match()
+
+    def connect_db(self):
+        conn = sqlite3.connect("kiosk.db")
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT coins_left FROM kiosk_settings LIMIT 1")
+        self.coins_left = cursor.fetchone()[0]
+
+        conn.close()
+
+        self.counter = self.coins_left
 
     def update_counter(self, counter):
         self.counter = counter
         self.amount_label.setText(f"₱{self.counter:0.2f}")
 
-        # Connect database
+        self.update_db_counter(self.counter)
+        self.check_total_counter_match()
+
+    def update_db_counter(self, counter):
         conn = sqlite3.connect("kiosk.db")
         cursor = conn.cursor()
         cursor.execute(
             "UPDATE kiosk_settings SET coins_left = ?",
-            (self.counter,),
+            (counter,),
         )
         conn.commit()
 
@@ -303,7 +307,6 @@ class PrintFormWidget(QWidget):
         conn.close()
 
         print(coins)
-        self.check_total_counter_match()
 
     def check_total_counter_match(self):
         if self.counter >= self.total:
@@ -312,7 +315,7 @@ class PrintFormWidget(QWidget):
             self.print_bt.setEnabled(False)
 
     def open_print_window(self):
-        self.counter_thread.stop()
+        # self.counter_thread.stop()
         if self.counter > self.total:
             message_box = PrintMessageBox(
                 self.title,
@@ -342,32 +345,33 @@ class PrintFormWidget(QWidget):
             message_box.exec_()
 
     def go_back(self):
+        # self.counter_thread.stop()
         self.setVisible(False)
         self.cancel_clicked.emit()
-        self.counter_thread.stop()
+        
 
     def go_back_home_screen(self):
+        # self.counter_thread.stop()
         self.close()
-        self.go_back_home.emit()
-        self.counter_thread.stop()
+        self.go_back_home.emit()    
 
 
 class CounterThread(QThread):
     counter_changed = pyqtSignal(int)
 
-    def __init__(self):
+    def __init__(self, initial_counter):
         super().__init__()
         self.coinslot = Button(22)
         self.stop_event = Event()
+        self.counter = initial_counter
 
     def run(self):
-        counter = 0
         while not self.stop_event.is_set():
             try:
                 if self.coinslot.is_pressed:
-                    counter += 1
+                    self.counter += 1
                     time.sleep(0.05)
-                    self.counter_changed.emit(counter)
+                    self.counter_changed.emit(self.counter)
             except Exception as e:
                 print(f"Error reading button state: {e}")
 

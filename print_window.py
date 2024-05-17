@@ -137,16 +137,16 @@ class PrintInProgress(QWidget):
                 "media": "legal",  # Set media to legal size
             }
             
-            test = list(printers.keys())[1]
-            
             for printer_name, printer_attributes in printers.items():
                 if "printer-state" in printer_attributes and printer_attributes["printer-state"] == 3:
                     idle_printer_name = printer_name
+                else:
+                    raise Exception("Printer not available or offline")
                     
 
             # Submit print jobs
             for _ in range(num_copy):
-                job_id = conn.printFile(test, file_path, "Print Job", {})
+                job_id = conn.printFile(idle_printer_name, file_path, "Print Job", {})
                 print(f"Print job submitted to {idle_printer_name} with ID:", job_id)
             
                 if job_id is not None:

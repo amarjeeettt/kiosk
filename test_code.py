@@ -1,22 +1,35 @@
-import subprocess
+import sys
+import os
+from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget
 
-def is_job_completed(job_id):
-    try:
-        completed_jobs_output = subprocess.check_output(["lpstat", "-W", "completed", "-o"]).decode("utf-8")
-        completed_jobs_output_lines = completed_jobs_output.split("\n")
-        for line in completed_jobs_output_lines:
-            if job_id in line:
-                return True
-        return False
-    except subprocess.CalledProcessError as e:
-        print("Error executing lpstat command:", e)
-        return False
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
 
-# Usage example:
-job_id = "217"
-if is_job_completed(job_id):
-    print(f"Job {job_id} is completed.")
-else:
-    print(f"Job {job_id} is not completed.")
+    def initUI(self):
+        self.setWindowTitle("PyQt Restart Example")
+        self.setGeometry(100, 100, 300, 200)
 
+        button = QPushButton("Restart", self)
+        button.clicked.connect(self.restart_application)
 
+        layout = QVBoxLayout()
+        layout.addWidget(button)
+
+        container = QWidget()
+        container.setLayout(layout)
+        self.setCentralWidget(container)
+
+    def restart_application(self):
+        """Restart the application."""
+        # Save application state here if necessary
+        QApplication.quit()  # Close the application
+        # Execute the script again
+        os.execl(sys.executable, sys.executable, *sys.argv)
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    mainWindow = MainWindow()
+    mainWindow.show()
+    sys.exit(app.exec_())

@@ -1,4 +1,5 @@
 import sys
+import os
 from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -38,7 +39,7 @@ class MainWindow(QMainWindow):
 
         # Adding HomeScreenWindow
         self.layout.addWidget(self.home_screen_widget)
-        self.home_screen_widget.setVisible(True)
+        self.home_screen_widget.setVisible(False)
         self.home_screen_widget.home_screen_clicked.connect(self.show_form_list)
 
         # Set properties of the admin button
@@ -49,9 +50,12 @@ class MainWindow(QMainWindow):
             "QPushButton {background-color: transparent; border: none; image: url('img/admin_bt.svg');}"
             "QPushButton:pressed {background-color: transparent; border: none; image: url('img/admin_bt_pressed.svg');}"
         )
-        self.admin_bt.show()
+        self.admin_bt.hide()
         self.admin_bt.clicked.connect(self.show_admin_login)
-
+        
+        self.admin_window = AdminWindowWidget(self)
+        self.layout.addWidget(self.admin_window)
+        
     def go_back_to_home(self):
         self.home_screen_widget.setVisible(True)
         self.admin_bt.show()
@@ -78,6 +82,8 @@ class MainWindow(QMainWindow):
         self.admin_window.show()
 
         self.admin_window.home_screen_backbt_clicked.connect(self.go_back_to_home)
+        self.admin_window.restart_bt_clicked.connect(self.restart_app)
+        self.admin_window.shutdown_bt_clicked.connect(self.go_back_to_home)
 
     def show_form_list(self):
         self.view_form = ViewFormWidget(self)
@@ -152,6 +158,14 @@ class MainWindow(QMainWindow):
             0, 0, screen_resolution.width(), screen_resolution.height()
         )  # Set label size to screen resolution
         background_label.setScaledContents(True)
+    
+    def restart_app(self):
+        QApplication.quit()
+        os.execl(sys.executable, sys.executable, *sys.argv)
+        
+    def shutdown_app(self):
+        print('TEst')
+        QApplication.quit()
 
 
 if __name__ == "__main__":

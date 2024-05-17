@@ -1,7 +1,9 @@
 import os
+import sys
 import sqlite3
 import datetime
 from PyQt5.QtWidgets import (
+    QApplication,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -26,6 +28,8 @@ from PyQt5.QtWidgets import (
     QDialog,
     QMenu,
     QAction,
+    QStyledItemDelegate,
+    QListView,
 )
 from PyQt5.QtCore import Qt, QSize, pyqtSignal
 from PyQt5.QtGui import QPixmap, QIcon, QColor, QPalette
@@ -442,6 +446,25 @@ class EditButtonWidget(QWidget):
         # Emit the signal with necessary data
         self.buttonClicked.emit(self.index, self.title_text)
 
+class CustomDelegate(QStyledItemDelegate):
+    def sizeHint(self, option, index):
+        size = super().sizeHint(option, index)
+        # Increase the height (for example, make it double)
+        size.setHeight(size.height() * 3)
+        return size
+
+    def paint(self, painter, option, index):
+        super().paint(painter, option, index)
+        
+        # Draw separator line
+        if index.row() < option.widget.model().rowCount() - 1:
+            rect = option.rect
+            painter.save()
+            pen = painter.pen()
+            pen.setColor(QColor('#B3B3B3'))
+            painter.setPen(pen)
+            painter.drawLine(rect.bottomLeft(), rect.bottomRight())
+            painter.restore()
 
 class FormWidget(QWidget):
     title_input_clicked = pyqtSignal()
@@ -565,6 +588,13 @@ class FormWidget(QWidget):
         )
         self.category_input.addItems(self.form_category)
         self.category_input.setFixedWidth(300)
+        
+        view = QListView()
+        self.category_input.setView(view)
+        
+        delegate = CustomDelegate()
+        self.category_input.setItemDelegate(delegate)
+        
         category_layout.addWidget(category_label)
         category_layout.addWidget(self.category_input)
 
@@ -925,7 +955,7 @@ class EditFormWidget(QWidget):
         title_layout.addWidget(title_label)
         title_layout.addWidget(self.title_input)
 
-        # Category layout
+                # Category layout
         category_layout = QVBoxLayout()
         category_label = QLabel("Form Category:")
         category_label.setStyleSheet(
@@ -966,6 +996,13 @@ class EditFormWidget(QWidget):
         )
         self.category_input.addItems(self.form_category)
         self.category_input.setFixedWidth(300)
+        
+        view = QListView()
+        self.category_input.setView(view)
+        
+        delegate = CustomDelegate()
+        self.category_input.setItemDelegate(delegate)
+        
         category_layout.addWidget(category_label)
         category_layout.addWidget(self.category_input)
 
@@ -2550,6 +2587,34 @@ class AdminWindowWidget(QWidget):
 
         self.left_layout.addStretch(5)
         self.left_layout.setSpacing(20)
+        
+        
+        system_layout = QHBoxLayout()
+        
+        system_bt = QPushButton('test')
+        system_bt.setFixedSize(100, 100)
+        system_bt.setStyleSheet("margin-bottom: 40px; ")
+        
+        frame = QFrame()
+        
+        frame_layout = QVBoxLayout()
+        frame_layout.setContentsMargins(0, 0, 0, 40)
+        
+        restart_bt = QPushButton('Restart')
+        restart_bt.clicked.connect(self.restart_app)
+        
+        shutdown_bt = QPushButton('Shutdown')
+        shutdown_bt.clicked.connect(self.shutdown_app)
+        
+        frame_layout.addWidget(restart_bt)
+        frame_layout.addWidget(shutdown_bt)
+        frame.setLayout(frame_layout)
+        
+        system_layout.addWidget(system_bt)
+        system_layout.addWidget(frame)
+        
+        self.left_layout.addLayout(system_layout)
+        
         left_widget = QWidget()
         left_widget.setLayout(self.left_layout)
         left_widget.setFixedWidth(250)
@@ -2564,7 +2629,7 @@ class AdminWindowWidget(QWidget):
         self.right_widget.addTab(self.tab5, "")
         self.right_widget.addTab(self.tab6, "")
 
-        self.right_widget.setCurrentIndex(0)
+        self.right_widget.setCurrentIndex(1)
         self.right_widget.setStyleSheet(
             """
             QTabWidget::pane {
@@ -3583,3 +3648,10 @@ class AdminWindowWidget(QWidget):
     def logout(self):
         self.setVisible(False)
         self.home_screen_backbt_clicked.emit()
+        
+    def restart_app(self):
+        QApplication.quit()
+        os.execl(sys.executable, sys.executable, *sys.argv)
+        
+    def shutdown_app(self):
+        QApplication.quit()

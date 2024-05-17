@@ -4,9 +4,10 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QLabel,
     QHBoxLayout,
+    QGraphicsDropShadowEffect,
 )
 from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QPixmap, QImage, QPainter, QBrush, QColor
 
 
 class ViewProcessWidget(QWidget):
@@ -19,14 +20,9 @@ class ViewProcessWidget(QWidget):
 
     def setup_ui(self, title):
         self.title = title
-        print(self.title)
 
         # Create a layout for the central widget
         layout = QVBoxLayout(self)
-
-        # Create a label to display some text in the window
-        label = QLabel(self.title)
-        label.setAlignment(Qt.AlignCenter)  # Align text to the center
 
         # Add back button to the layout
         back_button_layout = QHBoxLayout()
@@ -55,8 +51,47 @@ class ViewProcessWidget(QWidget):
         self.back_bt.clicked.connect(self.go_back)
         back_button_layout.addWidget(self.back_bt, alignment=Qt.AlignLeft)
         layout.addLayout(back_button_layout)
+        
+        # Create a QGraphicsDropShadowEffect
+        shadow_effect = QGraphicsDropShadowEffect()
+        shadow_effect.setBlurRadius(50)
+        shadow_effect.setColor(Qt.gray)
+        shadow_effect.setOffset(0, 8)
 
-        layout.addWidget(label)
+        
+        # Load the image
+        self.image = (
+            QImage(f"./img/process/test.png")
+            .scaledToWidth(1280, Qt.SmoothTransformation)
+            .scaledToHeight(int(1280 * (2 / 3)), Qt.SmoothTransformation)
+        )
+        
+        # Apply border radius to the image
+        self.apply_border_radius()
+
+        pixmap = QPixmap.fromImage(self.image)
+        self.process_image = QLabel()
+        self.process_image.setPixmap(pixmap)
+        self.process_image.setGraphicsEffect(shadow_effect)
+        self.process_image.setAlignment(Qt.AlignCenter)
+
+        layout.addWidget(self.process_image)
+
+    def apply_border_radius(self):
+        # Create a mask image with the desired border radius
+        mask = QImage(self.image.size(), QImage.Format_ARGB32)
+        mask.fill(Qt.transparent)
+
+        # Create a QPainter for the mask
+        painter = QPainter(mask)
+        painter.setRenderHint(QPainter.Antialiasing, True)
+        painter.setBrush(QBrush(QColor(Qt.white)))
+        painter.setPen(Qt.NoPen)
+        painter.drawRoundedRect(self.image.rect(), 25, 25)
+        painter.end()
+
+        # Apply the mask to the image
+        self.image.setAlphaChannel(mask)
 
     def go_back(self):
         self.setVisible(False)
