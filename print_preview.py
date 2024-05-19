@@ -11,18 +11,33 @@ from PyQt5.QtWidgets import (
     QGraphicsDropShadowEffect,
 )
 from PyQt5.QtGui import QPixmap, QImage, QPainter, QBrush, QColor, QIcon
-from PyQt5.QtCore import Qt, pyqtSignal, QPoint, QPropertyAnimation, QSize
+from PyQt5.QtCore import (
+    Qt,
+    QTimer,
+    QEvent,
+    pyqtSignal,
+    QPoint,
+    QPropertyAnimation,
+    QSize,
+)
 
 
 class PrintPreviewWidget(QWidget):
     view_form_backbt_clicked = pyqtSignal()
+    timer_expired = pyqtSignal()
     view_process_clicked = pyqtSignal(str)
     print_form_clicked = pyqtSignal(str, int, int, int)
 
     def __init__(self, parent, title, page_number):
         super().__init__(parent)
-
         self.setup_ui(title, page_number)
+
+        self.inactivity_timer = QTimer(self)
+        self.inactivity_timer.setInterval(30000)
+        self.inactivity_timer.timeout.connect(self.go_back_home)
+        self.inactivity_timer.start()
+
+        self.installEventFilter(self)
 
     def setup_ui(self, title, page_number):
         # Connect database
@@ -511,13 +526,32 @@ class PrintPreviewWidget(QWidget):
         self.image.setAlphaChannel(mask)
 
     def process_bt_clicked(self, title):
+        self.inactivity_timer.stop()
         self.view_process_clicked.emit(title)
 
     def print_form_bt_clicked(self, title, page_number):
+        self.inactivity_timer.stop()
         self.print_form_clicked.emit(
             title, int(self.value), page_number, int(self.total)
         )
 
+    def eventFilter(self, obj, event):
+        if event.type() in [QEvent.MouseButtonPress, QEvent.KeyPress]:
+            self.reset_inactivity_timer()
+        return super().eventFilter(obj, event)
+
+    def reset_inactivity_timer(self):
+        self.inactivity_timer.start()
+
+    def go_back_home(self):
+        self.setVisible(False)
+
+        print("No user interaction for 30 seconds.")
+        self.inactivity_timer.stop()
+
+        self.timer_expired.emit()
+
     def go_back(self):
         self.setVisible(False)
+        self.inactivity_timer.stop()
         self.view_form_backbt_clicked.emit()

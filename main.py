@@ -1,5 +1,5 @@
 import sys
-import os
+import cups
 from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -52,10 +52,10 @@ class MainWindow(QMainWindow):
         )
         self.admin_bt.show()
         self.admin_bt.clicked.connect(self.show_admin_login)
-        
-        #self.admin_window = AdminWindowWidget(self)
-        #self.layout.addWidget(self.admin_window)
-        
+
+        self.printer_state = None
+        self.is_printer_available()
+
     def go_back_to_home(self):
         self.home_screen_widget.setVisible(True)
         self.admin_bt.show()
@@ -82,17 +82,16 @@ class MainWindow(QMainWindow):
         self.admin_window.show()
 
         self.admin_window.home_screen_backbt_clicked.connect(self.go_back_to_home)
-        self.admin_window.restart_bt_clicked.connect(self.restart_app)
-        self.admin_window.shutdown_bt_clicked.connect(self.go_back_to_home)
 
     def show_form_list(self):
-        self.view_form = ViewFormWidget(self)
+        self.view_form = ViewFormWidget(self, self.printer_state)
         self.layout.addWidget(self.view_form)
 
         self.admin_bt.hide()
 
         self.view_form.show()
         self.view_form.view_button_clicked.connect(self.show_print_preview)
+        self.view_form.go_back_clicked.connect(self.go_back_to_home)
 
     @pyqtSlot(str, int)
     def show_print_preview(self, title, page_number):
@@ -106,6 +105,7 @@ class MainWindow(QMainWindow):
         self.print_preview.view_form_backbt_clicked.connect(self.show_form_list)
         self.print_preview.view_process_clicked.connect(self.show_view_process)
         self.print_preview.print_form_clicked.connect(self.show_print_form)
+        self.print_preview.timer_expired.connect(self.go_back_to_home)
 
     @pyqtSlot(str, int, int, int)
     def show_print_form(self, title, num_copy, num_pages, total):
@@ -139,6 +139,32 @@ class MainWindow(QMainWindow):
     def go_back_print_preview_print_form(self):
         self.print_preview.show()
 
+    def is_printer_available(self):
+        try:
+            conn = cups.Connection()
+            printers = conn.getPrinters()
+
+            if not printers:
+                self.printer_state = False
+                raise Exception("No printers available.")
+
+            idle_printer_found = False
+            for printer_name, printer_attributes in printers.items():
+                if (
+                    "printer-state" in printer_attributes
+                    and printer_attributes["printer-state"] == 3
+                ):
+                    idle_printer_found = True
+                    self.printer_state = True
+                    break
+
+            if not idle_printer_found:
+                self.printer_state = False
+                raise Exception("No idle printer available")
+
+        except Exception as e:
+            print("Error during printing:", e)
+
     def set_background_image(self):
         # Get screen resolution
         screen_resolution = QDesktopWidget().screenGeometry()
@@ -158,14 +184,6 @@ class MainWindow(QMainWindow):
             0, 0, screen_resolution.width(), screen_resolution.height()
         )  # Set label size to screen resolution
         background_label.setScaledContents(True)
-    
-    def restart_app(self):
-        QApplication.quit()
-        os.execl(sys.executable, sys.executable, *sys.argv)
-        
-    def shutdown_app(self):
-        print('TEst')
-        QApplication.quit()
 
 
 if __name__ == "__main__":

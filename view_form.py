@@ -11,9 +11,10 @@ from PyQt5.QtWidgets import (
     QSizePolicy,
     QGraphicsDropShadowEffect,
     QSpacerItem,
+    QDialog,
 )
 from PyQt5.QtGui import QPixmap, QColor
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt, QTimer, QEvent, pyqtSignal
 
 
 class SmoothScrollArea(QScrollArea):
@@ -43,6 +44,83 @@ class SmoothScrollArea(QScrollArea):
         self._mousePressPos = None
         self._scrollBarValueAtMousePress = None
         super().mouseReleaseEvent(event)
+
+
+class WarningMessageBox(QDialog):
+    return_bt_clicked = pyqtSignal()
+
+    def __init__(self, message, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(400, 325)
+
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+        self.setStyleSheet("background-color: #EBEBEB;")
+
+        title_label = QLabel("Warning")
+        title_label.setStyleSheet(
+            "font-size: 24px; font-family: Montserrat; font-weight: bold; color: #7C2F3E;"
+        )
+        layout.addWidget(title_label, alignment=Qt.AlignCenter)
+
+        message_label = QLabel(message)
+        message_label.setWordWrap(True)
+        message_label.setStyleSheet(
+            "font-size: 14px; font-family: Roboto; margin-left: 15px; margin-right: 15px"
+        )
+        layout.addWidget(message_label, alignment=Qt.AlignCenter)
+
+        button_layout = QHBoxLayout()
+        layout.addLayout(button_layout)
+
+        return_button = QPushButton("Return")
+        return_button.setFixedSize(100, 45)
+        return_button.clicked.connect(self.return_clicked)
+        return_button.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #B3B3B3;
+                border-radius: 10px;
+                color: #19323C;
+                padding: 8px 16px;
+                font-size: 14px;
+                font-weight: bold;
+                font-family: Montserrat;
+            }
+            QPushButton:pressed {
+                background-color: #7C2F3E;
+                color: #FAEBD7;
+            }
+            """
+        )
+        button_layout.addWidget(return_button, alignment=Qt.AlignCenter)
+
+        continue_button = QPushButton("Continue")
+        continue_button.setFixedSize(100, 45)
+        continue_button.clicked.connect(lambda: self.accept())
+        continue_button.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #7C2F3E;
+                border-radius: 10px;
+                color: #FAEBD7;
+                padding: 8px 16px;
+                font-size: 14px;
+                font-weight: bold;
+                font-family: Montserrat;
+            }
+            QPushButton:pressed {
+                background-color: #B3B3B3;
+                color: #19323C;
+            }
+            """
+        )
+        button_layout.addWidget(continue_button, alignment=Qt.AlignCenter)
+        button_layout.setContentsMargins(55, 0, 65, 0)
+
+    def return_clicked(self):
+        self.return_bt_clicked.emit()
+        self.close()
 
 
 class ButtonWidget(QWidget):
@@ -161,10 +239,11 @@ class ButtonWidget(QWidget):
 
 class ViewFormWidget(QWidget):
     view_button_clicked = pyqtSignal(str, int)
+    go_back_clicked = pyqtSignal()
 
-    def __init__(self, parent):
+    def __init__(self, parent, is_printer_available):
         super().__init__(parent)
-        self.setup_ui()
+        self.setup_ui(is_printer_available)
 
         # Connect navigation buttons to their respective slots
         self.nav_btn_all.clicked.connect(self.filter_buttons_all)
@@ -180,7 +259,14 @@ class ViewFormWidget(QWidget):
         self.active_button = self.nav_btn_all
         self.update_button_styles()
 
-    def setup_ui(self):
+        self.inactivity_timer = QTimer(self)
+        self.inactivity_timer.setInterval(30000)
+        self.inactivity_timer.timeout.connect(self.go_back)
+        self.inactivity_timer.start()
+
+        self.installEventFilter(self)
+
+    def setup_ui(self, is_printer_available):
         # connect database
         conn = sqlite3.connect("kiosk.db")
         cursor = conn.cursor()
@@ -194,6 +280,8 @@ class ViewFormWidget(QWidget):
         conn.close()
 
         layout = QVBoxLayout(self)
+
+        print(is_printer_available)
 
         # Adding labels in top right corner
         rectangle_layout = QHBoxLayout()
@@ -238,13 +326,30 @@ class ViewFormWidget(QWidget):
         printer_layout.setContentsMargins(15, 0, 15, 0)
 
         # Bondpaper widgets
-        bondapaper_warning = QPushButton("!")
-        bondapaper_warning.setFixedSize(45,45)
+        self.bondpaper_warning = QPushButton("!")
+        self.bondpaper_warning.setFixedSize(45, 45)
+        self.bondpaper_warning.setStyleSheet(
+            """
+            QPushButton{
+                font-weight: bold;
+                font-size: 24px;
+                background-color: #E2E2E2;
+                color: #7C2F3E;
+                border: none;
+                border-radius: 15px;
+            }
+            QPushButton::pressed {
+                color: #D8C995;
+            }
+            """
+        )
+        self.bondpaper_warning.clicked.connect(self.low_bondpaper)
+        self.bondpaper_warning.hide()
         bondpaper_img = QLabel()
         pixmap = QPixmap("./img/static/bondpaper_quantity.png")
         bondpaper_img.setPixmap(pixmap)
         bondpaper_label = QLabel(str(self.bondpaper_quantity))
-        bondpaper_layout.addWidget(bondapaper_warning)
+        bondpaper_layout.addWidget(self.bondpaper_warning)
         bondpaper_layout.addWidget(bondpaper_img)
         bondpaper_layout.addWidget(bondpaper_label)
 
@@ -257,15 +362,32 @@ class ViewFormWidget(QWidget):
         coins_layout.addWidget(coins_label)
 
         # Printer widgets
-        printer_warning = QPushButton("!")
-        printer_warning.setFixedSize(45,45)
+        self.printer_warning = QPushButton("!")
+        self.printer_warning.setFixedSize(45, 45)
+        self.printer_warning.setStyleSheet(
+            """
+            QPushButton{
+                font-weight: bold;
+                font-size: 24px;
+                background-color: #E2E2E2;
+                color: #7C2F3E;
+                border: none;
+                border-radius: 15px;
+            }
+            QPushButton::pressed {
+                color: #D8C995;
+            }
+            """
+        )
+        self.printer_warning.clicked.connect(self.printer_not_connected)
+        self.printer_warning.hide()
         printer_img = QLabel()
         pixmap = QPixmap("./img/static/printer_img.png")
         printer_img.setPixmap(pixmap)
-        printer_status_symbol = QLabel("X")
-        printer_layout.addWidget(printer_warning)
+        self.printer_status_symbol = QLabel("✓")
+        printer_layout.addWidget(self.printer_warning)
         printer_layout.addWidget(printer_img)
-        printer_layout.addWidget(printer_status_symbol)
+        printer_layout.addWidget(self.printer_status_symbol)
 
         # Add layouts to the rectangle_inner_layout
         rectangle_inner_layout.addLayout(bondpaper_layout)
@@ -273,6 +395,13 @@ class ViewFormWidget(QWidget):
         rectangle_inner_layout.addLayout(printer_layout)
 
         layout.addLayout(rectangle_layout)
+
+        if self.bondpaper_quantity <= 5:
+            self.bondpaper_warning.show()
+
+        if not is_printer_available:
+            self.printer_warning.show()
+            self.printer_status_symbol.setText("✕")
 
         self.nav_btn_all = QPushButton("All")
         self.nav_btn_category1 = QPushButton("Academic Recognition")
@@ -521,7 +650,41 @@ class ViewFormWidget(QWidget):
         print("Title:", title)
         print("Page number:", int(page_number))
 
+        self.inactivity_timer.stop()
+        
         self.view_button_clicked.emit(title, int(page_number))
+
+    def printer_not_connected(self):
+        self.delete_message_box = WarningMessageBox(
+            "Uh-oh, it seems the printer is currently offline or not available. Please contact the admin staff for further assistance.\n\n\nWould you like to proceed or return to the menu?",
+            parent=self,
+        )
+        self.delete_message_box.return_bt_clicked.connect(self.go_back)
+        self.delete_message_box.exec_()
+
+    def low_bondpaper(self):
+        self.delete_message_box = WarningMessageBox(
+            "Uh-oh, it seems the bond paper supply is low. Please contact the admin staff for further assistance.\n\n\nWould you like to proceed or return to the menu?",
+            parent=self,
+        )
+        self.delete_message_box.return_bt_clicked.connect(self.go_back)
+        self.delete_message_box.exec_()
+
+    def eventFilter(self, obj, event):
+        if event.type() in [QEvent.MouseButtonPress, QEvent.KeyPress]:
+            self.reset_inactivity_timer()
+        return super().eventFilter(obj, event)
+
+    def reset_inactivity_timer(self):
+        self.inactivity_timer.start()
+
+    def go_back(self):
+        self.setVisible(False)
+
+        print("No user interaction for 30 seconds in ViewFormWidget.")
+        self.inactivity_timer.stop()
+
+        self.go_back_clicked.emit()
 
 
 def fetch_button_labels():

@@ -446,6 +446,7 @@ class EditButtonWidget(QWidget):
         # Emit the signal with necessary data
         self.buttonClicked.emit(self.index, self.title_text)
 
+
 class CustomDelegate(QStyledItemDelegate):
     def sizeHint(self, option, index):
         size = super().sizeHint(option, index)
@@ -455,16 +456,17 @@ class CustomDelegate(QStyledItemDelegate):
 
     def paint(self, painter, option, index):
         super().paint(painter, option, index)
-        
+
         # Draw separator line
         if index.row() < option.widget.model().rowCount() - 1:
             rect = option.rect
             painter.save()
             pen = painter.pen()
-            pen.setColor(QColor('#B3B3B3'))
+            pen.setColor(QColor("#B3B3B3"))
             painter.setPen(pen)
             painter.drawLine(rect.bottomLeft(), rect.bottomRight())
             painter.restore()
+
 
 class FormWidget(QWidget):
     title_input_clicked = pyqtSignal()
@@ -588,13 +590,13 @@ class FormWidget(QWidget):
         )
         self.category_input.addItems(self.form_category)
         self.category_input.setFixedWidth(300)
-        
+
         view = QListView()
         self.category_input.setView(view)
-        
+
         delegate = CustomDelegate()
         self.category_input.setItemDelegate(delegate)
-        
+
         category_layout.addWidget(category_label)
         category_layout.addWidget(self.category_input)
 
@@ -955,7 +957,7 @@ class EditFormWidget(QWidget):
         title_layout.addWidget(title_label)
         title_layout.addWidget(self.title_input)
 
-                # Category layout
+        # Category layout
         category_layout = QVBoxLayout()
         category_label = QLabel("Form Category:")
         category_label.setStyleSheet(
@@ -996,13 +998,13 @@ class EditFormWidget(QWidget):
         )
         self.category_input.addItems(self.form_category)
         self.category_input.setFixedWidth(300)
-        
+
         view = QListView()
         self.category_input.setView(view)
-        
+
         delegate = CustomDelegate()
         self.category_input.setItemDelegate(delegate)
-        
+
         category_layout.addWidget(category_label)
         category_layout.addWidget(self.category_input)
 
@@ -1521,7 +1523,11 @@ class UploadProcessWidget(QWidget):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog  # Use native dialog on macOS
         file_path, _ = QFileDialog.getOpenFileName(
-            self, "Open File", "/media/amarjeet/", "Images (*.png *.jpg *.jpeg *.bmp)", options=options
+            self,
+            "Open File",
+            "/media/amarjeet/",
+            "Images (*.png *.jpg *.jpeg *.bmp)",
+            options=options,
         )
         if file_path:
             file_name = os.path.basename(file_path)
@@ -2587,34 +2593,80 @@ class AdminWindowWidget(QWidget):
 
         self.left_layout.addStretch(5)
         self.left_layout.setSpacing(20)
-        
-        
+
         system_layout = QHBoxLayout()
-        
-        system_bt = QPushButton('test')
-        system_bt.setFixedSize(100, 100)
-        system_bt.setStyleSheet("margin-bottom: 40px; ")
-        
+
+        system_bt = QPushButton()
+        system_bt.setFixedSize(50, 50)
+        system_bt.setStyleSheet(
+            "QPushButton {background-color: transparent; border: none; image: url('img/static/system.png');}"
+            "QPushButton:pressed {background-color: transparent; border: none; image: url('img/static/system_pressed.png');}"
+        )
+        system_bt.clicked.connect(self.show_system_button)
+
         frame = QFrame()
-        
+
         frame_layout = QVBoxLayout()
-        frame_layout.setContentsMargins(0, 0, 0, 40)
-        
-        restart_bt = QPushButton('Restart')
-        restart_bt.clicked.connect(self.restart_app)
-        
-        shutdown_bt = QPushButton('Shutdown')
-        shutdown_bt.clicked.connect(self.shutdown_app)
-        
-        frame_layout.addWidget(restart_bt)
-        frame_layout.addWidget(shutdown_bt)
+
+        self.restart_bt = QPushButton("Restart")
+        self.restart_bt.setFixedHeight(70)
+        self.restart_bt.setStyleSheet(
+            """
+            QPushButton {
+                border: 2px solid #555555;
+                background-color: #A9A9A9;
+                border-radius: 15px;
+                color: #19323C;
+                padding: 8px 16px;
+                font-size: 14px;
+                font-weight: bold;
+                font-family: Montserrat;
+            }
+            QPushButton::pressed {
+                background-color: #555555;
+                color: #FDFDFD;
+            }
+            """
+        )
+        self.restart_bt.clicked.connect(self.restart_app)
+        self.restart_bt.hide()
+
+        self.shutdown_bt = QPushButton("Shutdown")
+        self.shutdown_bt.setFixedHeight(70)
+        self.shutdown_bt.setStyleSheet(
+            """
+            QPushButton {
+                border: 2px solid #555555;
+                background-color: #A9A9A9;
+                border-radius: 15px;
+                color: #19323C;
+                padding: 8px 16px;
+                font-size: 14px;
+                font-weight: bold;
+                font-family: Montserrat;
+            }
+            QPushButton::pressed {
+                background-color: #555555;
+                color: #FDFDFD;
+            }
+            """
+        )
+        self.shutdown_bt.clicked.connect(self.shutdown_app)
+        self.shutdown_bt.hide()
+
+        self.buttons_visible = False
+
+        frame_layout.addWidget(self.restart_bt)
+        frame_layout.addWidget(self.shutdown_bt)
+        frame_layout.setSpacing(10)
+        frame_layout.setContentsMargins(15, 0, 0, 0)
         frame.setLayout(frame_layout)
-        
-        system_layout.addWidget(system_bt)
-        system_layout.addWidget(frame)
-        
+
+        system_layout.addWidget(frame, alignment=Qt.AlignTop)
+        system_layout.addWidget(system_bt, alignment=Qt.AlignRight)
+
         self.left_layout.addLayout(system_layout)
-        
+
         left_widget = QWidget()
         left_widget.setLayout(self.left_layout)
         left_widget.setFixedWidth(250)
@@ -2629,7 +2681,7 @@ class AdminWindowWidget(QWidget):
         self.right_widget.addTab(self.tab5, "")
         self.right_widget.addTab(self.tab6, "")
 
-        self.right_widget.setCurrentIndex(1)
+        self.right_widget.setCurrentIndex(0)
         self.right_widget.setStyleSheet(
             """
             QTabWidget::pane {
@@ -3648,10 +3700,20 @@ class AdminWindowWidget(QWidget):
     def logout(self):
         self.setVisible(False)
         self.home_screen_backbt_clicked.emit()
-        
+
+    def show_system_button(self):
+        if self.buttons_visible:
+            self.restart_bt.hide()
+            self.shutdown_bt.hide()
+        else:
+            self.restart_bt.show()
+            self.shutdown_bt.show()
+
+        self.buttons_visible = not self.buttons_visible
+
     def restart_app(self):
         QApplication.quit()
         os.execl(sys.executable, sys.executable, *sys.argv)
-        
+
     def shutdown_app(self):
         QApplication.quit()

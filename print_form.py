@@ -50,9 +50,7 @@ class PrintFormWidget(QWidget):
                 font-family: Montserrat;
                 font-size: 18px;
                 font-weight: bold; 
-                padding-bottom: 10px;
-                border-bottom-left-radius: 50px; 
-                border-bottom-right-radius: 50px; 
+                border-radius: 45px; 
             }
             QPushButton:pressed {
                 background-color: #D8973C;

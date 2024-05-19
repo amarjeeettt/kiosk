@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import (
     QGridLayout,
     QGraphicsDropShadowEffect,
 )
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt, QTimer, QEvent, pyqtSignal
 
 
 class AdminLoginWidget(QWidget):
@@ -17,8 +17,14 @@ class AdminLoginWidget(QWidget):
 
     def __init__(self, parent):
         super().__init__(parent)
-
         self.setup_ui()
+
+        self.inactivity_timer = QTimer(self)
+        self.inactivity_timer.setInterval(30000)
+        self.inactivity_timer.timeout.connect(self.go_back)
+        self.inactivity_timer.start()
+
+        self.installEventFilter(self)
 
     def setup_ui(self):
         layout = QVBoxLayout(self)
@@ -167,9 +173,21 @@ class AdminLoginWidget(QWidget):
             current_text = self.input_edit.text()
             self.input_edit.setText(current_text + clicked_text)
 
+    def eventFilter(self, obj, event):
+        if event.type() in [QEvent.MouseButtonPress, QEvent.KeyPress]:
+            self.reset_inactivity_timer()
+        return super().eventFilter(obj, event)
+
+    def reset_inactivity_timer(self):
+        self.inactivity_timer.start()
+
     def go_back(self):
         self.setVisible(False)
         self.input_edit.clear()
+
+        print("No user interaction for 30 seconds.")
+        self.inactivity_timer.stop()
+
         self.home_screen_backbt_clicked.emit()
 
     def on_login_click(self):
@@ -178,4 +196,7 @@ class AdminLoginWidget(QWidget):
         if input_password == self.admin_password:
             self.setVisible(False)
             self.input_edit.clear()
+
+            self.inactivity_timer.stop()
+
             self.login_clicked.emit()

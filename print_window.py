@@ -233,15 +233,7 @@ class PrintInProgress(QWidget):
                         print(f"Job ID {job_id} is not active.")
                         break # Job is not active
                     # Wait for a few seconds before checking again
-                    timer = threading.Timer(3, delayed_function)
-
-                    # Start the timer
-                    timer.start()
-
-                    # You can do other things here while waiting for the timer to expire
-
-                    # Wait for the timer to finish
-                    timer.join()
+                    time.sleep(3)
                 else:
                     print("No active print jobs found.")
                     break  # No active print jobs
