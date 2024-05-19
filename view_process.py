@@ -1,3 +1,4 @@
+import glob
 from PyQt5.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -11,7 +12,47 @@ from PyQt5.QtCore import Qt, QRectF, pyqtSignal
 from PyQt5.QtGui import QPixmap, QImage, QPainter, QBrush, QColor, QPainterPath
 
 
-class CustomButton(QPushButton):
+class ProcessButton(QPushButton):
+    def __init__(self, title, parent=None):
+        super().__init__(parent)
+        self.title = title
+        self.border_radius = 35  # Set the desired border radius here
+
+        # Use glob to search for both .png and .jpg files
+        image_paths = glob.glob(f"./img/process/{title}.[pj][np]g")
+        if image_paths:
+            self.image_path = image_paths[0]
+            self.pixmap = QPixmap(self.image_path)
+        else:
+            print(f"Image not found: {title}.png or {title}.jpg")
+            self.pixmap = QPixmap()  # Create an empty pixmap if image is not found
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+
+        # Create a rounded rectangle path
+        path = QPainterPath()
+        path.addRoundedRect(QRectF(self.rect()), self.border_radius, self.border_radius)
+
+        # Clip the painting region to the rounded rectangle
+        painter.setClipPath(path)
+
+        # Draw the pixmap if it's not empty
+        if not self.pixmap.isNull():
+            painter.drawPixmap(self.rect(), self.pixmap)
+
+        # Draw the button text
+        super().paintEvent(event)
+
+    def sizeHint(self):
+        if not self.pixmap.isNull():
+            return self.pixmap.size()
+        else:
+            return super().sizeHint()
+
+
+class MapButton(QPushButton):
     def __init__(self, image_path, parent=None):
         super().__init__(parent)
         self.image_path = image_path
@@ -51,7 +92,7 @@ class ButtonWidget(QWidget):
         layout.setSpacing(20)
         layout.setAlignment(Qt.AlignCenter)
 
-        process_button = CustomButton(f"./img/process/{title}.png", self)
+        process_button = ProcessButton(title, self)
         process_button.setText("View Process")
         process_button.setStyleSheet(
             """
@@ -74,7 +115,7 @@ class ButtonWidget(QWidget):
         process_button.clicked.connect(self.process)
         layout.addWidget(process_button)
 
-        map_button = CustomButton("./img/process/map.jpg", self)
+        map_button = MapButton("./img/process/map.jpg", self)
         map_button.setText("View Map")
         map_button.setStyleSheet(
             """
@@ -141,11 +182,16 @@ class ProcessWidget(QWidget):
 
         self.image_label = QLabel()
 
-        self.image = (
-            QImage(f"./img/process/{title}.png")
-            .scaledToWidth(1280, Qt.SmoothTransformation)
-            .scaledToHeight(int(1280 * (2 / 3)), Qt.SmoothTransformation)
-        )
+        image_paths = glob.glob(f"./img/process/{title}.[pj][np]g")
+        if image_paths:
+            image_path = image_paths[0]
+            self.image = QImage(image_path)
+            self.image = self.image.scaledToWidth(1280, Qt.SmoothTransformation)
+            self.image = self.image.scaledToHeight(
+                int(1280 * (2 / 3)), Qt.SmoothTransformation
+            )
+        else:
+            print(f"Image not found: {title}.png or {title}.jpg")
 
         self.apply_border_radius()
 
@@ -291,7 +337,7 @@ class ViewProcessWidget(QWidget):
 
         self.layout.addLayout(back_button_layout)
 
-        self.buttons_widget = ButtonWidget(self)
+        self.buttons_widget = ButtonWidget(self.title, self)
         self.buttons_widget.process_clicked.connect(self.show_process)
         self.buttons_widget.map_clicked.connect(self.show_map)
         self.layout.addWidget(self.buttons_widget)

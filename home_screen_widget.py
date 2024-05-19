@@ -19,15 +19,15 @@ class HomeScreenWidget(QWidget):
         image_label = QLabel()
         pixmap = QPixmap("./img/logo.png")
         pixmap = pixmap.scaledToWidth(
-            500, Qt.SmoothTransformation
+            685, Qt.SmoothTransformation
         )  # Scale the image width to fit the label
         image_label.setPixmap(pixmap)
         image_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(image_label)
-        layout.setContentsMargins(0, 140, 0, 0)
+        layout.setContentsMargins(0, 100, 0, 0)
 
         # Add spacing between image_label and sub_label
-        layout.addSpacing(170)
+        layout.addSpacing(120)
 
         # Create second label and add it to the layout
         sub_label = QLabel("Touch Anywhere to Continue", alignment=Qt.AlignCenter)

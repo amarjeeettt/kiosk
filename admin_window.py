@@ -31,10 +31,18 @@ from PyQt5.QtWidgets import (
     QStyledItemDelegate,
     QListView,
 )
-from PyQt5.QtCore import Qt, QSize, pyqtSignal
-from PyQt5.QtGui import QPixmap, QIcon, QColor, QPalette
+from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtGui import QPixmap, QColor
 from virtual_keyboard import AlphaNeumericVirtualKeyboard
-from helpers import upload_form_file, upload_process_file
+from helpers import (
+    upload_form_file,
+    upload_process_file,
+    edit_form_file,
+    edit_process_file,
+    delete_form_file,
+    delete_process_file,
+    delete_form_preview,
+)
 from custom_message_box import CustomMessageBox
 
 
@@ -224,7 +232,7 @@ class DeleteMessageBox(QDialog):
 
     def continue_clicked(self):
         self.continue_button_clicked.emit(self.index, self.form_name)
-        self.close()
+        self.accept()
 
 
 class DeleteButtonWidget(QWidget):
@@ -884,7 +892,7 @@ class EditFormWidget(QWidget):
 
     def initUI(self, id_num, form_name):
         self.id_num = id_num
-        self.form_title = form_name
+        self.form_name = form_name
 
         conn = sqlite3.connect("kiosk.db")
         cursor = conn.cursor()
@@ -1126,7 +1134,7 @@ class EditFormWidget(QWidget):
         )
 
         add_clear_button_layout = QHBoxLayout()
-        self.add_button = QPushButton("Add")
+        self.add_button = QPushButton("Edit")
         self.add_button.setStyleSheet(
             """
             QPushButton {
@@ -1264,16 +1272,16 @@ class EditFormWidget(QWidget):
             )
 
             form_file_path = self.upload_form_widget.get_file()
-            upload_form_file(form_file_path, self.form_title)
+            edit_form_file(form_file_path, form_title, self.form_name)
 
             process_file_path = self.upload_process_widget.get_file()
-            upload_process_file(process_file_path, self.form_title)
+            edit_process_file(process_file_path, form_title, self.form_name)
 
-            self.edit_form_file_success.emit()
+            self.edit_form_success.emit()
 
             message_box = CustomMessageBox(
                 "Success",
-                f"{form_title} has been successfully added.",
+                f"{form_title} has been successfully updated.",
                 parent=self,
             )
             message_box.exec_()
@@ -3092,10 +3100,15 @@ class AdminWindowWidget(QWidget):
         main_layout.addWidget(settings_label)
 
         # Create a QGraphicsDropShadowEffect
-        shadow_effect = QGraphicsDropShadowEffect()
-        shadow_effect.setBlurRadius(50)
-        shadow_effect.setColor(Qt.gray)
-        shadow_effect.setOffset(0, 0)  # Adjust the shadow's offset as needed
+        shadow_effect1 = QGraphicsDropShadowEffect()
+        shadow_effect1.setBlurRadius(50)
+        shadow_effect1.setColor(Qt.gray)
+        shadow_effect1.setOffset(0, 0)  # Adjust the shadow's offset as needed
+
+        shadow_effect2 = QGraphicsDropShadowEffect()
+        shadow_effect2.setBlurRadius(50)
+        shadow_effect2.setColor(Qt.gray)
+        shadow_effect2.setOffset(0, 0)  # Adjust the shadow's offset as needed
 
         # Create a vertical layout to center the frames vertically
         center_layout = QVBoxLayout()
@@ -3113,7 +3126,7 @@ class AdminWindowWidget(QWidget):
             border-radius: 25px;
             """
         )
-        frame1.setGraphicsEffect(shadow_effect)
+        frame1.setGraphicsEffect(shadow_effect1)
         frame1_layout = QVBoxLayout(frame1)
 
         # Add label and buttons to the first frame
@@ -3234,7 +3247,7 @@ class AdminWindowWidget(QWidget):
             border-radius: 25px;
             """
         )
-        frame2.setGraphicsEffect(shadow_effect)
+        frame2.setGraphicsEffect(shadow_effect2)
         frame2_layout = QVBoxLayout(frame2)
 
         # Add label and buttons to the second frame
@@ -3645,6 +3658,10 @@ class AdminWindowWidget(QWidget):
             conn.commit()  # Commit changes to the database
             conn.close()
 
+            delete_form_file(form_name)
+            delete_process_file(form_name)
+            delete_form_preview(form_name)
+
             self.re_init()
 
             message_box = CustomMessageBox(
@@ -3696,6 +3713,9 @@ class AdminWindowWidget(QWidget):
         self.right_widget.addTab(self.tab4, "")
         self.right_widget.addTab(self.tab5, "")
         self.right_widget.addTab(self.tab6, "")
+
+        self.active_button = self.btn_1
+        self.update_button_styles()
 
     def logout(self):
         self.setVisible(False)

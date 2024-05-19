@@ -43,7 +43,7 @@ class MainWindow(QMainWindow):
         self.home_screen_widget.home_screen_clicked.connect(self.show_form_list)
 
         # Set properties of the admin button
-        self.admin_bt.setGeometry(1430, 813, 200, 65)
+        self.admin_bt.setGeometry(1430, 843, 200, 65)
         self.admin_bt.setIconSize(QSize(65, 65))
         self.admin_bt.setFocusPolicy(Qt.NoFocus)
         self.admin_bt.setStyleSheet(
