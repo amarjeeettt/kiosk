@@ -274,7 +274,7 @@ class PrintFormWidget(QWidget):
         self.check_total_counter_match()
 
     def connect_db(self):
-        conn = sqlite3.connect("kiosk.db")
+        conn = sqlite3.connect("./database/kiosk.db")
         cursor = conn.cursor()
 
         cursor.execute("SELECT coins_left FROM kiosk_settings LIMIT 1")
@@ -293,7 +293,7 @@ class PrintFormWidget(QWidget):
         self.check_total_counter_match()
 
     def update_db_counter(self, counter):
-        conn = sqlite3.connect("kiosk.db")
+        conn = sqlite3.connect("./database/kiosk.db")
         cursor = conn.cursor()
         cursor.execute(
             "UPDATE kiosk_settings SET coins_left = ?",

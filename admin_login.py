@@ -59,7 +59,7 @@ class AdminLoginWidget(QWidget):
         layout.addLayout(back_button_layout)
 
         # Connect database
-        conn = sqlite3.connect("kiosk.db")
+        conn = sqlite3.connect("./database/kiosk.db")
         cursor = conn.cursor()
 
         cursor.execute("SELECT admin_password FROM kiosk_settings LIMIT 1")

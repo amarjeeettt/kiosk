@@ -268,7 +268,7 @@ class ViewFormWidget(QWidget):
 
     def setup_ui(self, is_printer_available):
         # connect database
-        conn = sqlite3.connect("kiosk.db")
+        conn = sqlite3.connect("./database/kiosk.db")
         cursor = conn.cursor()
 
         cursor.execute("SELECT coins_left FROM kiosk_settings LIMIT 1")
@@ -688,7 +688,7 @@ class ViewFormWidget(QWidget):
 
 
 def fetch_button_labels():
-    conn = sqlite3.connect("kiosk.db")
+    conn = sqlite3.connect("./database/kiosk.db")
     cursor = conn.cursor()
 
     cursor.execute(

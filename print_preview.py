@@ -41,7 +41,7 @@ class PrintPreviewWidget(QWidget):
 
     def setup_ui(self, title, page_number):
         # Connect database
-        conn = sqlite3.connect("kiosk.db")
+        conn = sqlite3.connect("./database/kiosk.db")
         cursor = conn.cursor()
 
         cursor.execute("SELECT base_price FROM kiosk_settings LIMIT 1")

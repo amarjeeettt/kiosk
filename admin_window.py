@@ -486,7 +486,7 @@ class FormWidget(QWidget):
         self.initUI()
 
     def initUI(self):
-        conn = sqlite3.connect("kiosk.db")
+        conn = sqlite3.connect("./database/kiosk.db")
         cursor = conn.cursor()
 
         cursor.execute("SELECT DISTINCT form_category FROM kiosk_forms")
@@ -816,7 +816,7 @@ class FormWidget(QWidget):
 
     def add_sql_data(self, form_title, num_page, form_description, form_category):
         try:
-            conn = sqlite3.connect("kiosk.db")
+            conn = sqlite3.connect("./database/kiosk.db")
             cursor = conn.cursor()
 
             cursor.execute(
@@ -894,7 +894,7 @@ class EditFormWidget(QWidget):
         self.id_num = id_num
         self.form_name = form_name
 
-        conn = sqlite3.connect("kiosk.db")
+        conn = sqlite3.connect("./database/kiosk.db")
         cursor = conn.cursor()
 
         cursor.execute("SELECT DISTINCT form_category FROM kiosk_forms")
@@ -1224,7 +1224,7 @@ class EditFormWidget(QWidget):
 
     def add_sql_data(self, form_title, num_page, form_description, form_category):
         try:
-            conn = sqlite3.connect("kiosk.db")
+            conn = sqlite3.connect("./database/kiosk.db")
             cursor = conn.cursor()
 
             cursor.execute(
@@ -1659,7 +1659,7 @@ class TotalAmountDropButton(QPushButton):
         self.setText("Weekly")
 
         # Connect to the database
-        conn = sqlite3.connect("kiosk.db")
+        conn = sqlite3.connect("./database/kiosk.db")
         cursor = conn.cursor()
 
         # Get the current week's start and end dates
@@ -1693,7 +1693,7 @@ class TotalAmountDropButton(QPushButton):
         self.setText("Monthly")
 
         # Connect to the database
-        conn = sqlite3.connect("kiosk.db")
+        conn = sqlite3.connect("./database/kiosk.db")
         cursor = conn.cursor()
 
         # Get the current month and year
@@ -1722,7 +1722,7 @@ class TotalAmountDropButton(QPushButton):
         self.setText("Yearly")
 
         # Connect to the database
-        conn = sqlite3.connect("kiosk.db")
+        conn = sqlite3.connect("./database/kiosk.db")
         cursor = conn.cursor()
 
         # Get the current year
@@ -1787,7 +1787,7 @@ class TotalFormDropButton(QPushButton):
         self.setText("Weekly")
 
         # Connect to the database
-        conn = sqlite3.connect("kiosk.db")
+        conn = sqlite3.connect("./database/kiosk.db")
         cursor = conn.cursor()
 
         # Get the start and end dates for the current week
@@ -1825,7 +1825,7 @@ class TotalFormDropButton(QPushButton):
         self.setText("Monthly")
 
         # Connect to the database
-        conn = sqlite3.connect("kiosk.db")
+        conn = sqlite3.connect("./database/kiosk.db")
         cursor = conn.cursor()
 
         current_month = datetime.datetime.now().strftime("%Y-%m")
@@ -1857,7 +1857,7 @@ class TotalFormDropButton(QPushButton):
         self.setText("Yearly")
 
         # Connect to the database
-        conn = sqlite3.connect("kiosk.db")
+        conn = sqlite3.connect("./database/kiosk.db")
         cursor = conn.cursor()
 
         current_year = datetime.datetime.now().strftime("%Y")
@@ -1934,7 +1934,7 @@ class TotalFailedDropButton(QPushButton):
         self.setText("Weekly")
 
         # Connect to the database
-        conn = sqlite3.connect("kiosk.db")
+        conn = sqlite3.connect("./database/kiosk.db")
         cursor = conn.cursor()
 
         # Get the start and end dates for the current week
@@ -1966,7 +1966,7 @@ class TotalFailedDropButton(QPushButton):
         self.setText("Monthly")
 
         # Connect to the database
-        conn = sqlite3.connect("kiosk.db")
+        conn = sqlite3.connect("./database/kiosk.db")
         cursor = conn.cursor()
 
         current_month = datetime.datetime.now().strftime("%Y-%m")
@@ -1992,7 +1992,7 @@ class TotalFailedDropButton(QPushButton):
         self.setText("Yearly")
 
         # Connect to the database
-        conn = sqlite3.connect("kiosk.db")
+        conn = sqlite3.connect("./database/kiosk.db")
         cursor = conn.cursor()
 
         current_year = datetime.datetime.now().strftime("%Y")
@@ -2063,7 +2063,7 @@ class TotalSuccessDropButton(QPushButton):
         self.setText("Weekly")
 
         # Connect to the database
-        conn = sqlite3.connect("kiosk.db")
+        conn = sqlite3.connect("./database/kiosk.db")
         cursor = conn.cursor()
 
         # Get the start and end dates for the current week
@@ -2095,7 +2095,7 @@ class TotalSuccessDropButton(QPushButton):
         self.setText("Monthly")
 
         # Connect to the database
-        conn = sqlite3.connect("kiosk.db")
+        conn = sqlite3.connect("./database/kiosk.db")
         cursor = conn.cursor()
 
         current_month = datetime.datetime.now().strftime("%Y-%m")
@@ -2121,7 +2121,7 @@ class TotalSuccessDropButton(QPushButton):
         self.setText("Yearly")
 
         # Connect to the database
-        conn = sqlite3.connect("kiosk.db")
+        conn = sqlite3.connect("./database/kiosk.db")
         cursor = conn.cursor()
 
         current_year = datetime.datetime.now().strftime("%Y")
@@ -2460,7 +2460,7 @@ class AdminWindowWidget(QWidget):
 
     def setup_ui(self):
         # connect database
-        conn = sqlite3.connect("kiosk.db")
+        conn = sqlite3.connect("./database/kiosk.db")
         cursor = conn.cursor()
 
         cursor.execute("SELECT coins_left FROM kiosk_settings LIMIT 1")
@@ -3457,7 +3457,7 @@ class AdminWindowWidget(QWidget):
         new_price = self.price_value
 
         try:
-            connection = sqlite3.connect("kiosk.db")
+            connection = sqlite3.connect("./database/kiosk.db")
             cursor = connection.cursor()
 
             cursor.execute("BEGIN TRANSACTION")
@@ -3502,7 +3502,7 @@ class AdminWindowWidget(QWidget):
         bondpaper_quantity = self.number_value
 
         try:
-            connection = sqlite3.connect("kiosk.db")
+            connection = sqlite3.connect("./database/kiosk.db")
             cursor = connection.cursor()
 
             cursor.execute("BEGIN TRANSACTION")
@@ -3552,7 +3552,7 @@ class AdminWindowWidget(QWidget):
 
     def populate_table(self):
         try:
-            connection = sqlite3.connect("kiosk.db")
+            connection = sqlite3.connect("./database/kiosk.db")
             cursor = connection.cursor()
 
             cursor.execute("SELECT * FROM kiosk_print_results")
@@ -3601,7 +3601,7 @@ class AdminWindowWidget(QWidget):
             self.tableWidget.clearSelection()
 
     def fetch_button_labels(self):
-        conn = sqlite3.connect("kiosk.db")
+        conn = sqlite3.connect("./database/kiosk.db")
         cursor = conn.cursor()
 
         cursor.execute(
@@ -3650,7 +3650,7 @@ class AdminWindowWidget(QWidget):
         button_widget.deleteLater()
 
         try:
-            conn = sqlite3.connect("kiosk.db")
+            conn = sqlite3.connect("./database/kiosk.db")
             cursor = conn.cursor()
 
             cursor.execute("DELETE FROM kiosk_forms WHERE id = ?", (index,))

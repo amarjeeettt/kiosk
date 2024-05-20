@@ -188,7 +188,7 @@ class PrintInProgress(QWidget):
             conn = None
             formatted_datetime = datetime.now().strftime("%Y-%m-%d %H:%M")
 
-            with sqlite3.connect("kiosk.db") as conn_sqlite:
+            with sqlite3.connect("./database/kiosk.db") as conn_sqlite:
                 cursor = conn_sqlite.cursor()
 
                 if self.print_result == "Success":
