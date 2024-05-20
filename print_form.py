@@ -41,6 +41,7 @@ class PrintFormWidget(QWidget):
 
         # Create the button
         self.cancel_bt = QPushButton("Cancel")
+        self.cancel_bt.setFocusPolicy(Qt.NoFocus)
         self.cancel_bt.setFixedSize(125, 90)
         self.cancel_bt.setStyleSheet(
             """
@@ -226,6 +227,7 @@ class PrintFormWidget(QWidget):
         rectangle_inner_layout.addWidget(line, alignment=Qt.AlignCenter)
 
         self.print_bt = QPushButton("Print")
+        self.print_bt.setFocusPolicy(Qt.NoFocus)
         self.print_bt.setFixedSize(250, 80)
         self.print_bt.setStyleSheet(
             """
@@ -282,8 +284,8 @@ class PrintFormWidget(QWidget):
 
         conn.close()
 
-        # self.counter = self.coins_left
-        self.counter = 10
+        self.counter = self.coins_left
+        # self.counter = 10
 
     def update_counter(self, counter):
         self.counter = counter

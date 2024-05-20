@@ -63,6 +63,7 @@ class PrintPreviewWidget(QWidget):
         left_layout = QVBoxLayout(left_window)  # Use QVBoxLayout
         left_layout.setAlignment(Qt.AlignTop)  # Align top
         back_bt = QPushButton("Back")
+        back_bt.setFocusPolicy(Qt.NoFocus)
         back_bt.setFixedSize(200, 100)  # Set fixed size
         back_bt.setStyleSheet(
             """
@@ -206,6 +207,7 @@ class PrintPreviewWidget(QWidget):
         )  # Align label in center
         square_layout = QHBoxLayout()  # Layout for buttons and label
         decrement_button = QPushButton("-")
+        decrement_button.setFocusPolicy(Qt.NoFocus)
         decrement_button.setStyleSheet(
             """
             QPushButton {
@@ -227,6 +229,7 @@ class PrintPreviewWidget(QWidget):
         decrement_button.setFixedSize(65, 65)
 
         increment_button = QPushButton("+")
+        increment_button.setFocusPolicy(Qt.NoFocus)
         increment_button.setStyleSheet(
             """
             QPushButton {
@@ -276,6 +279,7 @@ class PrintPreviewWidget(QWidget):
 
         # Outer buttons
         view_process_bt = QPushButton()
+        view_process_bt.setFocusPolicy(Qt.NoFocus)
         view_process_bt.setFixedSize(250, 150)  # Set fixed size
         view_process_bt.setStyleSheet(
             """
@@ -332,6 +336,7 @@ class PrintPreviewWidget(QWidget):
         view_process_bt.setLayout(process_button_layout)
 
         print_bt = QPushButton()
+        print_bt.setFocusPolicy(Qt.NoFocus)
         print_bt.setFixedSize(250, 150)  # Set fixed size
         print_bt.setStyleSheet(
             """

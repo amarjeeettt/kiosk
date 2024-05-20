@@ -106,6 +106,7 @@ class EditMessageBox(QDialog):
         layout.addLayout(button_layout)
 
         file_button = QPushButton("Discard")
+        file_button.setFocusPolicy(Qt.NoFocus)
         file_button.setFixedSize(100, 45)
         file_button.clicked.connect(lambda: self.reject())
         file_button.setStyleSheet(
@@ -128,6 +129,7 @@ class EditMessageBox(QDialog):
         button_layout.addWidget(file_button, alignment=Qt.AlignCenter)
 
         form_file_button = QPushButton("Continue")
+        form_file_button.setFocusPolicy(Qt.NoFocus)
         form_file_button.setFixedSize(100, 45)
         form_file_button.clicked.connect(self.edit_form_clicked)
         form_file_button.setStyleSheet(
@@ -186,6 +188,7 @@ class DeleteMessageBox(QDialog):
         layout.addLayout(button_layout)
 
         discard_button = QPushButton("Discard")
+        discard_button.setFocusPolicy(Qt.NoFocus)
         discard_button.setFixedSize(100, 45)
         discard_button.clicked.connect(lambda: self.reject())
         discard_button.setStyleSheet(
@@ -208,6 +211,7 @@ class DeleteMessageBox(QDialog):
         button_layout.addWidget(discard_button, alignment=Qt.AlignCenter)
 
         continue_button = QPushButton("Continue")
+        continue_button.setFocusPolicy(Qt.NoFocus)
         continue_button.setFixedSize(100, 45)
         continue_button.clicked.connect(self.continue_clicked)
         continue_button.setStyleSheet(
@@ -303,6 +307,7 @@ class DeleteButtonWidget(QWidget):
         self.description_label.setContentsMargins(15, 0, 10, 0)
 
         self.button = QPushButton("Delete")
+        self.button.setFocusPolicy(Qt.NoFocus)
         self.button.setStyleSheet(
             """
             QPushButton {
@@ -413,6 +418,7 @@ class EditButtonWidget(QWidget):
         self.description_label.setContentsMargins(15, 0, 10, 0)
 
         self.button = QPushButton("Edit")
+        self.button.setFocusPolicy(Qt.NoFocus)
         self.button.setStyleSheet(
             """
             QPushButton {
@@ -727,6 +733,7 @@ class FormWidget(QWidget):
 
         add_clear_button_layout = QHBoxLayout()
         self.add_button = QPushButton("Add")
+        self.add_button.setFocusPolicy(Qt.NoFocus)
         self.add_button.setStyleSheet(
             """
             QPushButton {
@@ -748,6 +755,7 @@ class FormWidget(QWidget):
         self.add_button.clicked.connect(self.add_file)
 
         self.clear_button = QPushButton("Clear")
+        self.clear_button.setFocusPolicy(Qt.NoFocus)
         self.clear_button.setStyleSheet(
             """
             QPushButton {
@@ -1135,6 +1143,7 @@ class EditFormWidget(QWidget):
 
         add_clear_button_layout = QHBoxLayout()
         self.add_button = QPushButton("Edit")
+        self.add_button.setFocusPolicy(Qt.NoFocus)
         self.add_button.setStyleSheet(
             """
             QPushButton {
@@ -1156,6 +1165,7 @@ class EditFormWidget(QWidget):
         self.add_button.clicked.connect(self.add_file)
 
         self.clear_button = QPushButton("Clear")
+        self.clear_button.setFocusPolicy(Qt.NoFocus)
         self.clear_button.setStyleSheet(
             """
             QPushButton {
@@ -1344,6 +1354,7 @@ class UploadFormWidget(QWidget):
 
         # Create and add the button
         self.browse_button = QPushButton("Browse")
+        self.browse_button.setFocusPolicy(Qt.NoFocus)
         self.browse_button.setStyleSheet(
             """
             QPushButton {
@@ -1481,6 +1492,7 @@ class UploadProcessWidget(QWidget):
 
         # Create and add the button
         self.browse_button = QPushButton("Browse")
+        self.browse_button.setFocusPolicy(Qt.NoFocus)
         self.browse_button.setStyleSheet(
             """
             QPushButton {
@@ -1641,15 +1653,7 @@ class TotalAmountDropButton(QPushButton):
         self.menu.addAction(self.action3)
 
         self.setMenu(self.menu)
-
-        # Use a stylesheet to make the menu appear below the button
-        self.menu.setStyleSheet(
-            """
-            QMenu {
-                left: 0;
-            }
-        """
-        )
+        self.setFocusPolicy(Qt.NoFocus)
 
         # Set initial state to "Weekly"
         self.setText("Weekly")
@@ -1778,6 +1782,7 @@ class TotalFormDropButton(QPushButton):
         self.menu.addAction(self.action3)
 
         self.setMenu(self.menu)
+        self.setFocusPolicy(Qt.NoFocus)
 
         # Set initial state to "Weekly"
         self.setText("Weekly")
@@ -1916,15 +1921,7 @@ class TotalFailedDropButton(QPushButton):
         self.menu.addAction(self.action3)
 
         self.setMenu(self.menu)
-
-        # Use a stylesheet to make the menu appear below the button
-        self.menu.setStyleSheet(
-            """
-            QMenu {
-                left: 0;
-            }
-        """
-        )
+        self.setFocusPolicy(Qt.NoFocus)
 
         # Set initial state to "Weekly"
         self.setText("Weekly")
@@ -2045,15 +2042,7 @@ class TotalSuccessDropButton(QPushButton):
         self.menu.addAction(self.action3)
 
         self.setMenu(self.menu)
-
-        # Use a stylesheet to make the menu appear below the button
-        self.menu.setStyleSheet(
-            """
-            QMenu {
-                left: 0;
-            }
-        """
-        )
+        self.setFocusPolicy(Qt.NoFocus)
 
         # Set initial state to "Weekly"
         self.setText("Weekly")
@@ -2605,6 +2594,7 @@ class AdminWindowWidget(QWidget):
         system_layout = QHBoxLayout()
 
         system_bt = QPushButton()
+        system_bt.setFocusPolicy(Qt.NoFocus)
         system_bt.setFixedSize(50, 50)
         system_bt.setStyleSheet(
             "QPushButton {background-color: transparent; border: none; image: url('img/static/system.png');}"
@@ -2617,6 +2607,7 @@ class AdminWindowWidget(QWidget):
         frame_layout = QVBoxLayout()
 
         self.restart_bt = QPushButton("Restart")
+        self.restart_bt.setFocusPolicy(Qt.NoFocus)
         self.restart_bt.setFixedHeight(70)
         self.restart_bt.setStyleSheet(
             """
@@ -2640,6 +2631,7 @@ class AdminWindowWidget(QWidget):
         self.restart_bt.hide()
 
         self.shutdown_bt = QPushButton("Shutdown")
+        self.shutdown_bt.setFocusPolicy(Qt.NoFocus)
         self.shutdown_bt.setFixedHeight(70)
         self.shutdown_bt.setStyleSheet(
             """
@@ -3158,6 +3150,7 @@ class AdminWindowWidget(QWidget):
         button_layout = QHBoxLayout()
 
         bondpaper_decrement_button = QPushButton("-")
+        bondpaper_decrement_button.setFocusPolicy(Qt.NoFocus)
         bondpaper_decrement_button.setStyleSheet(
             """
             QPushButton {
@@ -3179,6 +3172,7 @@ class AdminWindowWidget(QWidget):
         bondpaper_decrement_button.setFixedSize(65, 65)
 
         refill_button = QPushButton("Refill")
+        refill_button.setFocusPolicy(Qt.NoFocus)
         refill_button.setStyleSheet(
             """
             QPushButton {
@@ -3200,6 +3194,7 @@ class AdminWindowWidget(QWidget):
         refill_button.setFixedSize(215, 65)
 
         bondpaper_increment_button = QPushButton("+")
+        bondpaper_increment_button.setFocusPolicy(Qt.NoFocus)
         bondpaper_increment_button.setStyleSheet(
             """
             QPushButton {
@@ -3279,6 +3274,7 @@ class AdminWindowWidget(QWidget):
         button_layout = QHBoxLayout()
 
         price_decrement_button = QPushButton("-")
+        price_decrement_button.setFocusPolicy(Qt.NoFocus)
         price_decrement_button.setStyleSheet(
             """
             QPushButton {
@@ -3300,6 +3296,7 @@ class AdminWindowWidget(QWidget):
         price_decrement_button.setFixedSize(65, 65)
 
         change_price_button = QPushButton("Change Price")
+        change_price_button.setFocusPolicy(Qt.NoFocus)
         change_price_button.setStyleSheet(
             """
             QPushButton {
@@ -3321,6 +3318,7 @@ class AdminWindowWidget(QWidget):
         change_price_button.setFixedSize(215, 65)
 
         price_increment_button = QPushButton("+")
+        price_increment_button.setFocusPolicy(Qt.NoFocus)
         price_increment_button.setStyleSheet(
             """
             QPushButton {

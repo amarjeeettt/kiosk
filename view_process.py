@@ -17,6 +17,7 @@ class ProcessButton(QPushButton):
         super().__init__(parent)
         self.title = title
         self.border_radius = 35  # Set the desired border radius here
+        self.setFocusPolicy(Qt.NoFocus)
 
         # Use glob to search for both .png and .jpg files
         image_paths = glob.glob(f"./img/process/{title}.[pj][np]g")
@@ -58,6 +59,7 @@ class MapButton(QPushButton):
         self.image_path = image_path
         self.pixmap = QPixmap(self.image_path)
         self.border_radius = 35  # Set the desired border radius here
+        self.setFocusPolicy(Qt.NoFocus)
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -164,6 +166,7 @@ class ProcessWidget(QWidget):
         layout.setAlignment(Qt.AlignCenter)
 
         close_bt = QPushButton()
+        close_bt.setFocusPolicy(Qt.NoFocus)
         close_bt.setFixedSize(50, 50)
         close_bt.setStyleSheet(
             "QPushButton {background-color: transparent; border: none; image: url('img/static/error.png'); margin-right: 5px;}"
@@ -238,6 +241,7 @@ class MapWidget(QWidget):
         layout.setAlignment(Qt.AlignCenter)
 
         close_bt = QPushButton()
+        close_bt.setFocusPolicy(Qt.NoFocus)
         close_bt.setFixedSize(50, 50)
         close_bt.setStyleSheet(
             "QPushButton {background-color: transparent; border: none; image: url('img/static/error.png'); margin-right: 15px;}"
@@ -311,6 +315,7 @@ class ViewProcessWidget(QWidget):
         back_button_layout = QHBoxLayout()
 
         self.back_bt = QPushButton("Back")
+        self.back_bt.setFocusPolicy(Qt.NoFocus)
         self.back_bt.setStyleSheet(
             """
             QPushButton {

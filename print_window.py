@@ -221,9 +221,12 @@ class PrintInProgress(QWidget):
         except Exception as e:
             print("Error during printing:", e)
             self.print_result = "Failed"
+            print_status = False
 
         finally:
             conn = None
+            print(self.print_result)
+            self.on_status_checked(print_status)
 
     def on_status_checked(self, print_result):
         if print_result:
@@ -231,15 +234,17 @@ class PrintInProgress(QWidget):
         else:
             self.print_result = "Failed"
 
-        self.update_database_and_ui()
+        self.update_database_and_ui(self.print_result)
 
-    def update_database_and_ui(self):
+    def update_database_and_ui(self, print_result):
+        self.print_result = print_result
+        print(self.print_result)
         formatted_datetime = datetime.now().strftime("%Y-%m-%d %H:%M")
 
         with sqlite3.connect("./database/kiosk.db") as conn_sqlite:
             cursor = conn_sqlite.cursor()
 
-            if self.print_resul == "Success":
+            if self.print_result == "Success":
                 cursor.execute(
                     "UPDATE kiosk_settings SET bondpaper_quantity = bondpaper_quantity - ?, coins_left = 0",
                     (self.bondpaper_left,),
@@ -409,6 +414,7 @@ class WarningPrint(QWidget):
 
         button_layout = QHBoxLayout()
         self.cancel_button = QPushButton("Cancel")
+        self.cancel_button.setFocusPolicy(Qt.NoFocus)
         self.cancel_button.setFixedSize(165, 65)
         self.cancel_button.clicked.connect(lambda: self.cancel_bt_clicked.emit())
         self.cancel_button.setStyleSheet(
@@ -427,6 +433,7 @@ class WarningPrint(QWidget):
         )
 
         self.ok_button = QPushButton("Confirm")
+        self.ok_button.setFocusPolicy(Qt.NoFocus)
         self.ok_button.setFixedSize(165, 65)
         self.ok_button.clicked.connect(self.on_ok_button_clicked)
         self.ok_button.setStyleSheet(

@@ -48,6 +48,7 @@ class CustomMessageBox(QDialog):
         )
 
         ok_button = QPushButton("OK")
+        ok_button.setFocusPolicy(Qt.NoFocus)
         ok_button.setFixedSize(125, 45)
         ok_button.clicked.connect(self.on_ok_button_clicked)
         ok_button.setStyleSheet(

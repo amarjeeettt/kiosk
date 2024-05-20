@@ -74,6 +74,7 @@ class WarningMessageBox(QDialog):
         layout.addLayout(button_layout)
 
         return_button = QPushButton("Return")
+        return_button.setFocusPolicy(Qt.NoFocus)
         return_button.setFixedSize(100, 45)
         return_button.clicked.connect(self.return_clicked)
         return_button.setStyleSheet(
@@ -96,6 +97,7 @@ class WarningMessageBox(QDialog):
         button_layout.addWidget(return_button, alignment=Qt.AlignCenter)
 
         continue_button = QPushButton("Continue")
+        continue_button.setFocusPolicy(Qt.NoFocus)
         continue_button.setFixedSize(100, 45)
         continue_button.clicked.connect(lambda: self.accept())
         continue_button.setStyleSheet(
@@ -184,6 +186,7 @@ class ButtonWidget(QWidget):
 
         # Button
         self.button = QPushButton("View")
+        self.button.setFocusPolicy(Qt.NoFocus)
         self.button.setStyleSheet(
             """
             QPushButton {
@@ -327,6 +330,7 @@ class ViewFormWidget(QWidget):
 
         # Bondpaper widgets
         self.bondpaper_warning = QPushButton("!")
+        self.bondpaper_warning.setFocusPolicy(Qt.NoFocus)
         self.bondpaper_warning.setFixedSize(45, 45)
         self.bondpaper_warning.setStyleSheet(
             """
@@ -363,6 +367,7 @@ class ViewFormWidget(QWidget):
 
         # Printer widgets
         self.printer_warning = QPushButton("!")
+        self.printer_warning.setFocusPolicy(Qt.NoFocus)
         self.printer_warning.setFixedSize(45, 45)
         self.printer_warning.setStyleSheet(
             """
@@ -404,13 +409,21 @@ class ViewFormWidget(QWidget):
             self.printer_status_symbol.setText("✕")
 
         self.nav_btn_all = QPushButton("All")
+        self.nav_btn_all.setFocusPolicy(Qt.NoFocus)
         self.nav_btn_category1 = QPushButton("Academic Recognition")
+        self.nav_btn_category1.setFocusPolicy(Qt.NoFocus)
         self.nav_btn_category2 = QPushButton("Accreditation")
+        self.nav_btn_category2.setFocusPolicy(Qt.NoFocus)
         self.nav_btn_category3 = QPushButton("Clearance")
+        self.nav_btn_category3.setFocusPolicy(Qt.NoFocus)
         self.nav_btn_category4 = QPushButton("Enrollment")
+        self.nav_btn_category4.setFocusPolicy(Qt.NoFocus)
         self.nav_btn_category5 = QPushButton("Graduation")
+        self.nav_btn_category5.setFocusPolicy(Qt.NoFocus)
         self.nav_btn_category6 = QPushButton("Petition")
+        self.nav_btn_category6.setFocusPolicy(Qt.NoFocus)
         self.nav_btn_category7 = QPushButton("Research")
+        self.nav_btn_category7.setFocusPolicy(Qt.NoFocus)
 
         # Set size policy for navigation buttons to Fixed
         self.nav_btn_all.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)

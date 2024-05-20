@@ -110,6 +110,7 @@ class AdminLoginWidget(QWidget):
 
         # Login button
         self.login_button = QPushButton("Login")
+        self.login_button.setFocusPolicy(Qt.NoFocus)
         self.login_button.clicked.connect(self.on_login_click)
 
         # Apply minimalist style to buttons
@@ -156,6 +157,7 @@ class AdminLoginWidget(QWidget):
         for position, number in zip(positions, numbers):
             row, col = position
             button = QPushButton(number)
+            button.setFocusPolicy(Qt.NoFocus)
             button.clicked.connect(self.on_button_click)
             self.keypad_layout.addWidget(button, row + 1, col)
             self.apply_minimalist_style(button)
