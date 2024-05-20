@@ -226,7 +226,7 @@ class PrintInProgress(QWidget):
         finally:
             conn = None
             print(self.print_result)
-            self.on_status_checked(print_status)
+            # self.on_status_checked(print_status)
 
     def on_status_checked(self, print_result):
         if print_result:

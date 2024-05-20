@@ -1,4 +1,4 @@
-import sys
+`import sys
 import cups
 from PyQt5.QtWidgets import (
     QApplication,

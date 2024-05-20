@@ -269,9 +269,9 @@ class PrintFormWidget(QWidget):
         )
         layout.addLayout(rectangle_layout)
 
-        # self.counter_thread = CounterThread(self.counter)
-        # self.counter_thread.counter_changed.connect(self.update_counter)
-        # self.counter_thread.start()
+        self.counter_thread = CounterThread(self.counter)
+        self.counter_thread.counter_changed.connect(self.update_counter)
+        self.counter_thread.start()
 
         self.check_total_counter_match()
 
@@ -346,13 +346,13 @@ class PrintFormWidget(QWidget):
             message_box.exec_()
 
     def go_back(self):
-        # self.counter_thread.stop()
+        self.counter_thread.stop()
         self.setVisible(False)
         self.cancel_clicked.emit()
         
 
     def go_back_home_screen(self):
-        # self.counter_thread.stop()
+        self.counter_thread.stop()
         self.close()
         self.go_back_home.emit()    
 
