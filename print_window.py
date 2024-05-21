@@ -297,7 +297,7 @@ class PrintInProgress(QWidget):
             """
         )
 
-        QTimer.singleShot(3000, lambda: self.go_back.emit())
+        QTimer.singleShot(5000, lambda: self.go_back.emit())
 
     def print_failed(self):
         self.movie.stop()
@@ -332,7 +332,7 @@ class PrintInProgress(QWidget):
             """
         )
 
-        QTimer.singleShot(3000, lambda: self.go_back.emit())
+        QTimer.singleShot(5000, lambda: self.go_back.emit())
 
     def update_label(self):
         text = self.message_label.text()

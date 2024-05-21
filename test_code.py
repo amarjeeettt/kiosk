@@ -1,89 +1,106 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QLabel, QSlider, QVBoxLayout, QWidget
-from PyQt5.QtCore import Qt, QPoint
-from PyQt5.QtGui import QImage, QPixmap
+import cups
+import time
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, pyqtSlot
+from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QVBoxLayout, QWidget, QMessageBox
 
-class ImageZoomWidget(QWidget):
+class PrinterStatusWorker(QThread):
+    status_updated = pyqtSignal(bool, str)  # Signal to communicate printer status
+    
+    def __init__(self):
+        super().__init__()
+        self.printer_state = False
+        self.running = True  # Control the running state of the thread
+
+    def run(self):
+        while self.running:
+            self.is_printer_available()
+            time.sleep(10)  # Check every 10 seconds
+
+    def is_printer_available(self):
+        try:
+            conn = cups.Connection()
+            printers = conn.getPrinters()
+
+            if not printers:
+                self.printer_state = False
+                raise Exception("No printers available.")
+
+            idle_printer_found = False
+            for printer_name, printer_attributes in printers.items():
+                if (
+                    "printer-state" in printer_attributes
+                    and printer_attributes["printer-state"] == 3
+                ):
+                    idle_printer_found = True
+                    self.printer_state = True
+                    break
+
+            if not idle_printer_found:
+                self.printer_state = False
+                raise Exception("No idle printer available")
+
+            self.status_updated.emit(self.printer_state, "Idle printer found.")
+        except Exception as e:
+            self.printer_state = False
+            self.status_updated.emit(self.printer_state, f"Error during printing: {e}")
+
+    def stop(self):
+        self.running = False
+
+class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.image = QImage('./img/process/map.jpg').scaled(
-            1440, 900, Qt.KeepAspectRatio, Qt.SmoothTransformation
-        )
-        self.zoom_level = 1.0
-        self.offset = QPoint(0, 0)
-        self.last_mouse_pos = QPoint(0, 0)
-        self.panning = False
+        self.initUI()
 
-        self.image_label = QLabel()
-        self.image_label.setAlignment(Qt.AlignCenter)
-        self.update_image_display()
+        self.worker = PrinterStatusWorker()
+        self.worker.status_updated.connect(self.update_status_label)
 
-        self.zoom_slider = QSlider(Qt.Horizontal)
-        self.zoom_slider.setMinimum(1)
-        self.zoom_slider.setMaximum(400)
-        self.zoom_slider.setValue(100)
-        self.zoom_slider.valueChanged.connect(self.zoom_image)
+    def initUI(self):
+        self.label = QLabel("Press the button to start checking printer status", self)
+        self.label.setAlignment(Qt.AlignCenter)
+
+        self.button = QPushButton("Start Checking", self)
+        self.button.clicked.connect(self.toggle_checking)
 
         layout = QVBoxLayout()
-        layout.addWidget(self.image_label)
-        layout.addWidget(self.zoom_slider)
-        self.setLayout(layout)
+        layout.addWidget(self.label)
+        layout.addWidget(self.button)
 
-    def zoom_image(self):
-        old_zoom_level = self.zoom_level
-        zoom_percent = self.zoom_slider.value()
-        self.zoom_level = zoom_percent / 100.0
+        container = QWidget()
+        container.setLayout(layout)
+        self.setCentralWidget(container)
 
-        # Adjust the offset to zoom towards the center
-        if self.zoom_level > old_zoom_level:
-            self.offset.setX(self.offset.x() + int((self.image.width() * (self.zoom_level - old_zoom_level)) / 2))
-            self.offset.setY(self.offset.y() + int((self.image.height() * (self.zoom_level - old_zoom_level)) / 2))
+        self.setWindowTitle('Printer Status Checker')
+        self.setGeometry(300, 300, 400, 200)
+    
+    def toggle_checking(self):
+        if self.worker.isRunning():
+            self.worker.stop()
+            self.worker.wait()  # Ensure the thread is completely stopped
+            self.button.setText("Start Checking")
+            self.label.setText("Checking stopped.")
         else:
-            self.offset.setX(self.offset.x() - int((self.image.width() * (old_zoom_level - self.zoom_level)) / 2))
-            self.offset.setY(self.offset.y() - int((self.image.height() * (old_zoom_level - self.zoom_level)) / 2))
-        
-        self.update_image_display()
+            self.worker.start()
+            self.button.setText("Stop Checking")
+            self.label.setText("Checking printer status...")
 
-    def update_image_display(self):
-        new_width = int(self.image.width() * self.zoom_level)
-        new_height = int(self.image.height() * self.zoom_level)
-        
-        self.offset.setX(max(0, min(self.offset.x(), self.image.width() - new_width)))
-        self.offset.setY(max(0, min(self.offset.y(), self.image.height() - new_height)))
-        
-        visible_image = self.image.copy(
-            self.offset.x(), self.offset.y(),
-            min(new_width, self.image.width() - self.offset.x()),
-            min(new_height, self.image.height() - self.offset.y())
-        ).scaled(
-            self.image_label.width(),
-            self.image_label.height(),
-            Qt.KeepAspectRatio
-        )
-        
-        self.image_label.setPixmap(QPixmap.fromImage(visible_image))
+    @pyqtSlot(bool, str)
+    def update_status_label(self, status, message):
+        self.label.setText(message)
 
-    def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
-            self.panning = True
-            self.last_mouse_pos = event.pos()
+    def closeEvent(self, event):
+        if self.worker.isRunning():
+            self.worker.stop()
+            self.worker.wait()
+        event.accept()
 
-    def mouseMoveEvent(self, event):
-        if self.panning:
-            delta = event.pos() - self.last_mouse_pos
-            self.offset -= delta
-            self.offset.setX(max(0, min(self.offset.x(), self.image.width() - int(self.image.width() * self.zoom_level))))
-            self.offset.setY(max(0, min(self.offset.y(), self.image.height() - int(self.image.height() * self.zoom_level))))
-            self.last_mouse_pos = event.pos()
-            self.update_image_display()
-
-    def mouseReleaseEvent(self, event):
-        if event.button() == Qt.LeftButton:
-            self.panning = False
+def main():
+    app = QApplication(sys.argv)
+    main_window = MainWindow()
+    main_window.show()
+    sys.exit(app.exec_())
 
 if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    window = ImageZoomWidget()
-    window.show()
-    sys.exit(app.exec_())
+    main()

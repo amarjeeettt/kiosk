@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import (
     QSpacerItem,
     QSizePolicy,
     QGraphicsDropShadowEffect,
+    QDialog
 )
 from PyQt5.QtGui import QPixmap, QImage, QPainter, QBrush, QColor, QIcon
 from PyQt5.QtCore import (
@@ -20,6 +21,71 @@ from PyQt5.QtCore import (
     QPropertyAnimation,
     QSize,
 )
+
+
+class MessageBox(QDialog):
+    ok_button_clicked = pyqtSignal()
+    
+    def __init__(self, title, message, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(400, 200)
+
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+        self.setStyleSheet("background-color: #EBEBEB;")
+
+        title_label = QLabel(title)
+        title_label.setStyleSheet(
+            "font-size: 24px; font-family: Montserrat; font-weight: bold; color: #7C2F3E;"
+        )
+        layout.addWidget(title_label, alignment=Qt.AlignCenter)
+
+        # Add a vertical spacer item
+        layout.addSpacerItem(
+            QSpacerItem(20, 20, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
+
+        message_label = QLabel(message)
+        message_label.setWordWrap(True)
+        message_label.setStyleSheet("font-size: 14px; font-family: Roboto; ")
+        layout.addWidget(message_label, alignment=Qt.AlignCenter)
+
+        # Add a vertical spacer item
+        layout.addSpacerItem(
+            QSpacerItem(20, 10, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
+
+        button_layout = QHBoxLayout()
+        layout.addLayout(button_layout)
+
+        # Add a vertical spacer item
+        layout.addSpacerItem(
+            QSpacerItem(20, 20, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
+
+        ok_button = QPushButton("OK")
+        ok_button.setFocusPolicy(Qt.NoFocus)
+        ok_button.setFixedSize(125, 45)
+        ok_button.clicked.connect(self.on_ok_button_clicked)
+        ok_button.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #7C2F3E;
+                border-radius: 5px;
+                color: #FAEBD7; 
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+            QPushButton:pressed {
+                background-color: #D8973C;
+            }
+            """
+        )
+        button_layout.addWidget(ok_button, alignment=Qt.AlignCenter)
+
+    def on_ok_button_clicked(self):
+        self.accept()
+        self.ok_button_clicked.emit()
 
 
 class PrintPreviewWidget(QWidget):
@@ -503,6 +569,17 @@ class PrintPreviewWidget(QWidget):
             self.value += 1
             self.label_between_buttons.setText(str(self.value))
             self.update_total_label()
+        
+        if self.value >= self.bondpaper_quantity:
+            self.inactivity_timer.stop()
+            
+            message_box = MessageBox(
+                "Error",
+                "Uh-oh, it appears the bondpaper is insufficient to add more.",
+                parent=self,
+            )
+            message_box.ok_button_clicked.connect(self.reset_inactivity_timer)
+            message_box.exec_()
 
     def decrement_value(self):
         if self.value > 1:

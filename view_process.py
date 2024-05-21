@@ -7,9 +7,19 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QGraphicsDropShadowEffect,
     QSizePolicy,
+    QGraphicsView,
+    QGraphicsScene,
 )
 from PyQt5.QtCore import Qt, QRectF, pyqtSignal
-from PyQt5.QtGui import QPixmap, QImage, QPainter, QBrush, QColor, QPainterPath
+from PyQt5.QtGui import (
+    QPixmap,
+    QIcon,
+    QImage,
+    QPainter,
+    QBrush,
+    QColor,
+    QPainterPath,
+)
 
 
 class ProcessButton(QPushButton):
@@ -229,6 +239,35 @@ class ProcessWidget(QWidget):
         self.image.setAlphaChannel(mask)
 
 
+class ImageViewer(QGraphicsView):
+    def __init__(self):
+        super().__init__()
+        self.scene = QGraphicsScene()
+        self.setScene(self.scene)
+        self.setDragMode(QGraphicsView.ScrollHandDrag)
+
+        self.image_item = None
+        self.scale_factor = 1.0
+
+    def load_image(self, image_path):
+        pixmap = QPixmap(image_path)
+        scaled_pixmap = pixmap.scaled(
+            2560,
+            1440,
+            aspectRatioMode=Qt.KeepAspectRatio,
+            transformMode=Qt.SmoothTransformation,
+        )
+        self.image_item = self.scene.addPixmap(scaled_pixmap)
+
+    def zoom_in(self):
+        self.scale_factor *= 1.2
+        self.setTransform(self.transform().scale(1.2, 1.2))
+
+    def zoom_out(self):
+        self.scale_factor /= 1.2
+        self.setTransform(self.transform().scale(1 / 1.2, 1 / 1.2))
+
+
 class MapWidget(QWidget):
     close_bt_clicked = pyqtSignal()
 
@@ -252,26 +291,41 @@ class MapWidget(QWidget):
 
         layout.addWidget(close_bt, alignment=Qt.AlignCenter)
 
-        # Create a QGraphicsDropShadowEffect
+        # Add shadow effect to the image
         shadow_effect = QGraphicsDropShadowEffect()
         shadow_effect.setBlurRadius(35)
         shadow_effect.setColor(Qt.gray)
-        shadow_effect.setOffset(0, 8)
+        shadow_effect.setOffset(0, 0)
 
-        self.image_label = QLabel()
+        self.image_viewer = ImageViewer()
+        layout.addWidget(self.image_viewer)
+        self.image_viewer.load_image("./img/process/map.jpg")
+        self.image_viewer.setGraphicsEffect(shadow_effect)
 
-        self.image = QImage(f"./img/process/map.jpg").scaled(
-            1440, 900, Qt.KeepAspectRatio, Qt.SmoothTransformation
+        zoom_buttons = QHBoxLayout()
+        zoom_buttons.setAlignment(Qt.AlignCenter)
+
+        zoom_out_button = QPushButton()
+        zoom_out_button.setStyleSheet(
+            "QPushButton {background-color: #7C2F3E; border: none; border-radius: 12px;}"
+            "QPushButton:pressed {background-color: #444444; }"
         )
+        zoom_out_button.setIcon(QIcon("./img/static/zoom_out.png"))
+        zoom_out_button.setFixedSize(55,55)
+        zoom_out_button.clicked.connect(self.image_viewer.zoom_out)
+        zoom_buttons.addWidget(zoom_out_button)
 
-        self.apply_border_radius()
+        zoom_in_button = QPushButton()
+        zoom_in_button.setStyleSheet(
+            "QPushButton {background-color: #7C2F3E; border: none; border-radius: 12px;}"
+            "QPushButton:pressed {background-color: #444444; }"
+        )
+        zoom_in_button.setIcon(QIcon("./img/static/zoom_in.png"))
+        zoom_in_button.setFixedSize(55,55)
+        zoom_in_button.clicked.connect(self.image_viewer.zoom_in)
+        zoom_buttons.addWidget(zoom_in_button)
 
-        pixmap = QPixmap.fromImage(self.image)
-        self.image_label.setPixmap(pixmap)
-        self.image_label.setGraphicsEffect(shadow_effect)
-        self.image_label.setAlignment(Qt.AlignCenter)
-
-        layout.addWidget(self.image_label)
+        layout.addLayout(zoom_buttons)
 
         # Set the layout for the widget
         self.setLayout(layout)

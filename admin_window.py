@@ -2,6 +2,7 @@ import os
 import sys
 import sqlite3
 import datetime
+import time
 from PyQt5.QtWidgets import (
     QApplication,
     QTableWidget,
@@ -31,7 +32,7 @@ from PyQt5.QtWidgets import (
     QStyledItemDelegate,
     QListView,
 )
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QPixmap, QColor
 from virtual_keyboard import AlphaNeumericVirtualKeyboard
 from helpers import (
@@ -44,6 +45,20 @@ from helpers import (
     delete_form_preview,
 )
 from custom_message_box import CustomMessageBox
+
+
+class PrinterStatus(QThread):
+    status_updated = pyqtSignal()
+    
+    def __init__(self):
+        super().__init__()
+        self.printer_state = None
+        self.running = True 
+        
+    def run(self):
+        while self.running:
+            self.is_printer_available()
+            time.sleep(10)
 
 
 class SmoothScrollArea(QScrollArea):
@@ -73,6 +88,63 @@ class SmoothScrollArea(QScrollArea):
         self._mousePressPos = None
         self._scrollBarValueAtMousePress = None
         super().mouseReleaseEvent(event)
+
+
+class MessageBox(QDialog):
+    def __init__(self, title, message, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(400, 200)
+
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+        self.setStyleSheet("background-color: #EBEBEB;")
+
+        title_label = QLabel(title)
+        title_label.setStyleSheet(
+            "font-size: 24px; font-family: Montserrat; font-weight: bold; color: #7C2F3E;"
+        )
+        layout.addWidget(title_label, alignment=Qt.AlignCenter)
+
+        # Add a vertical spacer item
+        layout.addSpacerItem(
+            QSpacerItem(20, 20, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
+
+        message_label = QLabel(message)
+        message_label.setWordWrap(True)
+        message_label.setStyleSheet("font-size: 14px; font-family: Roboto; ")
+        layout.addWidget(message_label, alignment=Qt.AlignCenter)
+
+        button_layout = QHBoxLayout()
+        layout.addLayout(button_layout)
+
+        # Add a vertical spacer item
+        layout.addSpacerItem(
+            QSpacerItem(20, 20, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
+
+        ok_button = QPushButton("OK")
+        ok_button.setFocusPolicy(Qt.NoFocus)
+        ok_button.setFixedSize(125, 45)
+        ok_button.clicked.connect(self.on_ok_button_clicked)
+        ok_button.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #7C2F3E;
+                border-radius: 5px;
+                color: #FAEBD7; 
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+            QPushButton:pressed {
+                background-color: #D8973C;
+            }
+            """
+        )
+        button_layout.addWidget(ok_button, alignment=Qt.AlignCenter)
+
+    def on_ok_button_clicked(self):
+        self.accept()
 
 
 class EditMessageBox(QDialog):
@@ -2420,6 +2492,18 @@ class AdminWindowWidget(QWidget):
         self.id_num = 0
         self.form_name = " "
 
+        # connect database
+        conn = sqlite3.connect("./database/kiosk.db")
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT coins_left FROM kiosk_settings LIMIT 1")
+        self.coins_left = cursor.fetchone()[0]
+
+        cursor.execute("SELECT bondpaper_quantity FROM kiosk_settings LIMIT 1")
+        self.bondpaper_quantity = cursor.fetchone()[0]
+
+        conn.close()
+
         # Create and position the virtual keyboard
         self.virtual_keyboard = AlphaNeumericVirtualKeyboard("", parent=self)
 
@@ -2448,18 +2532,6 @@ class AdminWindowWidget(QWidget):
         self.update_button_styles()
 
     def setup_ui(self):
-        # connect database
-        conn = sqlite3.connect("./database/kiosk.db")
-        cursor = conn.cursor()
-
-        cursor.execute("SELECT coins_left FROM kiosk_settings LIMIT 1")
-        self.coins_left = cursor.fetchone()[0]
-
-        cursor.execute("SELECT bondpaper_quantity FROM kiosk_settings LIMIT 1")
-        self.bondpaper_quantity = cursor.fetchone()[0]
-
-        conn.close()
-
         layout = QVBoxLayout(self)
 
         # Adding labels in top right corner
@@ -3434,8 +3506,10 @@ class AdminWindowWidget(QWidget):
         self.virtual_keyboard.display(title_input)
 
     def bondpaper_increment_value(self):
-        self.number_value += 10
-        self.number_label.setText(str(self.number_value))
+        bondpaper_amount = 100 - self.bondpaper_quantity
+        if self.number_value < (bondpaper_amount // 10) * 10:
+            self.number_value += 10
+            self.number_label.setText(str(self.number_value))
 
     def bondpaper_decrement_value(self):
         if self.number_value > 10:
@@ -3486,6 +3560,7 @@ class AdminWindowWidget(QWidget):
             message_box = CustomMessageBox(
                 "Success", "Price changed successfully.", parent=self
             )
+            message_box.ok_button_clicked.connect(self.re_init)
             message_box.exec_()
 
         except sqlite3.Error as error:
@@ -3499,50 +3574,53 @@ class AdminWindowWidget(QWidget):
     def refill_bondpaper(self):
         bondpaper_quantity = self.number_value
 
-        try:
-            connection = sqlite3.connect("./database/kiosk.db")
-            cursor = connection.cursor()
-
-            cursor.execute("BEGIN TRANSACTION")
-
-            cursor.execute(
-                """
-                UPDATE kiosk_settings
-                SET bondpaper_quantity = bondpaper_quantity + ?
-                WHERE ROWID = (
-                    SELECT ROWID
-                    FROM kiosk_settings
-                    ORDER BY ROWID
-                    LIMIT 1
-                )
-            """,
-                (bondpaper_quantity,),
-            )
-
-            cursor.execute("COMMIT")
-
-            cursor.execute("SELECT bondpaper_quantity FROM kiosk_settings LIMIT 1")
-            self.bondpaper_quantity = cursor.fetchone()[0]
-
-            print(self.bondpaper_quantity)
-            print("Bondpaper refilled successfully.")
-
-            # Emit signal to update label
-            self.bondpaper_quantity_updated.emit(self.bondpaper_quantity)
-
+        if (self.bondpaper_quantity + 10) > 100:
             # Display dialog box indicating success
-            message_box = CustomMessageBox(
-                "Success", "Bondpaper refilled successfully.", parent=self
+            message_box = MessageBox(
+                "Error", "You have exceeded the amount of bondpaper that can be stored in the printer.", parent=self
             )
             message_box.exec_()
+        else:
+            try:
+                with sqlite3.connect("./database/kiosk.db") as connection:
+                    connection.execute("BEGIN TRANSACTION")
 
-        except sqlite3.Error as error:
-            connection.rollback()
-            print("Error changing price:", error)
+                    connection.execute(
+                        """
+                        UPDATE kiosk_settings
+                        SET bondpaper_quantity = bondpaper_quantity + ?
+                        WHERE ROWID = (
+                            SELECT ROWID
+                            FROM kiosk_settings
+                            ORDER BY ROWID
+                            LIMIT 1
+                        )
+                        """,
+                        (bondpaper_quantity,),
+                    )
 
-        finally:
-            if connection:
-                connection.close()
+                    connection.execute("COMMIT")
+
+                    cursor = connection.execute(
+                        "SELECT bondpaper_quantity FROM kiosk_settings LIMIT 1"
+                    )
+                    self.bondpaper_quantity = cursor.fetchone()[0]
+
+                    print(self.bondpaper_quantity)
+                    print("Bondpaper refilled successfully.")
+
+                    # Emit signal to update label
+                    self.bondpaper_quantity_updated.emit(self.bondpaper_quantity)
+
+                    # Display dialog box indicating success
+                    message_box = CustomMessageBox(
+                        "Success", "Bondpaper refilled successfully.", parent=self
+                    )
+                    message_box.ok_button_clicked.connect(self.re_init)
+                    message_box.exec_()
+
+            except sqlite3.Error as error:
+                print("Error changing price:", error)
 
     # Slot to update the bondpaper label
     def update_label_slot(self, new_quantity):

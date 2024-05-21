@@ -7,10 +7,12 @@ from PyQt5.QtWidgets import (
     QSpacerItem,
     QSizePolicy,
 )
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSignal
 
 
 class CustomMessageBox(QDialog):
+    ok_button_clicked = pyqtSignal()
+
     def __init__(self, title, message, parent=None):
         super().__init__(parent)
         self.setFixedSize(400, 200)
@@ -68,4 +70,5 @@ class CustomMessageBox(QDialog):
         button_layout.addWidget(ok_button, alignment=Qt.AlignCenter)
 
     def on_ok_button_clicked(self):
+        self.ok_button_clicked.emit()
         self.accept()
