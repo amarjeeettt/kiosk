@@ -241,7 +241,7 @@ class ButtonWidget(QWidget):
 
 
 class ViewFormWidget(QWidget):
-    view_button_clicked = pyqtSignal(str, int)
+    view_button_clicked = pyqtSignal(str, int, bool, bool)
     go_back_clicked = pyqtSignal()
 
     def __init__(self, parent, is_printer_available):
@@ -284,7 +284,12 @@ class ViewFormWidget(QWidget):
 
         layout = QVBoxLayout(self)
 
+        self.is_printer_available = is_printer_available
+        self.bondpaper_supply = True
         print(is_printer_available)
+
+        if self.bondpaper_quantity <= 0:
+            self.bondpaper_supply = False
 
         # Adding labels in top right corner
         rectangle_layout = QHBoxLayout()
@@ -664,8 +669,10 @@ class ViewFormWidget(QWidget):
         print("Page number:", int(page_number))
 
         self.inactivity_timer.stop()
-        
-        self.view_button_clicked.emit(title, int(page_number))
+
+        self.view_button_clicked.emit(
+            title, int(page_number), self.is_printer_available, self.bondpaper_supply
+        )
 
     def printer_not_connected(self):
         self.delete_message_box = WarningMessageBox(

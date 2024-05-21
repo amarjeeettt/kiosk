@@ -311,7 +311,7 @@ class MapWidget(QWidget):
             "QPushButton:pressed {background-color: #444444; }"
         )
         zoom_out_button.setIcon(QIcon("./img/static/zoom_out.png"))
-        zoom_out_button.setFixedSize(55,55)
+        zoom_out_button.setFixedSize(55, 55)
         zoom_out_button.clicked.connect(self.image_viewer.zoom_out)
         zoom_buttons.addWidget(zoom_out_button)
 
@@ -321,7 +321,7 @@ class MapWidget(QWidget):
             "QPushButton:pressed {background-color: #444444; }"
         )
         zoom_in_button.setIcon(QIcon("./img/static/zoom_in.png"))
-        zoom_in_button.setFixedSize(55,55)
+        zoom_in_button.setFixedSize(55, 55)
         zoom_in_button.clicked.connect(self.image_viewer.zoom_in)
         zoom_buttons.addWidget(zoom_in_button)
 

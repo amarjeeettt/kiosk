@@ -93,9 +93,11 @@ class MainWindow(QMainWindow):
         self.view_form.view_button_clicked.connect(self.show_print_preview)
         self.view_form.go_back_clicked.connect(self.go_back_to_home)
 
-    @pyqtSlot(str, int)
-    def show_print_preview(self, title, page_number):
-        self.print_preview = PrintPreviewWidget(self, title, page_number)
+    @pyqtSlot(str, int, bool, bool)
+    def show_print_preview(self, title, page_number, printer_status, bondpaper_status):
+        self.print_preview = PrintPreviewWidget(
+            self, title, page_number, printer_status, bondpaper_status
+        )
         self.layout.addWidget(self.print_preview)
 
         self.admin_bt.hide()

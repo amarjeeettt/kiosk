@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (
     QSpacerItem,
     QSizePolicy,
     QGraphicsDropShadowEffect,
-    QDialog
+    QDialog,
 )
 from PyQt5.QtGui import QPixmap, QImage, QPainter, QBrush, QColor, QIcon
 from PyQt5.QtCore import (
@@ -25,7 +25,7 @@ from PyQt5.QtCore import (
 
 class MessageBox(QDialog):
     ok_button_clicked = pyqtSignal()
-    
+
     def __init__(self, title, message, parent=None):
         super().__init__(parent)
         self.setFixedSize(400, 200)
@@ -94,9 +94,9 @@ class PrintPreviewWidget(QWidget):
     view_process_clicked = pyqtSignal(str)
     print_form_clicked = pyqtSignal(str, int, int, int)
 
-    def __init__(self, parent, title, page_number):
+    def __init__(self, parent, title, page_number, printer_status, bondpaper_status):
         super().__init__(parent)
-        self.setup_ui(title, page_number)
+        self.setup_ui(title, page_number, printer_status, bondpaper_status)
 
         self.inactivity_timer = QTimer(self)
         self.inactivity_timer.setInterval(30000)
@@ -105,7 +105,7 @@ class PrintPreviewWidget(QWidget):
 
         self.installEventFilter(self)
 
-    def setup_ui(self, title, page_number):
+    def setup_ui(self, title, page_number, printer_status, bondpaper_status):
         # Connect database
         conn = sqlite3.connect("./database/kiosk.db")
         cursor = conn.cursor()
@@ -401,10 +401,10 @@ class PrintPreviewWidget(QWidget):
         # Set button layout
         view_process_bt.setLayout(process_button_layout)
 
-        print_bt = QPushButton()
-        print_bt.setFocusPolicy(Qt.NoFocus)
-        print_bt.setFixedSize(250, 150)  # Set fixed size
-        print_bt.setStyleSheet(
+        self.print_bt = QPushButton()
+        self.print_bt.setFocusPolicy(Qt.NoFocus)
+        self.print_bt.setFixedSize(250, 150)  # Set fixed size
+        self.print_bt.setStyleSheet(
             """
             QPushButton {
                 background-color: #7C2F3E;
@@ -420,28 +420,33 @@ class PrintPreviewWidget(QWidget):
             QPushButton:pressed {
                 background-color: #D8973C;
             }
+            QPushButton:disabled {
+                background-color: #C0C0C0;
+            }
             """
         )
-        print_bt.clicked.connect(lambda: self.print_form_bt_clicked(title, page_number))
+        self.print_bt.clicked.connect(
+            lambda: self.print_form_bt_clicked(title, page_number)
+        )
 
         # Create layout for button
         print_button_layout = QVBoxLayout()
 
         # Add image to button
-        print_image_label = QLabel()
+        self.print_image_label = QLabel()
         icon = QIcon("./img/print_forms_icon.svg")
         pixmap = icon.pixmap(QSize(200, 200))
         pixmap = pixmap.scaled(
             QSize(50, 50), Qt.KeepAspectRatio, Qt.SmoothTransformation
         )  # Adjust size as needed
-        print_image_label.setPixmap(pixmap)
-        print_image_label.setContentsMargins(0, 25, 0, 0)
-        print_image_label.setAlignment(Qt.AlignCenter)
-        print_button_layout.addWidget(print_image_label)
+        self.print_image_label.setPixmap(pixmap)
+        self.print_image_label.setContentsMargins(0, 25, 0, 0)
+        self.print_image_label.setAlignment(Qt.AlignCenter)
+        print_button_layout.addWidget(self.print_image_label)
 
         # Add label to button
-        print_label = QLabel("Print Forms")
-        print_label.setStyleSheet(
+        self.print_label = QLabel("Print Forms")
+        self.print_label.setStyleSheet(
             """
                 QLabel {
                 font-family: Montserrat;
@@ -452,11 +457,17 @@ class PrintPreviewWidget(QWidget):
                 }
             """
         )
-        print_label.setAlignment(Qt.AlignBottom | Qt.AlignCenter)
-        print_button_layout.addWidget(print_label)
+        self.print_label.setAlignment(Qt.AlignBottom | Qt.AlignCenter)
+        print_button_layout.addWidget(self.print_label)
 
         # Set button layout
-        print_bt.setLayout(print_button_layout)
+        self.print_bt.setLayout(print_button_layout)
+
+        if not printer_status:
+            self.disable_print_button()
+
+        if not bondpaper_status:
+            self.disable_print_button()
 
         # Add vertical spacer item between square frame and outer buttons
         spacer_vertical = QSpacerItem(
@@ -465,7 +476,7 @@ class PrintPreviewWidget(QWidget):
         right_layout.addItem(spacer_vertical)
 
         right_layout.addWidget(view_process_bt, alignment=Qt.AlignCenter)
-        right_layout.addWidget(print_bt, alignment=Qt.AlignCenter)
+        right_layout.addWidget(self.print_bt, alignment=Qt.AlignCenter)
 
         # Add spacer item between center image and right layout
         spacer_left = QSpacerItem(120, 20, QSizePolicy.Preferred, QSizePolicy.Minimum)
@@ -569,10 +580,10 @@ class PrintPreviewWidget(QWidget):
             self.value += 1
             self.label_between_buttons.setText(str(self.value))
             self.update_total_label()
-        
+
         if self.value >= self.bondpaper_quantity:
             self.inactivity_timer.stop()
-            
+
             message_box = MessageBox(
                 "Error",
                 "Uh-oh, it appears the bondpaper is insufficient to add more.",
@@ -606,6 +617,26 @@ class PrintPreviewWidget(QWidget):
 
         # Apply the mask to the image
         self.image.setAlphaChannel(mask)
+
+    def disable_print_button(self):
+        self.print_bt.setEnabled(False)
+        disabled_icon = QIcon("./img/print_forms_icon_disabled.svg")
+        pixmap = disabled_icon.pixmap(QSize(200, 200))
+        pixmap = pixmap.scaled(
+            QSize(50, 50), Qt.KeepAspectRatio, Qt.SmoothTransformation
+        )  # Adjust size as needed
+        self.print_image_label.setPixmap(pixmap)
+        self.print_label.setStyleSheet(
+            """
+                QLabel {
+                font-family: Montserrat;
+                font-size: 16px; 
+                font-weight: bold;
+                margin-bottom: 10px;
+                color: #828282
+                }
+            """
+        )
 
     def process_bt_clicked(self, title):
         self.inactivity_timer.stop()

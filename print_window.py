@@ -221,12 +221,11 @@ class PrintInProgress(QWidget):
         except Exception as e:
             print("Error during printing:", e)
             self.print_result = "Failed"
-            print_status = False
+            self.print_status = False
 
         finally:
-            conn = None
             print(self.print_result)
-            # self.on_status_checked(print_status)
+            self.on_status_checked(self.print_status)
 
     def on_status_checked(self, print_result):
         if print_result:

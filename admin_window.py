@@ -1,5 +1,6 @@
 import os
 import sys
+import cups
 import sqlite3
 import datetime
 import time
@@ -48,17 +49,46 @@ from custom_message_box import CustomMessageBox
 
 
 class PrinterStatus(QThread):
-    status_updated = pyqtSignal()
-    
+    status_updated = pyqtSignal(bool)
+
     def __init__(self):
         super().__init__()
         self.printer_state = None
-        self.running = True 
-        
+        self.running = True
+
     def run(self):
         while self.running:
             self.is_printer_available()
             time.sleep(10)
+
+    def is_printer_available(self):
+        try:
+            conn = cups.Connection()
+            printers = conn.getPrinters()
+
+            if not printers:
+                self.printer_state = False
+                raise Exception("No printers available.")
+
+            idle_printer_found = True
+            for printer_name, printer_attributes in printers.items():
+                if (
+                    "printer-state" in printer_attributes
+                    and printer_attributes["printer-state"] == 3
+                ):
+                    self.printer_state = True
+                    break
+
+            if not idle_printer_found:
+                self.printer_state = False
+                raise Exception("No idle printer found.")
+
+            self.status_updated.emit(self.printer_state)
+        except Exception as e:
+            print(e)
+
+    def stop(self):
+        self.running = False
 
 
 class SmoothScrollArea(QScrollArea):
@@ -2531,6 +2561,10 @@ class AdminWindowWidget(QWidget):
         self.active_button = self.btn_1
         self.update_button_styles()
 
+        # self.printer_status = PrinterStatus()
+        # self.printer_status.status_updated.connect(self.update_print_status)
+        # self.printer_status.start()
+
     def setup_ui(self):
         layout = QVBoxLayout(self)
 
@@ -2578,11 +2612,30 @@ class AdminWindowWidget(QWidget):
         printer_layout.setContentsMargins(30, 0, 30, 0)
 
         # Bondpaper widgets
+        self.bondpaper_warning = QPushButton("!")
+        self.bondpaper_warning.setFocusPolicy(Qt.NoFocus)
+        self.bondpaper_warning.setFixedSize(45, 45)
+        self.bondpaper_warning.setStyleSheet(
+            """
+            QPushButton{
+                font-weight: bold;
+                font-size: 24px;
+                background-color: #E2E2E2;
+                color: #7C2F3E;
+                border: none;
+                border-radius: 15px;
+            }
+            QPushButton::pressed {
+                color: #D8C995;
+            }
+            """
+        )
+        self.bondpaper_warning.clicked.connect(self.low_bondpaper)
+        self.bondpaper_warning.hide()
         bondpaper_img = QLabel()
         pixmap = QPixmap("./img/static/bondpaper_quantity.png")
         bondpaper_img.setPixmap(pixmap)
         self.bondpaper_label = QLabel(str(self.bondpaper_quantity))
-        # Connect bondpaper_quantity_updated signal to update_label_slot
         self.bondpaper_quantity_updated.connect(self.update_label_slot)
         bondpaper_layout.addWidget(bondpaper_img)
         bondpaper_layout.addWidget(self.bondpaper_label)
@@ -2596,12 +2649,32 @@ class AdminWindowWidget(QWidget):
         coins_layout.addWidget(coins_label)
 
         # Printer widgets
+        self.printer_warning = QPushButton("!")
+        self.printer_warning.setFocusPolicy(Qt.NoFocus)
+        self.printer_warning.setFixedSize(45, 45)
+        self.printer_warning.setStyleSheet(
+            """
+            QPushButton{
+                font-weight: bold;
+                font-size: 24px;
+                background-color: #E2E2E2;
+                color: #7C2F3E;
+                border: none;
+                border-radius: 15px;
+            }
+            QPushButton::pressed {
+                color: #D8C995;
+            }
+            """
+        )
+        # self.printer_warning.clicked.connect(self.printer_not_connected)
+        self.printer_warning.hide()
         printer_img = QLabel()
         pixmap = QPixmap("./img/static/printer_img.png")
         printer_img.setPixmap(pixmap)
-        printer_status_symbol = QLabel("X")
+        self.printer_status_symbol = QLabel()
         printer_layout.addWidget(printer_img)
-        printer_layout.addWidget(printer_status_symbol)
+        printer_layout.addWidget(self.printer_status_symbol)
 
         # Add layouts to the rectangle_inner_layout
         rectangle_inner_layout.addLayout(bondpaper_layout)
@@ -2609,6 +2682,9 @@ class AdminWindowWidget(QWidget):
         rectangle_inner_layout.addLayout(printer_layout)
 
         layout.addLayout(rectangle_layout)
+
+        if self.bondpaper_quantity <= 5:
+            self.bondpaper_warning.show()
 
         self.btn_1 = CustomButton("Dashboard", "./img/static/dashboard.png", self)
         self.btn_1.setFixedHeight(80)
@@ -3577,7 +3653,9 @@ class AdminWindowWidget(QWidget):
         if (self.bondpaper_quantity + 10) > 100:
             # Display dialog box indicating success
             message_box = MessageBox(
-                "Error", "You have exceeded the amount of bondpaper that can be stored in the printer.", parent=self
+                "Error",
+                "You have exceeded the amount of bondpaper that can be stored in the printer.",
+                parent=self,
             )
             message_box.exec_()
         else:
@@ -3755,6 +3833,15 @@ class AdminWindowWidget(QWidget):
         self.edit_message_box.edit_form_button_clicked.connect(self.switch_ui)
         self.edit_message_box.exec_()
 
+    def low_bondpaper(self):
+        self.delete_message_box = MessageBox(
+            "Error",
+            "Uh-oh, it seems the bond paper supply is low. Please refill immediately the bondpaper tray.",
+            parent=self,
+        )
+        self.delete_message_box.return_bt_clicked.connect(self.go_back)
+        self.delete_message_box.exec_()
+
     def update_temp_values(self, index, form_name):
         self.id_num = index
         self.form_name = form_name
@@ -3792,6 +3879,13 @@ class AdminWindowWidget(QWidget):
 
         self.active_button = self.btn_1
         self.update_button_styles()
+
+    def update_print_status(self, status):
+        if status:
+            self.printer_status_symbol.setText("✓")
+        else:
+            self.printer_status_symbol.setText("✕")
+            self.printer_warning.show()
 
     def logout(self):
         self.setVisible(False)
