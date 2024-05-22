@@ -1,7 +1,7 @@
 import time
 from gpiozero import Button
 
-coinslot = Button(22)
+coinslot = Button(10)
 
 while True:
     coinslotState = True

@@ -23,7 +23,6 @@ class PrintFormWidget(QWidget):
 
     def __init__(self, parent, title, num_copy, num_pages, total):
         super().__init__(parent)
-
         self.setup_ui(title, num_copy, num_pages, total)
 
     def setup_ui(self, title, num_copy, num_pages, total):
@@ -34,7 +33,6 @@ class PrintFormWidget(QWidget):
 
         # Connect to the database and retrieve the initial counter value
         self.connect_db()
-        self.bondpaper_quantity = None
 
         # Create a layout for the central widget
         layout = QVBoxLayout(self)
@@ -377,5 +375,4 @@ class CounterThread(QThread):
 
     def stop(self):
         self.stop_event.set()
-        # Close the coinslot connection
         self.coinslot.close()

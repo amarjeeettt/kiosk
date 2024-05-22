@@ -175,9 +175,12 @@ class PrintInProgress(QWidget):
 
     def print_document(self, title, num_copy, num_pages, total):
         self.bondpaper_left = num_copy * num_pages
+        self.ink_left = num_copy * num_pages
         self.title = title
         self.num_copy = num_copy
         self.total = total
+
+        self.print_status = None
 
         try:
             conn = cups.Connection()
@@ -245,8 +248,11 @@ class PrintInProgress(QWidget):
 
             if self.print_result == "Success":
                 cursor.execute(
-                    "UPDATE kiosk_settings SET bondpaper_quantity = bondpaper_quantity - ?, coins_left = 0",
-                    (self.bondpaper_left,),
+                    "UPDATE kiosk_settings SET bondpaper_quantity = bondpaper_quantity - ?, ink_level = ink_level - ?, coins_left = 0",
+                    (
+                        self.bondpaper_left,
+                        self.ink_left,
+                    ),
                 )
                 self.print_success()
 
