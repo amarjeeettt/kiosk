@@ -241,7 +241,7 @@ class ButtonWidget(QWidget):
 
 
 class ViewFormWidget(QWidget):
-    view_button_clicked = pyqtSignal(str, int, bool, bool)
+    view_button_clicked = pyqtSignal(str, int, bool, bool, bool)
     go_back_clicked = pyqtSignal()
 
     def __init__(self, parent, is_printer_available):
@@ -280,16 +280,12 @@ class ViewFormWidget(QWidget):
         cursor.execute("SELECT bondpaper_quantity FROM kiosk_settings LIMIT 1")
         self.bondpaper_quantity = cursor.fetchone()[0]
 
+        cursor.execute("SELECT ink_level FROM kiosk_settings LIMIT 1")
+        self.ink_level = cursor.fetchone()[0]
+
         conn.close()
 
         layout = QVBoxLayout(self)
-
-        self.is_printer_available = is_printer_available
-        self.bondpaper_supply = True
-        print(is_printer_available)
-
-        if self.bondpaper_quantity <= 0:
-            self.bondpaper_supply = False
 
         # Adding labels in top right corner
         rectangle_layout = QHBoxLayout()
@@ -297,7 +293,7 @@ class ViewFormWidget(QWidget):
         rectangle = QFrame()
         rectangle.setFrameShape(QFrame.StyledPanel)
         rectangle.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        rectangle.setFixedSize(465, 65)
+        rectangle.setFixedSize(525, 65)
         rectangle.setStyleSheet(
             "QFrame { background-color: #FDFDFD; border-radius: 20px; }"
         )
@@ -312,26 +308,19 @@ class ViewFormWidget(QWidget):
         rectangle.setGraphicsEffect(shadow_effect)
 
         rectangle_layout.addWidget(rectangle, alignment=Qt.AlignTop | Qt.AlignRight)
-        rectangle_layout.setContentsMargins(0, 30, 60, 0)
+        rectangle_layout.setContentsMargins(0, 25, 60, 0)
 
         rectangle_inner_layout = QHBoxLayout()
-        rectangle_inner_layout.setContentsMargins(30, 0, 15, 0)
+        rectangle_inner_layout.setContentsMargins(25, 0, 15, 0)
         rectangle.setLayout(rectangle_inner_layout)
 
         # Create layouts for bondpaper, coins, and printer
         bondpaper_layout = QHBoxLayout()
         coins_layout = QHBoxLayout()
         printer_layout = QHBoxLayout()
+        ink_layout = QHBoxLayout()
 
-        # Set spacing and margins for each layout if needed
-        bondpaper_layout.setSpacing(15)
-        coins_layout.setSpacing(15)
-        printer_layout.setSpacing(15)
-
-        # Set contents margins for each layout if needed
-        bondpaper_layout.setContentsMargins(15, 0, 15, 0)
-        coins_layout.setContentsMargins(15, 0, 15, 0)
-        printer_layout.setContentsMargins(15, 0, 15, 0)
+        coins_layout.setContentsMargins(20, 0, 15, 0)
 
         # Bondpaper widgets
         self.bondpaper_warning = QPushButton("!")
@@ -360,7 +349,7 @@ class ViewFormWidget(QWidget):
         bondpaper_label = QLabel(str(self.bondpaper_quantity))
         bondpaper_layout.addWidget(self.bondpaper_warning)
         bondpaper_layout.addWidget(bondpaper_img)
-        bondpaper_layout.addWidget(bondpaper_label)
+        bondpaper_layout.addWidget(bondpaper_label, alignment=Qt.AlignLeft)
 
         # Coins widgets
         coins_img = QLabel()
@@ -368,7 +357,7 @@ class ViewFormWidget(QWidget):
         coins_img.setPixmap(pixmap)
         coins_label = QLabel(f"{self.coins_left:0.2f}")
         coins_layout.addWidget(coins_img)
-        coins_layout.addWidget(coins_label)
+        coins_layout.addWidget(coins_label, alignment=Qt.AlignLeft)
 
         # Printer widgets
         self.printer_warning = QPushButton("!")
@@ -399,15 +388,59 @@ class ViewFormWidget(QWidget):
         printer_layout.addWidget(printer_img)
         printer_layout.addWidget(self.printer_status_symbol)
 
+        # Ink Widgets
+        self.ink_warning = QPushButton("!")
+        self.ink_warning.setFocusPolicy(Qt.NoFocus)
+        self.ink_warning.setFixedSize(45, 45)
+        self.ink_warning.setStyleSheet(
+            """
+            QPushButton{
+                font-weight: bold;
+                font-size: 24px;
+                background-color: #E2E2E2;
+                color: #7C2F3E;
+                border: none;
+                border-radius: 15px;
+            }
+            QPushButton::pressed {
+                color: #D8C995;
+            }
+            """
+        )
+        self.ink_warning.clicked.connect(self.low_ink)
+        self.ink_warning.hide()
+        ink_img = QLabel()
+        pixmap = QPixmap("./img/static/ink_img.png")
+        ink_img.setPixmap(pixmap)
+        self.ink_status_symbol = QLabel("✓")
+        ink_layout.addWidget(self.ink_warning)
+        ink_layout.addWidget(ink_img)
+        ink_layout.addWidget(self.ink_status_symbol)
+
         # Add layouts to the rectangle_inner_layout
         rectangle_inner_layout.addLayout(bondpaper_layout)
         rectangle_inner_layout.addLayout(coins_layout)
         rectangle_inner_layout.addLayout(printer_layout)
+        rectangle_inner_layout.addLayout(ink_layout)
 
         layout.addLayout(rectangle_layout)
 
+        self.is_printer_available = is_printer_available
+        self.bondpaper_supply = True
+        self.ink_supply = True
+
+        if self.bondpaper_quantity <= 0:
+            self.bondpaper_supply = False
+
+        if self.ink_level <= 0:
+            self.ink_supply = False
+            self.printer_status_symol.setText("✕")
+
         if self.bondpaper_quantity <= 5:
             self.bondpaper_warning.show()
+
+        if self.ink_level <= 75:
+            self.ink_warning.show()
 
         if not is_printer_available:
             self.printer_warning.show()
@@ -671,24 +704,36 @@ class ViewFormWidget(QWidget):
         self.inactivity_timer.stop()
 
         self.view_button_clicked.emit(
-            title, int(page_number), self.is_printer_available, self.bondpaper_supply
+            title,
+            int(page_number),
+            self.is_printer_available,
+            self.bondpaper_supply,
+            self.ink_supply,
         )
 
     def printer_not_connected(self):
-        self.delete_message_box = WarningMessageBox(
+        self.printer_message_box = WarningMessageBox(
             "Uh-oh, it seems the printer is currently offline or not available. Please contact the admin staff for further assistance.\n\n\nWould you like to proceed or return to the menu?",
             parent=self,
         )
-        self.delete_message_box.return_bt_clicked.connect(self.go_back)
-        self.delete_message_box.exec_()
+        self.printer_message_box.return_bt_clicked.connect(self.go_back)
+        self.printer_message_box.exec_()
 
     def low_bondpaper(self):
-        self.delete_message_box = WarningMessageBox(
-            "Uh-oh, it seems the bond paper supply is low. Please contact the admin staff for further assistance.\n\n\nWould you like to proceed or return to the menu?",
+        self.bondpaper_message_box = WarningMessageBox(
+            "Uh-oh, it seems the bondpaper supply is low. Please contact the admin staff for further assistance.\n\n\nWould you like to proceed or return to the menu?",
             parent=self,
         )
-        self.delete_message_box.return_bt_clicked.connect(self.go_back)
-        self.delete_message_box.exec_()
+        self.bondpaper_message_box.return_bt_clicked.connect(self.go_back)
+        self.bondpaper_message_box.exec_()
+
+    def low_ink(self):
+        self.ink_message_box = WarningMessageBox(
+            "Uh-oh, it seems the ink supply is low. Please contact the admin staff for further assistance.\n\n\nWould you like to proceed or return to the menu?",
+            parent=self,
+        )
+        self.ink_message_box.return_bt_clicked.connect(self.go_back)
+        self.ink_message_box.exec_()
 
     def eventFilter(self, obj, event):
         if event.type() in [QEvent.MouseButtonPress, QEvent.KeyPress]:
@@ -700,10 +745,7 @@ class ViewFormWidget(QWidget):
 
     def go_back(self):
         self.setVisible(False)
-
-        print("No user interaction for 30 seconds in ViewFormWidget.")
         self.inactivity_timer.stop()
-
         self.go_back_clicked.emit()
 
 

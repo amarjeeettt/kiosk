@@ -59,6 +59,7 @@ class MainWindow(QMainWindow):
     def go_back_to_home(self):
         self.home_screen_widget.setVisible(True)
         self.admin_bt.show()
+        self.is_printer_available()
 
     def show_admin_login(self):
         self.admin_login = AdminLoginWidget(self)
@@ -93,10 +94,12 @@ class MainWindow(QMainWindow):
         self.view_form.view_button_clicked.connect(self.show_print_preview)
         self.view_form.go_back_clicked.connect(self.go_back_to_home)
 
-    @pyqtSlot(str, int, bool, bool)
-    def show_print_preview(self, title, page_number, printer_status, bondpaper_status):
+    @pyqtSlot(str, int, bool, bool, bool)
+    def show_print_preview(
+        self, title, page_number, printer_status, bondpaper_status, ink_status
+    ):
         self.print_preview = PrintPreviewWidget(
-            self, title, page_number, printer_status, bondpaper_status
+            self, title, page_number, printer_status, bondpaper_status, ink_status
         )
         self.layout.addWidget(self.print_preview)
 

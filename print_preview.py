@@ -94,9 +94,19 @@ class PrintPreviewWidget(QWidget):
     view_process_clicked = pyqtSignal(str)
     print_form_clicked = pyqtSignal(str, int, int, int)
 
-    def __init__(self, parent, title, page_number, printer_status, bondpaper_status):
+    def __init__(
+        self,
+        parent,
+        title,
+        page_number,
+        printer_status,
+        bondpaper_status,
+        ink_status,
+    ):
         super().__init__(parent)
-        self.setup_ui(title, page_number, printer_status, bondpaper_status)
+        self.setup_ui(title, page_number, printer_status, bondpaper_status, ink_status)
+
+        self.swiping = False
 
         self.inactivity_timer = QTimer(self)
         self.inactivity_timer.setInterval(30000)
@@ -105,7 +115,9 @@ class PrintPreviewWidget(QWidget):
 
         self.installEventFilter(self)
 
-    def setup_ui(self, title, page_number, printer_status, bondpaper_status):
+    def setup_ui(
+        self, title, page_number, printer_status, bondpaper_status, ink_status
+    ):
         # Connect database
         conn = sqlite3.connect("./database/kiosk.db")
         cursor = conn.cursor()
@@ -153,7 +165,6 @@ class PrintPreviewWidget(QWidget):
         )
         back_bt.setFocusPolicy(Qt.NoFocus)
         back_bt.clicked.connect(self.go_back)
-        # Apply margin to the left button
         left_layout.addWidget(back_bt)
 
         # Center image
@@ -469,6 +480,9 @@ class PrintPreviewWidget(QWidget):
         if not bondpaper_status:
             self.disable_print_button()
 
+        if not ink_status:
+            self.disable_print_button()
+
         # Add vertical spacer item between square frame and outer buttons
         spacer_vertical = QSpacerItem(
             20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding
@@ -508,12 +522,21 @@ class PrintPreviewWidget(QWidget):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
-            self.start_pos = event.pos()
+            if self.center_image.underMouse():
+                self.start_pos = event.pos()
+                self.swiping = True
 
     def mouseReleaseEvent(self, event):
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.LeftButton and self.swiping:
             self.end_pos = event.pos()
-            self.detect_swipe()
+            delta = self.end_pos - self.start_pos
+
+            if delta.x() > 50:  # Swipe right
+                self.slide_left()
+            elif delta.x() < -50:  # Swipe left
+                self.slide_right()
+
+            self.swiping = False
 
     def detect_swipe(self):
         delta_x = self.end_pos.x() - self.start_pos.x()
@@ -547,14 +570,12 @@ class PrintPreviewWidget(QWidget):
     def next_image(self):
         if self.index < self.page_number:
             self.index += 1
-            print(self.index)
             self.update_image()
             self.update_bottom_label()
 
     def previous_image(self):
         if self.index > 0:
             self.index -= 1
-            print(self.index)
             self.update_image()
             self.update_bottom_label()
 
@@ -658,10 +679,7 @@ class PrintPreviewWidget(QWidget):
 
     def go_back_home(self):
         self.setVisible(False)
-
-        print("No user interaction for 30 seconds.")
         self.inactivity_timer.stop()
-
         self.timer_expired.emit()
 
     def go_back(self):
