@@ -314,7 +314,7 @@ class ViewFormWidget(QWidget):
         rectangle_inner_layout.setContentsMargins(25, 0, 15, 0)
         rectangle.setLayout(rectangle_inner_layout)
 
-        # Create layouts for bondpaper, coins, and printer
+        # Create layouts for bondpaper, coins, printer, and ink
         bondpaper_layout = QHBoxLayout()
         coins_layout = QHBoxLayout()
         printer_layout = QHBoxLayout()

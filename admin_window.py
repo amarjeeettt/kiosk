@@ -2532,6 +2532,9 @@ class AdminWindowWidget(QWidget):
         cursor.execute("SELECT bondpaper_quantity FROM kiosk_settings LIMIT 1")
         self.bondpaper_quantity = cursor.fetchone()[0]
 
+        cursor.execute("SELECT ink_level FROM kiosk_settings LIMIT 1")
+        self.ink_level = cursor.fetchone()[0]
+
         conn.close()
 
         # Create and position the virtual keyboard
@@ -2574,7 +2577,7 @@ class AdminWindowWidget(QWidget):
         rectangle = QFrame()
         rectangle.setFrameShape(QFrame.StyledPanel)
         rectangle.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        rectangle.setFixedSize(465, 65)
+        rectangle.setFixedSize(525, 65)
         rectangle.setStyleSheet(
             "QFrame { background-color: #FDFDFD; border-radius: 20px; }"
         )
@@ -2589,21 +2592,19 @@ class AdminWindowWidget(QWidget):
         rectangle.setGraphicsEffect(shadow_effect)
 
         rectangle_layout.addWidget(rectangle, alignment=Qt.AlignTop | Qt.AlignRight)
-        rectangle_layout.setContentsMargins(0, 30, 60, 0)
+        rectangle_layout.setContentsMargins(0, 25, 60, 0)
 
         rectangle_inner_layout = QHBoxLayout()
-        rectangle_inner_layout.setContentsMargins(30, 0, 15, 0)
+        rectangle_inner_layout.setContentsMargins(25, 0, 15, 0)
         rectangle.setLayout(rectangle_inner_layout)
 
-        # Create layouts for bondpaper, coins, and printer
+        # Create layouts for bondpaper, coins, printer, and ink
         bondpaper_layout = QHBoxLayout()
         coins_layout = QHBoxLayout()
         printer_layout = QHBoxLayout()
+        ink_layout = QHBoxLayout()
 
-        # Set spacing and margins for each layout if needed
-        bondpaper_layout.setSpacing(15)
-        coins_layout.setSpacing(15)
-        printer_layout.setSpacing(15)
+        coins_layout.setContentsMargins(20, 0, 15, 0)
 
         # Set contents margins for each layout if needed
         bondpaper_layout.setContentsMargins(30, 0, 30, 0)
@@ -2635,10 +2636,10 @@ class AdminWindowWidget(QWidget):
         bondpaper_img = QLabel()
         pixmap = QPixmap("./img/static/bondpaper_quantity.png")
         bondpaper_img.setPixmap(pixmap)
-        self.bondpaper_label = QLabel(str(self.bondpaper_quantity))
-        self.bondpaper_quantity_updated.connect(self.update_label_slot)
+        bondpaper_label = QLabel(str(self.bondpaper_quantity))
+        bondpaper_layout.addWidget(self.bondpaper_warning)
         bondpaper_layout.addWidget(bondpaper_img)
-        bondpaper_layout.addWidget(self.bondpaper_label)
+        bondpaper_layout.addWidget(bondpaper_label, alignment=Qt.AlignLeft)
 
         # Coins widgets
         coins_img = QLabel()
@@ -2646,7 +2647,7 @@ class AdminWindowWidget(QWidget):
         coins_img.setPixmap(pixmap)
         coins_label = QLabel(f"{self.coins_left:0.2f}")
         coins_layout.addWidget(coins_img)
-        coins_layout.addWidget(coins_label)
+        coins_layout.addWidget(coins_label, alignment=Qt.AlignLeft)
 
         # Printer widgets
         self.printer_warning = QPushButton("!")
@@ -2672,19 +2673,53 @@ class AdminWindowWidget(QWidget):
         printer_img = QLabel()
         pixmap = QPixmap("./img/static/printer_img.png")
         printer_img.setPixmap(pixmap)
-        self.printer_status_symbol = QLabel()
+        self.printer_status_symbol = QLabel("✓")
+        printer_layout.addWidget(self.printer_warning)
         printer_layout.addWidget(printer_img)
         printer_layout.addWidget(self.printer_status_symbol)
+        
+        # Ink Widgets
+        self.ink_warning = QPushButton("!")
+        self.ink_warning.setFocusPolicy(Qt.NoFocus)
+        self.ink_warning.setFixedSize(45, 45)
+        self.ink_warning.setStyleSheet(
+            """
+            QPushButton{
+                font-weight: bold;
+                font-size: 24px;
+                background-color: #E2E2E2;
+                color: #7C2F3E;
+                border: none;
+                border-radius: 15px;
+            }
+            QPushButton::pressed {
+                color: #D8C995;
+            }
+            """
+        )
+        # self.ink_warning.clicked.connect(self.low_ink)
+        self.ink_warning.hide()
+        ink_img = QLabel()
+        pixmap = QPixmap("./img/static/ink_img.png")
+        ink_img.setPixmap(pixmap)
+        self.ink_status_symbol = QLabel("✓")
+        ink_layout.addWidget(self.ink_warning)
+        ink_layout.addWidget(ink_img)
+        ink_layout.addWidget(self.ink_status_symbol)
 
         # Add layouts to the rectangle_inner_layout
         rectangle_inner_layout.addLayout(bondpaper_layout)
         rectangle_inner_layout.addLayout(coins_layout)
         rectangle_inner_layout.addLayout(printer_layout)
+        rectangle_inner_layout.addLayout(ink_layout)
 
         layout.addLayout(rectangle_layout)
 
         if self.bondpaper_quantity <= 5:
             self.bondpaper_warning.show()
+        
+        if self.ink_level <= 75:
+            self.ink_warning.show()
 
         self.btn_1 = CustomButton("Dashboard", "./img/static/dashboard.png", self)
         self.btn_1.setFixedHeight(80)
