@@ -32,16 +32,14 @@ class MainWindow(QMainWindow):
 
         self.setup_ui()
 
-        self.view_form = ViewFormWidget(self, self.printer_state)
-        self.layout.addWidget(self.view_form)
-
     def setup_ui(self):
         self.layout = QVBoxLayout(self.centralWidget)
 
-        # Adding HomeScreenWindow
         self.layout.addWidget(self.home_screen_widget)
-        self.home_screen_widget.setVisible(False)
+        self.home_screen_widget.setVisible(True)
         self.home_screen_widget.start_button_clicked.connect(self.show_form_list)
+        self.home_screen_widget.admin_button_clicked.connect(self.show_admin_login)
+        self.home_screen_widget.about_button_clicked.connect(self.show_about)
 
         self.printer_state = None
         self.is_printer_available()
@@ -49,6 +47,9 @@ class MainWindow(QMainWindow):
     def go_back_to_home(self):
         self.home_screen_widget.setVisible(True)
         self.is_printer_available()
+
+    def show_about(self):
+        ...
 
     def show_admin_login(self):
         self.admin_login = AdminLoginWidget(self)

@@ -380,7 +380,7 @@ class ViewProcessWidget(QWidget):
                 font-weight: bold; 
                 border-radius: 10px;
                 border: none;
-                margin-left: 35px;
+                margin-left: 165px;
                 min-width: 150px;
                 min-height: 80px;
                 margin-top: 35px;

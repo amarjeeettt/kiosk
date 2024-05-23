@@ -197,6 +197,8 @@ class HelpMessageButton(QPushButton):
 
 
 class HelpMessageBox(QDialog):
+    close_message_clicked = pyqtSignal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setFixedSize(600, 900)
@@ -290,6 +292,7 @@ class HelpMessageBox(QDialog):
         self.how_to_remove.clicked.connect(self.how_to_remove_copy)
         self.payment_method.clicked.connect(self.payment)
         self.extra_coin.clicked.connect(self.get_back_coins)
+        self.student_request.clicked.connect(self.student_request_form)
 
         self.lines = []
         self.add_widget_with_line(button_layout, self.how_to_print)
@@ -483,7 +486,7 @@ class HelpMessageBox(QDialog):
         self.help_text.setHtml(html_content)
         self.help_text.show()
 
-    def student_request(self):
+    def student_request_form(self):
         self.hide_buttons(
             self.how_to_print,
             self.how_to_view,
@@ -548,6 +551,7 @@ class HelpMessageBox(QDialog):
 
     def close_message_box(self):
         self.reject()
+        self.close_message_clicked.emit()
 
 
 class ButtonWidget(QWidget):
@@ -690,7 +694,7 @@ class ViewFormWidget(QWidget):
         self.inactivity_timer = QTimer(self)
         self.inactivity_timer.setInterval(15000)
         self.inactivity_timer.timeout.connect(self.go_back)
-        # self.inactivity_timer.start()
+        self.inactivity_timer.start()
 
         self.installEventFilter(self)
 
@@ -1156,9 +1160,12 @@ class ViewFormWidget(QWidget):
         )
 
     def show_help(self):
+        self.inactivity_timer.stop()
+
         help_message_box = HelpMessageBox(self)
         parent_pos = self.mapToGlobal(self.rect().center())
         help_message_box.move(parent_pos - help_message_box.rect().center())
+        help_message_box.close_message_clicked.connect(self.reset_inactivity_timer)
         help_message_box.exec_()
 
     def printer_not_connected(self):

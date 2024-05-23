@@ -128,7 +128,7 @@ class PrintPreviewWidget(QWidget):
         main_layout.setContentsMargins(0, 55, 0, 0)
 
         left_window = QWidget()
-        left_window.setFixedWidth(200)
+        left_window.setFixedWidth(330)
         left_layout = QVBoxLayout(left_window)  # Use QVBoxLayout
         left_layout.setAlignment(Qt.AlignTop)  # Align top
         back_bt = QPushButton("Back")
@@ -144,7 +144,7 @@ class PrintPreviewWidget(QWidget):
                 font-weight: bold; 
                 border-radius: 10px;
                 border: none;
-                margin-left: 35px;
+                margin-left: 165px;
                 margin-top: 20px;
                 min-width: 150px;
                 min-height: 80px;
@@ -651,11 +651,9 @@ class PrintPreviewWidget(QWidget):
         )
 
     def process_bt_clicked(self, title):
-        self.inactivity_timer.stop()
         self.view_process_clicked.emit(title)
 
     def print_form_bt_clicked(self, title, page_number):
-        self.inactivity_timer.stop()
         self.print_form_clicked.emit(
             title, int(self.value), page_number, int(self.total)
         )

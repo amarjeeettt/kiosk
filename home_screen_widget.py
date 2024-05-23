@@ -5,6 +5,8 @@ from PyQt5.QtGui import QMovie
 
 class HomeScreenWidget(QWidget):
     start_button_clicked = pyqtSignal()
+    about_button_clicked = pyqtSignal()
+    admin_button_clicked = pyqtSignal()
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -36,7 +38,10 @@ class HomeScreenWidget(QWidget):
         bottom_buttons = QHBoxLayout()
 
         about_button = QPushButton("About")
+        about_button.clicked.connect(self.go_to_about)
+
         admin_button = QPushButton("Admin")
+        admin_button.clicked.connect(self.go_to_admin)
 
         bottom_buttons.addWidget(about_button)
         bottom_buttons.addWidget(admin_button)
@@ -49,3 +54,11 @@ class HomeScreenWidget(QWidget):
     def go_to_forms(self):
         self.setVisible(False)
         self.start_button_clicked.emit()
+
+    def go_to_about(self):
+        self.setVisible(False)
+        self.about_button_clicked.emit()
+
+    def go_to_admin(self):
+        self.setVisible(False)
+        self.admin_button_clicked.emit()
