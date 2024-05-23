@@ -240,7 +240,7 @@ class HelpMessageBox(QDialog):
         self.back_button.setFixedSize(30, 30)
         self.back_button.setStyleSheet(
             "QPushButton {background-color: transparent; border: none; image: url('img/static/back_img.png');}"
-            "QPushButton:pressed {background-color: transparent; border: none; image: url('img/static/close_img_pressed.png');}"
+            "QPushButton:pressed {background-color: transparent; border: none; image: url('img/static/back_img_pressed.png');}"
         )
         self.back_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.back_button.clicked.connect(self.go_back)

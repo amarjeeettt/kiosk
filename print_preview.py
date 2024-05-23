@@ -22,8 +22,6 @@ from PyQt5.QtCore import (
 
 
 class MessageBox(QDialog):
-    ok_button_clicked = pyqtSignal()
-
     def __init__(self, title, message, parent=None):
         super().__init__(parent)
         self.setFixedSize(400, 200)
@@ -83,7 +81,6 @@ class MessageBox(QDialog):
 
     def on_ok_button_clicked(self):
         self.accept()
-        self.ok_button_clicked.emit()
 
 
 class PrintPreviewWidget(QWidget):
@@ -594,14 +591,11 @@ class PrintPreviewWidget(QWidget):
             self.update_total_label()
 
         if self.value >= self.bondpaper_quantity:
-            self.inactivity_timer.stop()
-
             message_box = MessageBox(
                 "Error",
                 "Uh-oh, it appears the bondpaper is insufficient to add more.",
                 parent=self,
             )
-            message_box.ok_button_clicked.connect(self.reset_inactivity_timer)
             message_box.exec_()
 
     def decrement_value(self):
@@ -658,12 +652,6 @@ class PrintPreviewWidget(QWidget):
             title, int(self.value), page_number, int(self.total)
         )
 
-    def go_back_home(self):
-        self.setVisible(False)
-        self.inactivity_timer.stop()
-        self.timer_expired.emit()
-
     def go_back(self):
         self.setVisible(False)
-        self.inactivity_timer.stop()
         self.view_form_backbt_clicked.emit()
