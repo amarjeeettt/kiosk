@@ -359,7 +359,7 @@ class CounterThread(QThread):
 
     def __init__(self, initial_counter):
         super().__init__()
-        self.coinslot = Button(10)
+        self.coinslot = Button(16)
         self.stop_event = Event()
         self.counter = initial_counter
 

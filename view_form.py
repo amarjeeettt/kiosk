@@ -12,9 +12,17 @@ from PyQt5.QtWidgets import (
     QGraphicsDropShadowEffect,
     QSpacerItem,
     QDialog,
+    QTextBrowser,
 )
 from PyQt5.QtGui import QPixmap, QColor
-from PyQt5.QtCore import Qt, QTimer, QEvent, pyqtSignal
+from PyQt5.QtCore import (
+    Qt,
+    QTimer,
+    QEvent,
+    QPropertyAnimation,
+    QEasingCurve,
+    pyqtSignal,
+)
 
 
 class SmoothScrollArea(QScrollArea):
@@ -25,11 +33,15 @@ class SmoothScrollArea(QScrollArea):
         self.verticalScrollBar().setSingleStep(15)  # Set the scrolling step size
         self._mousePressPos = None
         self._scrollBarValueAtMousePress = None
+        self._animation = QPropertyAnimation(self.verticalScrollBar(), b"value")
+        self._animation.setEasingCurve(QEasingCurve.OutQuad)
+        self._animation.setDuration(500)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
             self._mousePressPos = event.globalPos()
             self._scrollBarValueAtMousePress = self.verticalScrollBar().value()
+            self._animation.stop()  # Stop any ongoing animation when the user interacts
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
@@ -41,9 +53,18 @@ class SmoothScrollArea(QScrollArea):
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
+        if self._mousePressPos:
+            delta = event.globalPos() - self._mousePressPos
+            target_value = self._scrollBarValueAtMousePress - delta.y()
+            self.smoothScrollTo(target_value)
         self._mousePressPos = None
         self._scrollBarValueAtMousePress = None
         super().mouseReleaseEvent(event)
+
+    def smoothScrollTo(self, target_value):
+        self._animation.setStartValue(self.verticalScrollBar().value())
+        self._animation.setEndValue(target_value)
+        self._animation.start()
 
 
 class WarningMessageBox(QDialog):
@@ -125,6 +146,410 @@ class WarningMessageBox(QDialog):
         self.close()
 
 
+class HelpMessageButton(QPushButton):
+    def __init__(self, title, parent=None):
+        super().__init__(parent)
+
+        layout = QVBoxLayout(self)
+
+        button_layout = QHBoxLayout()
+
+        self.label = QLabel(title)
+        self.label.setStyleSheet(
+            """
+            font-family: Roboto;
+            font-size: 15px;
+            background-color: transparent;
+            color: #19323C;
+            margin-left: 15px;         
+            """
+        )
+
+        pixmap = QPixmap("./img/static/next_arrow_img.png")
+        scaled_pixmap = pixmap.scaled(
+            15, 35, Qt.KeepAspectRatio, Qt.SmoothTransformation
+        )
+
+        self.image_label = QLabel()
+        self.image_label.setPixmap(scaled_pixmap)
+        self.image_label.setStyleSheet(
+            "margin-right: 15px; background-color: transparent"
+        )
+
+        button_layout.addWidget(self.label)
+        button_layout.addWidget(self.image_label, alignment=Qt.AlignRight)
+
+        layout.addLayout(button_layout)  # Add button_layout to the existing layout
+
+        self.setStyleSheet(
+            """
+            QPushButton {
+                background-color: transparent;
+                border: none;
+            }
+            QPushButton:pressed {
+                background-color: #FDFDFD;
+            }
+            """
+        )
+        self.setFocusPolicy(Qt.NoFocus)
+        self.setFixedHeight(65)
+
+
+class HelpMessageBox(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(600, 900)
+        self.setStyleSheet("background-color: #EBEBEB;")
+        self.setup_ui()
+
+    def setup_ui(self):
+        self.layout = QVBoxLayout(self)
+
+        upper_layout = QHBoxLayout()
+        upper_layout.setAlignment(Qt.AlignCenter | Qt.AlignTop)
+        upper_layout.setSpacing(167)
+
+        self.close_button = QPushButton()
+        self.close_button.setStyleSheet(
+            "QPushButton {background-color: transparent; border: none; image: url('img/static/close_img.png');}"
+            "QPushButton:pressed {background-color: transparent; border: none; image: url('img/static/close_img_pressed.png');}"
+        )
+        self.close_button.setFixedSize(45, 45)
+        self.close_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.close_button.clicked.connect(self.close_message_box)
+
+        self.help_label = QLabel("Get Help")
+        self.help_label.setStyleSheet(
+            """
+            font-family: Montserrat;
+            font-size: 22px;
+            color: #19323C;
+            """
+        )
+
+        upper_layout.addWidget(self.close_button, Qt.AlignLeft)
+        upper_layout.addWidget(self.help_label)
+        upper_layout.setContentsMargins(8, 15, 0, 0)
+
+        back_layout = QVBoxLayout()
+
+        self.back_button = QPushButton()
+        self.back_button.setFixedSize(30, 30)
+        self.back_button.setStyleSheet(
+            "QPushButton {background-color: transparent; border: none; image: url('img/static/back_img.png');}"
+            "QPushButton:pressed {background-color: transparent; border: none; image: url('img/static/close_img_pressed.png');}"
+        )
+        self.back_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.back_button.clicked.connect(self.go_back)
+        self.back_button.hide()
+
+        back_layout.addWidget(self.back_button)
+        back_layout.setContentsMargins(15, 20, 0, 20)
+
+        self.help_title_label = QLabel("User Printing and Viewing Forms Guide")
+        self.help_title_label.setStyleSheet(
+            """
+            font-family: Roboto;
+            font-weight: bold;
+            font-size: 24px;
+            margin-left: 8px;
+            color: #7C2F3E;
+            margin-bottom: 15px;
+            """
+        )
+
+        self.help_text = QTextBrowser()
+        self.help_text.setStyleSheet(
+            "QTextBrowser { border: none; background: transparent; margin-right: 30px; }"
+        )
+        self.help_text.setFixedHeight(700)
+        self.help_text.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.help_text.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.help_text.hide()
+
+        button_layout = QVBoxLayout()
+
+        self.how_to_print = HelpMessageButton("How to Print?", self)
+        self.how_to_view = HelpMessageButton("How to View the Process?", self)
+        self.how_to_add = HelpMessageButton("How to Add a Copy of the Form?", self)
+        self.how_to_remove = HelpMessageButton(
+            "How to Remove the Added Copy of the Form?", self
+        )
+        self.payment_method = HelpMessageButton("Payment Method?", self)
+        self.extra_coin = HelpMessageButton(
+            "Can I Get Back the Extra Coin I Inserted?", self
+        )
+        self.student_request = HelpMessageButton(
+            "Can Students Request Specific Forms?", self
+        )
+
+        self.how_to_print.clicked.connect(self.how_to_print_form)
+        self.how_to_view.clicked.connect(self.how_to_view_form)
+        self.how_to_add.clicked.connect(self.how_to_add_copy)
+        self.how_to_remove.clicked.connect(self.how_to_remove_copy)
+        self.payment_method.clicked.connect(self.payment)
+        self.extra_coin.clicked.connect(self.get_back_coins)
+
+        self.lines = []
+        self.add_widget_with_line(button_layout, self.how_to_print)
+        self.add_widget_with_line(button_layout, self.how_to_view)
+        self.add_widget_with_line(button_layout, self.how_to_add)
+        self.add_widget_with_line(button_layout, self.how_to_remove)
+        self.add_widget_with_line(button_layout, self.payment_method)
+        self.add_widget_with_line(button_layout, self.extra_coin)
+        button_layout.addWidget(self.student_request)
+        button_layout.setContentsMargins(0, 0, 0, 135)
+
+        self.layout.addLayout(upper_layout)
+        self.layout.addLayout(back_layout)
+        self.layout.addWidget(self.help_title_label)
+        self.layout.addWidget(self.help_text)
+        self.layout.addLayout(button_layout)
+
+    def how_to_print_form(self):
+        self.hide_buttons(
+            self.how_to_print,
+            self.how_to_view,
+            self.how_to_add,
+            self.how_to_remove,
+            self.payment_method,
+            self.extra_coin,
+            self.student_request,
+        )
+
+        self.close_button.hide()
+        self.help_label.hide()
+
+        self.back_button.show()
+
+        self.help_title_label.setText("How to Print?")
+
+        html_content = """
+        <ol>
+            <li style="font-size: 16px; margin-left: 8px;"><strong>Access the Forms Dashboard</strong><br>
+            First, go to the forms dashboard.</li><br>
+            <li style="font-size: 16px; margin-left: 8px;"><strong>Find Your Needed Form</strong><br>
+            Find your needed form by clicking its category button at the top of the dashboard or by scrolling through the list.</li><br>
+            <li style="font-size: 16px; margin-left: 8px;"><strong>Click the “View” Button</strong><br>
+            Select the form by clicking the “View” button to preview the form and start the printing process.</li><br>
+            <li style="font-size: 16px; margin-left: 8px;"><strong>Adjust the Number of Copies</strong><br>
+            You can adjust the number of copies by clicking the plus sign (+) icon to add more copies or the minus sign (-) icon to reduce the number of copies. Here, you will also see the total cost of the form and the number of copies.</li><br>
+            <li style="font-size: 16px; margin-left: 8px;"><strong>Proceed with Payment</strong><br>
+            Click the “Print Forms” button to proceed to the payment transaction. You can pay with both old and new types of coins.</li><br>
+            <li style="font-size: 16px; margin-left: 8px;"><strong>Enable the Print Button</strong><br>
+            If you pay the exact amount, the “Print” button will be enabled. Once you click the button, the printing will start. However, if your payment exceeds the exact amount, a warning message will pop up to hold the printing. The warning message 
+            will notify you that you inserted an excess amount and that once you click the “Confirm” button, you cannot retrieve the excess amount. But if you click the “Cancel” button, you will have the chance to edit the number of copies of the form 
+            cto consume all the coins you’ve inserted.</li><br>
+        </ol>
+        """
+        self.help_text.setHtml(html_content)
+        self.help_text.show()
+
+    def how_to_view_form(self):
+        self.hide_buttons(
+            self.how_to_print,
+            self.how_to_view,
+            self.how_to_add,
+            self.how_to_remove,
+            self.payment_method,
+            self.extra_coin,
+            self.student_request,
+        )
+
+        self.close_button.hide()
+        self.help_label.hide()
+
+        self.back_button.show()
+
+        self.help_title_label.setText("How to View the Process?")
+
+        html_content = """
+        <ol>
+            <li style="font-size: 16px; margin-left: 8px;"><strong>Access the Forms Dashboard</strong><br>
+            First, go to the forms dashboard.</li><br>
+            <li style="font-size: 16px; margin-left: 8px;"><strong>Find Your Needed Form</strong><br>
+            Find your needed form by clicking its category button at the top of the dashboard or by scrolling through the list.</li><br>
+            <li style="font-size: 16px; margin-left: 8px;"><strong>Click the “View” Button</strong><br>
+            Select the form by clicking the “View” button to preview the form and start the printing process.</li><br>
+            <li style="font-size: 16px; margin-left: 8px;"><strong>Click the “View Process” Button</strong><br>
+            Click the “View Process” button to view the step-by-step guidance process, map, and requirements of the forms.</li><br>
+        </ol>
+        """
+        self.help_text.setHtml(html_content)
+        self.help_text.show()
+
+    def how_to_add_copy(self):
+        self.hide_buttons(
+            self.how_to_print,
+            self.how_to_view,
+            self.how_to_add,
+            self.how_to_remove,
+            self.payment_method,
+            self.extra_coin,
+            self.student_request,
+        )
+
+        self.close_button.hide()
+        self.help_label.hide()
+
+        self.back_button.show()
+
+        self.help_title_label.setText("How to Add a Copy of the Form?")
+
+        html_content = """
+            <li style="font-size: 16px; margin-left: 8px; margin-right: 30px;"><strong>Click the “Add Sign (+)” Button</strong><br>
+            To add a copy of the form, click the plus sign (+) icon. By following this simple step, you can easily add additional copies
+            of the form as needed.</li><br>
+        """
+        self.help_text.setHtml(html_content)
+        self.help_text.show()
+
+    def how_to_remove_copy(self):
+        self.hide_buttons(
+            self.how_to_print,
+            self.how_to_view,
+            self.how_to_add,
+            self.how_to_remove,
+            self.payment_method,
+            self.extra_coin,
+            self.student_request,
+        )
+
+        self.close_button.hide()
+        self.help_label.hide()
+
+        self.back_button.show()
+
+        self.help_title_label.setText("How to Remove the Added Copy of the Form?")
+
+        html_content = """
+            <li style="font-size: 16px; margin-left: 8px; margin-right: 30px;"><strong>Click the “Minus Sign (-)” Button</strong><br>
+            To remove an added copy of the form, click the minus sign (-) icon. By following this simple step, you can easily reduce the number of copies of the form as needed.</li><br>
+        """
+        self.help_text.setHtml(html_content)
+        self.help_text.show()
+
+    def payment(self):
+        self.hide_buttons(
+            self.how_to_print,
+            self.how_to_view,
+            self.how_to_add,
+            self.how_to_remove,
+            self.payment_method,
+            self.extra_coin,
+            self.student_request,
+        )
+
+        self.close_button.hide()
+        self.help_label.hide()
+
+        self.back_button.show()
+
+        self.help_title_label.setText("Payment Method?")
+
+        html_content = """
+            <li style="font-size: 16px; margin-left: 8px; margin-right: 30px;">Our system accepts payment exclusively in peso coins. 
+            This means that students must use peso coins to pay for the forms they wish to print. <strong>No change provided</strong>, 
+            our system does not offer change. If you insert more coins than required , the excess amount will not be refunded. If you 
+            overpay, you will have the option to adjust the number of copies to consume the extra amount.</li><br>
+        """
+        self.help_text.setHtml(html_content)
+        self.help_text.show()
+
+    def get_back_coins(self):
+        self.hide_buttons(
+            self.how_to_print,
+            self.how_to_view,
+            self.how_to_add,
+            self.how_to_remove,
+            self.payment_method,
+            self.extra_coin,
+            self.student_request,
+        )
+
+        self.close_button.hide()
+        self.help_label.hide()
+
+        self.back_button.show()
+
+        self.help_title_label.setText("Can I Get Back the Extra Coin I Inserted?")
+
+        html_content = """
+            <li style="font-size: 16px; margin-left: 8px; margin-right: 30px;"><strong>Unfortunately, if you insert an extra coin, you cannot get it back.</strong> 
+            Once you click the “Confirm” button after inserting the coins, the excess amount cannot be refunded. However, if you click the “Cancel” button, you will 
+            have the chance to edit the number of copies of the form to utilize the extra amount you have inserted.</li><br>
+        """
+        self.help_text.setHtml(html_content)
+        self.help_text.show()
+
+    def student_request(self):
+        self.hide_buttons(
+            self.how_to_print,
+            self.how_to_view,
+            self.how_to_add,
+            self.how_to_remove,
+            self.payment_method,
+            self.extra_coin,
+            self.student_request,
+        )
+
+        self.close_button.hide()
+        self.help_label.hide()
+
+        self.back_button.show()
+
+        self.help_title_label.setText("Can Students Request Specific Forms?")
+
+        html_content = """
+            <li style="font-size: 16px; margin-left: 8px; margin-right: 30px;">No, students cannot request specific forms. They can only choose from the forms that are pre-set and provided by our system.</li><br>
+        """
+        self.help_text.setHtml(html_content)
+        self.help_text.show()
+
+    def go_back(self):
+        self.show_buttons(
+            self.how_to_print,
+            self.how_to_view,
+            self.how_to_add,
+            self.how_to_remove,
+            self.payment_method,
+            self.extra_coin,
+            self.student_request,
+        )
+
+        self.close_button.show()
+        self.help_label.show()
+
+        self.back_button.hide()
+
+        self.help_title_label.setText("User Printing and Viewing Forms Guide")
+        self.help_text.hide()
+
+    def hide_buttons(self, *buttons):
+        for button in buttons:
+            button.hide()
+        for line in self.lines:
+            line.hide()
+
+    def show_buttons(self, *buttons):
+        for button in buttons:
+            button.show()
+        for line in self.lines:
+            line.show()
+
+    def add_widget_with_line(self, layout, widget):
+        layout.addWidget(widget)
+        line = QFrame()
+        line.setFrameShape(QFrame.HLine)
+        line.setFrameShadow(QFrame.Sunken)
+        layout.addWidget(line)
+        self.lines.append(line)  # Store a reference to the line
+
+    def close_message_box(self):
+        self.reject()
+
+
 class ButtonWidget(QWidget):
     # Define a new signal
     buttonClicked = pyqtSignal(str, str)
@@ -178,7 +603,7 @@ class ButtonWidget(QWidget):
         self.description_label.setStyleSheet(
             """
             font-family: Open Sans;
-            font-size: 12px;
+            font-size: 13px;
             """
         )
         self.description_label.setWordWrap(True)
@@ -263,9 +688,9 @@ class ViewFormWidget(QWidget):
         self.update_button_styles()
 
         self.inactivity_timer = QTimer(self)
-        self.inactivity_timer.setInterval(30000)
+        self.inactivity_timer.setInterval(15000)
         self.inactivity_timer.timeout.connect(self.go_back)
-        self.inactivity_timer.start()
+        # self.inactivity_timer.start()
 
         self.installEventFilter(self)
 
@@ -290,6 +715,17 @@ class ViewFormWidget(QWidget):
         # Adding labels in top right corner
         rectangle_layout = QHBoxLayout()
 
+        help_button = QPushButton()
+        help_button.setStyleSheet(
+            "QPushButton {background-color: transparent; border: none; image: url('img/static/help_img.png');}"
+            "QPushButton:pressed {background-color: transparent; border: none; image: url('img/static/help_img_pressed.png');}"
+        )
+        help_button.setFixedSize(65, 65)
+        help_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        help_button.clicked.connect(self.show_help)
+
+        rectangle_layout.addWidget(help_button, alignment=Qt.AlignRight)
+
         rectangle = QFrame()
         rectangle.setFrameShape(QFrame.StyledPanel)
         rectangle.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
@@ -308,7 +744,7 @@ class ViewFormWidget(QWidget):
         rectangle.setGraphicsEffect(shadow_effect)
 
         rectangle_layout.addWidget(rectangle, alignment=Qt.AlignTop | Qt.AlignRight)
-        rectangle_layout.setContentsMargins(0, 25, 60, 0)
+        rectangle_layout.setContentsMargins(475, 25, 60, 0)
 
         rectangle_inner_layout = QHBoxLayout()
         rectangle_inner_layout.setContentsMargins(25, 0, 15, 0)
@@ -464,13 +900,21 @@ class ViewFormWidget(QWidget):
         self.nav_btn_category7.setFocusPolicy(Qt.NoFocus)
 
         # Set size policy for navigation buttons to Fixed
+        self.nav_btn_all.setFixedSize(140, 65)
         self.nav_btn_all.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.nav_btn_category1.setFixedHeight(65)
         self.nav_btn_category1.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.nav_btn_category2.setFixedHeight(65)
         self.nav_btn_category2.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.nav_btn_category3.setFixedHeight(65)
         self.nav_btn_category3.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.nav_btn_category4.setFixedHeight(65)
         self.nav_btn_category4.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.nav_btn_category5.setFixedHeight(65)
         self.nav_btn_category5.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.nav_btn_category6.setFixedHeight(65)
         self.nav_btn_category6.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.nav_btn_category7.setFixedHeight(65)
         self.nav_btn_category7.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
         self.nav_layout = QHBoxLayout()
@@ -508,7 +952,7 @@ class ViewFormWidget(QWidget):
                 font-weight: bold; 
                 border: none; 
                 border-bottom: 2px solid #7C2F3E; 
-                padding-bottom: 5px; 
+                padding-bottom: 10px; 
             }
             """
         )
@@ -522,8 +966,8 @@ class ViewFormWidget(QWidget):
 
         # Align the navigation bar to the top
         self.nav_layout.setAlignment(Qt.AlignTop)
-        self.nav_layout.setSpacing(40)
-        self.nav_layout.setContentsMargins(80, 20, 0, 0)
+        self.nav_layout.setSpacing(50)
+        self.nav_layout.setContentsMargins(100, 20, 0, 0)
 
         layout.addLayout(self.nav_layout)
 
@@ -615,7 +1059,7 @@ class ViewFormWidget(QWidget):
                 font-weight: bold; 
                 border: none; 
                 border-bottom: 2px solid #7C2F3E; 
-                padding-bottom: 5px; 
+                padding-bottom: 10px; 
             }
         """
         )
@@ -710,6 +1154,12 @@ class ViewFormWidget(QWidget):
             self.bondpaper_supply,
             self.ink_supply,
         )
+
+    def show_help(self):
+        help_message_box = HelpMessageBox(self)
+        parent_pos = self.mapToGlobal(self.rect().center())
+        help_message_box.move(parent_pos - help_message_box.rect().center())
+        help_message_box.exec_()
 
     def printer_not_connected(self):
         self.printer_message_box = WarningMessageBox(

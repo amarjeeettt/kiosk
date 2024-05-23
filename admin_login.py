@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import (
     QGraphicsDropShadowEffect,
 )
 from PyQt5.QtCore import Qt, QTimer, QEvent, pyqtSignal
+from custom_message_box import CustomMessageBox
 
 
 class AdminLoginWidget(QWidget):
@@ -20,7 +21,7 @@ class AdminLoginWidget(QWidget):
         self.setup_ui()
 
         self.inactivity_timer = QTimer(self)
-        self.inactivity_timer.setInterval(30000)
+        self.inactivity_timer.setInterval(15000)
         self.inactivity_timer.timeout.connect(self.go_back)
         self.inactivity_timer.start()
 
@@ -43,7 +44,7 @@ class AdminLoginWidget(QWidget):
                 font-weight: bold; 
                 border-radius: 10px;
                 border: none;
-                margin-left: 35px;
+                margin-left: 165px;
                 min-width: 150px;
                 min-height: 80px;
                 margin-top: 35px;
@@ -92,6 +93,7 @@ class AdminLoginWidget(QWidget):
         self.input_edit = QLineEdit()
         self.input_edit.setAlignment(Qt.AlignCenter)
         self.input_edit.setEchoMode(QLineEdit.Password)
+        self.input_edit.setMaxLength(4)
         self.input_edit.setStyleSheet(
             """
             QLineEdit {
@@ -202,3 +204,14 @@ class AdminLoginWidget(QWidget):
             self.inactivity_timer.stop()
 
             self.login_clicked.emit()
+
+        else:
+            message_box = CustomMessageBox(
+                "Error",
+                f"Incorrect password. Please try again.",
+                parent=self,
+            )
+            message_box.exec_()
+
+            self.input_edit.clear()
+            self.inactivity_timer.stop()

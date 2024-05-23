@@ -14,8 +14,6 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QPixmap, QImage, QPainter, QBrush, QColor, QIcon
 from PyQt5.QtCore import (
     Qt,
-    QTimer,
-    QEvent,
     pyqtSignal,
     QPoint,
     QPropertyAnimation,
@@ -107,13 +105,6 @@ class PrintPreviewWidget(QWidget):
         self.setup_ui(title, page_number, printer_status, bondpaper_status, ink_status)
 
         self.swiping = False
-
-        self.inactivity_timer = QTimer(self)
-        self.inactivity_timer.setInterval(30000)
-        self.inactivity_timer.timeout.connect(self.go_back_home)
-        self.inactivity_timer.start()
-
-        self.installEventFilter(self)
 
     def setup_ui(
         self, title, page_number, printer_status, bondpaper_status, ink_status
@@ -668,14 +659,6 @@ class PrintPreviewWidget(QWidget):
         self.print_form_clicked.emit(
             title, int(self.value), page_number, int(self.total)
         )
-
-    def eventFilter(self, obj, event):
-        if event.type() in [QEvent.MouseButtonPress, QEvent.KeyPress]:
-            self.reset_inactivity_timer()
-        return super().eventFilter(obj, event)
-
-    def reset_inactivity_timer(self):
-        self.inactivity_timer.start()
 
     def go_back_home(self):
         self.setVisible(False)

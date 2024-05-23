@@ -594,14 +594,6 @@ class FormWidget(QWidget):
         self.initUI()
 
     def initUI(self):
-        conn = sqlite3.connect("./database/kiosk.db")
-        cursor = conn.cursor()
-
-        cursor.execute("SELECT DISTINCT form_category FROM kiosk_forms")
-        self.form_category = [category[0] for category in cursor.fetchall()]
-
-        conn.close()
-
         # Main layout
         main_layout = QVBoxLayout(self)
 
@@ -704,6 +696,16 @@ class FormWidget(QWidget):
             }
             """
         )
+        self.form_category = [
+            "Accreditation",
+            "Academic Recognition",
+            "Clearance",
+            "Enrollment",
+            "Graduation",
+            "Petition",
+            "Research",
+            "Other",
+        ]
         self.category_input.addItems(self.form_category)
         self.category_input.setFixedWidth(300)
 
@@ -1004,14 +1006,6 @@ class EditFormWidget(QWidget):
         self.id_num = id_num
         self.form_name = form_name
 
-        conn = sqlite3.connect("./database/kiosk.db")
-        cursor = conn.cursor()
-
-        cursor.execute("SELECT DISTINCT form_category FROM kiosk_forms")
-        self.form_category = [category[0] for category in cursor.fetchall()]
-
-        conn.close()
-
         # Main layout
         main_layout = QVBoxLayout(self)
 
@@ -1114,6 +1108,16 @@ class EditFormWidget(QWidget):
             }
             """
         )
+        self.form_category = [
+            "Accreditation",
+            "Academic Recognition",
+            "Clearance",
+            "Enrollment",
+            "Graduation",
+            "Petition",
+            "Research",
+            "Other",
+        ]
         self.category_input.addItems(self.form_category)
         self.category_input.setFixedWidth(300)
 
@@ -1504,16 +1508,23 @@ class UploadFormWidget(QWidget):
         )  # Add the frame to UploadFormWidget's layout
 
     def open_file_explorer(self):
-        options = QFileDialog.Options()
-        options |= QFileDialog.DontUseNativeDialog  # Use native dialog on macOS
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "Open File", "/media/amarjeet/", "Document (*.pdf)", options=options
-        )
-        if file_path:
-            file_name = os.path.basename(file_path)
-            print("Selected file:", file_name)
-            self.display_file_preview(file_name)
-            self.selected_file_path = file_path
+        # Create a QFileDialog instance
+        dialog = QFileDialog(self, "Open File", "/media/amarjeet/", "Document (*.pdf)")
+
+        # Set the options for the dialog
+        dialog.setOptions(QFileDialog.DontUseNativeDialog)
+
+        # Adjust the size of the QFileDialog
+        dialog.resize(800, 600)  # Width: 800, Height: 600
+
+        # Execute the dialog and get the selected file path
+        if dialog.exec_() == QFileDialog.Accepted:
+            file_path = dialog.selectedFiles()[0]
+            if file_path:
+                file_name = os.path.basename(file_path)
+                print("Selected file:", file_name)
+                self.display_file_preview(file_name)
+                self.selected_file_path = file_path
 
     def display_file_preview(self, file_name):
         self.file_label.setText(f"Selected File: {file_name}")
@@ -1642,20 +1653,23 @@ class UploadProcessWidget(QWidget):
         )  # Add the frame to UploadFormWidget's layout
 
     def open_file_explorer(self):
-        options = QFileDialog.Options()
-        options |= QFileDialog.DontUseNativeDialog  # Use native dialog on macOS
-        file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            "Open File",
-            "/media/amarjeet/",
-            "Images (*.png *.jpg *.jpeg *.bmp)",
-            options=options,
+        dialog = QFileDialog(
+            self, "Open File", "/media/amarjeet/", "Images (*.png *.jpg *.jpeg *.bmp)"
         )
-        if file_path:
-            file_name = os.path.basename(file_path)
-            print("Selected file:", file_name)
-            self.display_file_preview(file_name)
-            self.selected_file_path = file_path
+
+        # Set the options for the dialog
+        dialog.setOptions(QFileDialog.DontUseNativeDialog)
+
+        # Adjust the size of the QFileDialog
+        dialog.resize(800, 600)  # Width: 800, Height: 600
+
+        if dialog.exec_() == QFileDialog.Accepted:
+            file_path = dialog.selectedFiles()[0]
+            if file_path:
+                file_name = os.path.basename(file_path)
+                print("Selected file:", file_name)
+                self.display_file_preview(file_name)
+                self.selected_file_path = file_path
 
     def display_file_preview(self, file_name):
         self.file_label.setText(f"Selected File: {file_name}")
@@ -1701,7 +1715,7 @@ class CustomButton(QPushButton):
         self.label = QLabel(text)
         self.label.setStyleSheet(
             """
-            font-family: Roboto, sans-serif; 
+            font-family: Roboto; 
             font-size: 14px;
             font-weight: bold;
             color: #19323C;
@@ -1726,6 +1740,7 @@ class CustomButton(QPushButton):
 
 
 class TotalAmountDropButton(QPushButton):
+    daily_selected = pyqtSignal(float)
     weekly_selected = pyqtSignal(float)
     monthly_selected = pyqtSignal(float)
     yearly_selected = pyqtSignal(float)
@@ -1740,26 +1755,61 @@ class TotalAmountDropButton(QPushButton):
         self.menu = QMenu(self)
 
         # Create actions for the menu
-        self.action1 = QAction("Weekly", self)
-        self.action2 = QAction("Monthly", self)
-        self.action3 = QAction("Yearly", self)
+        self.action1 = QAction("Daily", self)
+        self.action2 = QAction("Weekly", self)
+        self.action3 = QAction("Monthly", self)
+        self.action4 = QAction("Yearly", self)
 
         # Connect actions to their respective slots
-        self.action1.triggered.connect(self.sort_weekly)
-        self.action2.triggered.connect(self.sort_monthly)
-        self.action3.triggered.connect(self.sort_yearly)
+        self.action1.triggered.connect(self.sort_daily)
+        self.action2.triggered.connect(self.sort_weekly)
+        self.action3.triggered.connect(self.sort_monthly)
+        self.action4.triggered.connect(self.sort_yearly)
 
         # Add actions to the menu
         self.menu.addAction(self.action1)
         self.menu.addAction(self.action2)
         self.menu.addAction(self.action3)
+        self.menu.addAction(self.action4)
 
         self.setMenu(self.menu)
         self.setFocusPolicy(Qt.NoFocus)
 
         # Set initial state to "Weekly"
-        self.setText("Weekly")
-        self.sort_weekly()
+        self.setText("Daily")
+        self.sort_daily()
+
+    def sort_daily(self):
+        self.setText("Daily")
+
+        # Connect to the database
+        conn = sqlite3.connect("./database/kiosk.db")
+        cursor = conn.cursor()
+
+        # Get the current date
+        current_date = datetime.datetime.now().strftime("%Y-%m-%d")
+
+        # Execute the SQL query to sum the total amount based on the current date
+        cursor.execute(
+            """
+            SELECT COALESCE(SUM(total_amount), 0) AS total_amount
+            FROM kiosk_print_results
+            WHERE date(date_printed) = ? AND result = 'Success'
+            """,
+            (current_date,),
+        )
+
+        # Fetch the result
+        self.total_amount = cursor.fetchone()[0]
+
+        # Close the cursor and database connection
+        cursor.close()
+        conn.close()
+
+        self.daily_selected.emit(self.total_amount)
+
+    def get_daily_amount(self):
+        return float(self.total_amount)
 
     def sort_weekly(self):
         self.setText("Weekly")
@@ -1791,9 +1841,6 @@ class TotalAmountDropButton(QPushButton):
         conn.close()
 
         self.weekly_selected.emit(self.total_amount)
-
-    def get_weekly_amount(self):
-        return float(self.total_amount)
 
     def sort_monthly(self):
         self.setText("Monthly")
@@ -1855,6 +1902,7 @@ class TotalAmountDropButton(QPushButton):
 
 
 class TotalFormDropButton(QPushButton):
+    daily_selected = pyqtSignal(str)
     weekly_selected = pyqtSignal(str)
     monthly_selected = pyqtSignal(str)
     yearly_selected = pyqtSignal(str)
@@ -1869,26 +1917,65 @@ class TotalFormDropButton(QPushButton):
         self.menu = QMenu()
 
         # Create actions for the menu
-        self.action1 = QAction("Weekly", self)
-        self.action2 = QAction("Monthly", self)
-        self.action3 = QAction("Yearly", self)
+        self.action1 = QAction("Daily", self)
+        self.action2 = QAction("Weekly", self)
+        self.action3 = QAction("Monthly", self)
+        self.action4 = QAction("Yearly", self)
 
         # Connect actions to their respective slots
-        self.action1.triggered.connect(self.sort_weekly)
-        self.action2.triggered.connect(self.sort_monthly)
-        self.action3.triggered.connect(self.sort_yearly)
+        self.action1.triggered.connect(self.sort_daily)
+        self.action2.triggered.connect(self.sort_weekly)
+        self.action3.triggered.connect(self.sort_monthly)
+        self.action4.triggered.connect(self.sort_yearly)
 
         # Add actions to the menu
         self.menu.addAction(self.action1)
         self.menu.addAction(self.action2)
         self.menu.addAction(self.action3)
+        self.menu.addAction(self.action4)
 
         self.setMenu(self.menu)
         self.setFocusPolicy(Qt.NoFocus)
 
         # Set initial state to "Weekly"
-        self.setText("Weekly")
-        self.sort_weekly()
+        self.setText("Daily")
+        self.sort_daily()
+
+    def sort_daily(self):
+        self.setText("Daily")
+
+        # Connect to the database
+        conn = sqlite3.connect("./database/kiosk.db")
+        cursor = conn.cursor()
+
+        # Get the start and end dates for the current day
+        current_date = datetime.datetime.now().strftime("%Y-%m-%d")
+
+        cursor.execute(
+            """
+            SELECT COALESCE(
+                    (SELECT form_name
+                        FROM kiosk_print_results
+                        WHERE strftime('%Y-%m-%d', date_printed) = ? 
+                            AND result = 'Success'
+                        GROUP BY form_name
+                        ORDER BY SUM(number_of_copies) DESC
+                        LIMIT 1
+                    ), 'None'
+                )
+        """,
+            (current_date,),
+        )
+
+        self.total_form = cursor.fetchone()[0]
+
+        cursor.close()
+        conn.close()
+
+        self.daily_selected.emit(self.total_form)
+
+    def get_daily_amount(self):
+        return self.total_form
 
     def sort_weekly(self):
         self.setText("Weekly")
@@ -1924,9 +2011,6 @@ class TotalFormDropButton(QPushButton):
         conn.close()
 
         self.weekly_selected.emit(self.total_form)
-
-    def get_weekly_amount(self):
-        return self.total_form
 
     def sort_monthly(self):
         self.setText("Monthly")
@@ -1994,6 +2078,7 @@ class TotalFormDropButton(QPushButton):
 
 
 class TotalFailedDropButton(QPushButton):
+    daily_selected = pyqtSignal(int)
     weekly_selected = pyqtSignal(int)
     monthly_selected = pyqtSignal(int)
     yearly_selected = pyqtSignal(int)
@@ -2008,26 +2093,59 @@ class TotalFailedDropButton(QPushButton):
         self.menu = QMenu(self)
 
         # Create actions for the menu
-        self.action1 = QAction("Weekly", self)
-        self.action2 = QAction("Monthly", self)
-        self.action3 = QAction("Yearly", self)
+        self.action1 = QAction("Daily", self)
+        self.action2 = QAction("Weekly", self)
+        self.action3 = QAction("Monthly", self)
+        self.action4 = QAction("Yearly", self)
 
         # Connect actions to their respective slots
-        self.action1.triggered.connect(self.sort_weekly)
-        self.action2.triggered.connect(self.sort_monthly)
-        self.action3.triggered.connect(self.sort_yearly)
+        self.action1.triggered.connect(self.sort_daily)
+        self.action2.triggered.connect(self.sort_weekly)
+        self.action3.triggered.connect(self.sort_monthly)
+        self.action4.triggered.connect(self.sort_yearly)
 
         # Add actions to the menu
         self.menu.addAction(self.action1)
         self.menu.addAction(self.action2)
         self.menu.addAction(self.action3)
+        self.menu.addAction(self.action4)
 
         self.setMenu(self.menu)
         self.setFocusPolicy(Qt.NoFocus)
 
         # Set initial state to "Weekly"
-        self.setText("Weekly")
-        self.sort_weekly()
+        self.setText("Daily")
+        self.sort_daily()
+
+    def sort_daily(self):
+        self.setText("Daily")
+
+        # Connect to the database
+        conn = sqlite3.connect("./database/kiosk.db")
+        cursor = conn.cursor()
+
+        # Get the start and end dates for the current day
+        current_date = datetime.datetime.now().strftime("%Y-%m-%d")
+
+        cursor.execute(
+            """
+            SELECT COUNT(*) AS total_failed_count
+            FROM kiosk_print_results
+            WHERE result = 'Failed'
+            AND date(date_printed) = ?
+        """,
+            (current_date,),
+        )
+
+        self.total_error = cursor.fetchone()[0]
+
+        cursor.close()
+        conn.close()
+
+        self.daily_selected.emit(self.total_error)
+
+    def get_daily_amount(self):
+        return self.total_error
 
     def sort_weekly(self):
         self.setText("Weekly")
@@ -2057,9 +2175,6 @@ class TotalFailedDropButton(QPushButton):
         conn.close()
 
         self.weekly_selected.emit(self.total_error)
-
-    def get_weekly_amount(self):
-        return self.total_error
 
     def sort_monthly(self):
         self.setText("Monthly")
@@ -2115,6 +2230,7 @@ class TotalFailedDropButton(QPushButton):
 
 
 class TotalSuccessDropButton(QPushButton):
+    daily_selected = pyqtSignal(int)
     weekly_selected = pyqtSignal(int)
     monthly_selected = pyqtSignal(int)
     yearly_selected = pyqtSignal(int)
@@ -2129,26 +2245,59 @@ class TotalSuccessDropButton(QPushButton):
         self.menu = QMenu(self)
 
         # Create actions for the menu
-        self.action1 = QAction("Weekly", self)
-        self.action2 = QAction("Monthly", self)
-        self.action3 = QAction("Yearly", self)
+        self.action1 = QAction("Daily", self)
+        self.action2 = QAction("Weekly", self)
+        self.action3 = QAction("Monthly", self)
+        self.action4 = QAction("Yearly", self)
 
         # Connect actions to their respective slots
-        self.action1.triggered.connect(self.sort_weekly)
-        self.action2.triggered.connect(self.sort_monthly)
-        self.action3.triggered.connect(self.sort_yearly)
+        self.action1.triggered.connect(self.sort_daily)
+        self.action2.triggered.connect(self.sort_weekly)
+        self.action3.triggered.connect(self.sort_monthly)
+        self.action4.triggered.connect(self.sort_yearly)
 
         # Add actions to the menu
         self.menu.addAction(self.action1)
         self.menu.addAction(self.action2)
         self.menu.addAction(self.action3)
+        self.menu.addAction(self.action4)
 
         self.setMenu(self.menu)
         self.setFocusPolicy(Qt.NoFocus)
 
         # Set initial state to "Weekly"
-        self.setText("Weekly")
-        self.sort_weekly()
+        self.setText("Daily")
+        self.sort_daily()
+
+    def sort_daily(self):
+        self.setText("Daily")
+
+        # Connect to the database
+        conn = sqlite3.connect("./database/kiosk.db")
+        cursor = conn.cursor()
+
+        # Get the start and end dates for the current day
+        current_date = datetime.datetime.now().strftime("%Y-%m-%d")
+
+        cursor.execute(
+            """
+            SELECT COUNT(*) AS total_success_count
+            FROM kiosk_print_results
+            WHERE result = 'Success'
+            AND date(date_printed) = ?
+        """,
+            (current_date,),
+        )
+
+        self.total_success = cursor.fetchone()[0]
+
+        cursor.close()
+        conn.close()
+
+        self.daily_selected.emit(self.total_success)
+
+    def get_daily_amount(self):
+        return self.total_success
 
     def sort_weekly(self):
         self.setText("Weekly")
@@ -2178,9 +2327,6 @@ class TotalSuccessDropButton(QPushButton):
         conn.close()
 
         self.weekly_selected.emit(self.total_success)
-
-    def get_weekly_amount(self):
-        return self.total_success
 
     def sort_monthly(self):
         self.setText("Monthly")
@@ -2262,7 +2408,7 @@ class TotalAmountWidget(QWidget):
         button.monthly_selected.connect(self.change_total_label)
         button.yearly_selected.connect(self.change_total_label)
 
-        weekly_total = button.get_weekly_amount()
+        daily_total = button.get_daily_amount()
 
         top_layout.addWidget(image_label)
         top_layout.addWidget(button)
@@ -2279,7 +2425,7 @@ class TotalAmountWidget(QWidget):
             """
         )
 
-        self.total_label = QLabel(f"₱ {weekly_total}")
+        self.total_label = QLabel(f"₱ {daily_total}")
         self.total_label.setStyleSheet(
             """
             font-family: Montserrat;
@@ -2333,7 +2479,7 @@ class TotalFormWidget(QWidget):
         button.monthly_selected.connect(self.change_total_label)
         button.yearly_selected.connect(self.change_total_label)
 
-        weekly_total = button.get_weekly_amount()
+        daily_total = button.get_daily_amount()
 
         top_layout.addWidget(image_label)
         top_layout.addWidget(button)
@@ -2350,7 +2496,7 @@ class TotalFormWidget(QWidget):
             """
         )
 
-        self.total_label = QLabel(f"{weekly_total}")
+        self.total_label = QLabel(f"{daily_total}")
         self.total_label.setWordWrap(True)
         self.total_label.setStyleSheet(
             """
@@ -2401,7 +2547,7 @@ class TotalSuccessWidget(QWidget):
         button.monthly_selected.connect(self.change_total_label)
         button.yearly_selected.connect(self.change_total_label)
 
-        weekly_total = button.get_weekly_amount()
+        daily_total = button.get_daily_amount()
 
         top_layout.addWidget(image_label)
         top_layout.addWidget(button)
@@ -2418,7 +2564,7 @@ class TotalSuccessWidget(QWidget):
             """
         )
 
-        self.total_label = QLabel(f"{weekly_total}")
+        self.total_label = QLabel(f"{daily_total}")
         self.total_label.setStyleSheet(
             """
             font-family: Montserrat;
@@ -2468,7 +2614,7 @@ class TotalFailedWidget(QWidget):
         button.monthly_selected.connect(self.change_total_label)
         button.yearly_selected.connect(self.change_total_label)
 
-        weekly_total = button.get_weekly_amount()
+        daily_total = button.get_daily_amount()
 
         top_layout.addWidget(image_label)
         top_layout.addWidget(button)
@@ -2485,7 +2631,7 @@ class TotalFailedWidget(QWidget):
             """
         )
 
-        self.total_label = QLabel(f"{weekly_total}")
+        self.total_label = QLabel(f"{daily_total}")
         self.total_label.setStyleSheet(
             """
             font-family: Montserrat;
@@ -2509,6 +2655,38 @@ class TotalFailedWidget(QWidget):
 
     def change_total_label(self, total_amount):
         self.total_label.setText(f"{total_amount}")
+
+
+class RefillButton(QPushButton):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        layout = QVBoxLayout()
+
+        pixmap = QPixmap("./img/static/ink_img.png")
+        scaled_pixmap = pixmap.scaled(
+            65, 65, Qt.KeepAspectRatio, Qt.SmoothTransformation
+        )
+
+        self.image_label = QLabel()
+        self.image_label.setPixmap(scaled_pixmap)
+        self.image_label.setStyleSheet("margin-top: 15px;")
+
+        self.label = QLabel("Refill Ink")
+        self.label.setStyleSheet(
+            """
+            font-family: Roboto; 
+            font-size: 14px;
+            font-weight: bold;
+            color: #19323C;
+            """
+        )
+
+        layout.addWidget(self.image_label, alignment=Qt.AlignCenter)
+        layout.addWidget(self.label, alignment=Qt.AlignCenter)
+
+        self.setFocusPolicy(Qt.NoFocus)
+        self.setLayout(layout)
 
 
 class AdminWindowWidget(QWidget):
@@ -2637,6 +2815,7 @@ class AdminWindowWidget(QWidget):
         pixmap = QPixmap("./img/static/bondpaper_quantity.png")
         bondpaper_img.setPixmap(pixmap)
         bondpaper_label = QLabel(str(self.bondpaper_quantity))
+        self.bondpaper_quantity_updated.connect(self.update_label_slot)
         bondpaper_layout.addWidget(self.bondpaper_warning)
         bondpaper_layout.addWidget(bondpaper_img)
         bondpaper_layout.addWidget(bondpaper_label, alignment=Qt.AlignLeft)
@@ -2677,7 +2856,7 @@ class AdminWindowWidget(QWidget):
         printer_layout.addWidget(self.printer_warning)
         printer_layout.addWidget(printer_img)
         printer_layout.addWidget(self.printer_status_symbol)
-        
+
         # Ink Widgets
         self.ink_warning = QPushButton("!")
         self.ink_warning.setFocusPolicy(Qt.NoFocus)
@@ -2717,7 +2896,7 @@ class AdminWindowWidget(QWidget):
 
         if self.bondpaper_quantity <= 5:
             self.bondpaper_warning.show()
-        
+
         if self.ink_level <= 75:
             self.ink_warning.show()
 
@@ -3290,7 +3469,7 @@ class AdminWindowWidget(QWidget):
         center_layout.addStretch(1)  # Add stretch to center vertically
 
         frames_layout = QHBoxLayout()
-        frames_layout.setSpacing(100)
+        frames_layout.setSpacing(45)
 
         # Create the first frame
         frame1 = QFrame()
@@ -3415,6 +3594,18 @@ class AdminWindowWidget(QWidget):
 
         # Add the first frame to the frames layout
         frames_layout.addWidget(frame1)
+
+        ink_refill = RefillButton()
+        ink_refill.setStyleSheet(
+            """
+            QPushButton {
+                border-radius: 25px;
+                background-color: #D8C995;
+            }
+            """
+        )
+        ink_refill.setFixedSize(150, 150)
+        frames_layout.addWidget(ink_refill)
 
         # Create the second frame
         frame2 = QFrame()
@@ -3746,6 +3937,8 @@ class AdminWindowWidget(QWidget):
 
             cursor.execute("SELECT * FROM kiosk_print_results")
             data = cursor.fetchall()
+
+            data.sort(reverse=True)
 
             column_names = [
                 self.format_column_name(description[0])

@@ -6,10 +6,9 @@ from PyQt5.QtWidgets import (
     QWidget,
     QVBoxLayout,
     QLabel,
-    QPushButton,
     QDesktopWidget,
 )
-from PyQt5.QtCore import Qt, QSize, pyqtSlot
+from PyQt5.QtCore import Qt, pyqtSlot
 from PyQt5.QtGui import QPixmap
 from home_screen_widget import HomeScreenWidget
 from admin_login import AdminLoginWidget
@@ -30,42 +29,31 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.centralWidget)
 
         self.home_screen_widget = HomeScreenWidget(self)
-        self.admin_bt = QPushButton("", self)
 
         self.setup_ui()
+
+        self.view_form = ViewFormWidget(self, self.printer_state)
+        self.layout.addWidget(self.view_form)
 
     def setup_ui(self):
         self.layout = QVBoxLayout(self.centralWidget)
 
         # Adding HomeScreenWindow
         self.layout.addWidget(self.home_screen_widget)
-        self.home_screen_widget.setVisible(True)
-        self.home_screen_widget.home_screen_clicked.connect(self.show_form_list)
-
-        # Set properties of the admin button
-        self.admin_bt.setGeometry(1430, 843, 200, 65)
-        self.admin_bt.setIconSize(QSize(65, 65))
-        self.admin_bt.setFocusPolicy(Qt.NoFocus)
-        self.admin_bt.setStyleSheet(
-            "QPushButton {background-color: transparent; border: none; image: url('img/admin_bt.svg');}"
-            "QPushButton:pressed {background-color: transparent; border: none; image: url('img/admin_bt_pressed.svg');}"
-        )
-        self.admin_bt.show()
-        self.admin_bt.clicked.connect(self.show_admin_login)
+        self.home_screen_widget.setVisible(False)
+        self.home_screen_widget.start_button_clicked.connect(self.show_form_list)
 
         self.printer_state = None
         self.is_printer_available()
 
     def go_back_to_home(self):
         self.home_screen_widget.setVisible(True)
-        self.admin_bt.show()
         self.is_printer_available()
 
     def show_admin_login(self):
         self.admin_login = AdminLoginWidget(self)
         self.layout.addWidget(self.admin_login)
 
-        self.admin_bt.hide()
         self.home_screen_widget.setVisible(False)
 
         self.admin_login.show()
@@ -77,7 +65,6 @@ class MainWindow(QMainWindow):
         self.admin_window = AdminWindowWidget(self)
         self.layout.addWidget(self.admin_window)
 
-        self.admin_bt.hide()
         self.admin_login.setVisible(False)
 
         self.admin_window.show()
@@ -87,8 +74,6 @@ class MainWindow(QMainWindow):
     def show_form_list(self):
         self.view_form = ViewFormWidget(self, self.printer_state)
         self.layout.addWidget(self.view_form)
-
-        self.admin_bt.hide()
 
         self.view_form.show()
         self.view_form.view_button_clicked.connect(self.show_print_preview)
@@ -103,7 +88,6 @@ class MainWindow(QMainWindow):
         )
         self.layout.addWidget(self.print_preview)
 
-        self.admin_bt.hide()
         self.view_form.setVisible(False)
 
         self.print_preview.show()
@@ -117,7 +101,6 @@ class MainWindow(QMainWindow):
         self.print_form = PrintFormWidget(self, title, num_copy, num_pages, total)
         self.layout.addWidget(self.print_form)
 
-        self.admin_bt.hide()
         self.print_preview.setVisible(False)
 
         self.print_form.show()
@@ -130,7 +113,6 @@ class MainWindow(QMainWindow):
         self.view_process = ViewProcessWidget(self, title)
         self.layout.addWidget(self.view_process)
 
-        self.admin_bt.hide()
         self.print_preview.setVisible(False)
 
         self.view_process.show()

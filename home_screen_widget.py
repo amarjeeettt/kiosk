@@ -1,10 +1,10 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QMovie
 
 
 class HomeScreenWidget(QWidget):
-    home_screen_clicked = pyqtSignal()
+    start_button_clicked = pyqtSignal()
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -21,20 +21,31 @@ class HomeScreenWidget(QWidget):
         image_label.setMovie(movie)
         image_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(image_label)
-        layout.setContentsMargins(0, 100, 0, 0)
+        layout.setContentsMargins(0, 80, 0, 0)
 
         movie.start()
 
         # Add spacing between image_label and sub_label
         layout.addSpacing(80)
 
-        # Create second label and add it to the layout
-        sub_label = QLabel("Touch Anywhere to Continue", alignment=Qt.AlignCenter)
-        sub_label.setStyleSheet(
-            "color: #A93F55; font-family: Roboto; font-size: 20px; font-weight: bold; letter-spacing: 3px; "
-        )
-        layout.addWidget(sub_label)
+        button_layouts = QVBoxLayout()
 
-    def mousePressEvent(self, event):
+        start_button = QPushButton("Start")
+        start_button.clicked.connect(self.go_to_forms)
+
+        bottom_buttons = QHBoxLayout()
+
+        about_button = QPushButton("About")
+        admin_button = QPushButton("Admin")
+
+        bottom_buttons.addWidget(about_button)
+        bottom_buttons.addWidget(admin_button)
+
+        button_layouts.addWidget(start_button)
+        button_layouts.addLayout(bottom_buttons)
+
+        layout.addLayout(button_layouts)
+
+    def go_to_forms(self):
         self.setVisible(False)
-        self.home_screen_clicked.emit()
+        self.start_button_clicked.emit()

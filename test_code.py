@@ -1,84 +1,51 @@
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout
-from PyQt5.QtCore import QThread, pyqtSignal
-import time
-import cups
+import sys
+from PyQt5.QtWidgets import QApplication, QMainWindow, QTextBrowser, QVBoxLayout, QWidget
 
-class PrinterStatus(QThread):
-    status_updated = pyqtSignal(bool)
-
-    def __init__(self):
-        super().__init__()
-        self.printer_state = None
-        self.running = True
-
-    def run(self):
-        while self.running:
-            self.is_printer_available()
-            time.sleep(10)
-
-    def is_printer_available(self):
-        try:
-            conn = cups.Connection()
-            printers = conn.getPrinters()
-
-            if not printers:
-                self.printer_state = False
-                raise Exception("No printers available.")
-
-            idle_printer_found = False
-            for printer_name, printer_attributes in printers.items():
-                if (
-                    "printer-state" in printer_attributes
-                    and printer_attributes["printer-state"] == 3
-                ):
-                    idle_printer_found = True
-                    break
-
-            if idle_printer_found:
-                self.printer_state = True
-            else:
-                self.printer_state = False
-
-            self.status_updated.emit(self.printer_state)
-        except Exception as e:
-            print(e)
-
-    def stop(self):
-        self.running = False
-
-class MainWindow(QWidget):
+class ExampleWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.initUI()
+        # Set up the main window
+        self.setWindowTitle("QTextBrowser Example")
+        self.setGeometry(100, 100, 800, 600)
 
-    def initUI(self):
-        self.setWindowTitle("Printer Status")
+        # Create a QTextBrowser widget
+        self.text_browser = QTextBrowser()
+        
+        # Set the style sheet to remove background and border
+        self.text_browser.setStyleSheet("QTextBrowser { border: none; background: transparent; }")
 
-        self.label = QLabel("Printer Status: Unknown")
+        # Set some HTML content
+        html_content = """
+        <h1>Welcome to QTextBrowser</h1>
+        <p>This is an example of using <b>QTextBrowser</b> to display HTML content.</p>
+        <p>You can include various HTML elements such as:</p>
+        <ul>
+            <li>Lists</li>
+            <li><a href="#section1">Links</a></li>
+            <li>Images</li>
+        </ul>
+        <p>Click the link to go to <a href="#section1">Section 1</a>.</p>
+        <h2 id="section1">Section 1</h2>
+        <p>This is Section 1. <a href="#top">Back to top</a>.</p>
+        """
+        self.text_browser.setHtml(html_content)
+
+        # Create a layout and add the text browser to it
         layout = QVBoxLayout()
-        layout.addWidget(self.label)
-        self.setLayout(layout)
+        layout.addWidget(self.text_browser)
 
-        self.printer_status = PrinterStatus()
-        self.printer_status.status_updated.connect(self.update_label)
-        self.printer_status.start()
+        # Create a central widget and set the layout
+        central_widget = QWidget()
+        central_widget.setLayout(layout)
+        self.setCentralWidget(central_widget)
 
-    def update_label(self, status):
-        if status:
-            self.label.setText("Printer Status: Idle")
-        else:
-            self.label.setText("Printer Status: Not Idle")
+# Create the application instance
+app = QApplication(sys.argv)
 
-    def closeEvent(self, event):
-        self.printer_status.stop()
-        self.printer_status.wait()
-        event.accept()
+# Create and show the main window
+window = ExampleWindow()
+window.show()
 
-if __name__ == "__main__":
-    import sys
-
-    app = QApplication(sys.argv)
-    window = MainWindow()
-    window.show()
-    sys.exit(app.exec_())
+# Run the application event loop
+sys.exit(app.exec_())

@@ -226,10 +226,6 @@ class PrintInProgress(QWidget):
             self.print_result = "Failed"
             self.print_status = False
 
-        finally:
-            print(self.print_result)
-            self.on_status_checked(self.print_status)
-
     def on_status_checked(self, print_result):
         if print_result:
             self.print_result = "Success"
