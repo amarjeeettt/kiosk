@@ -1,3 +1,3 @@
 #!/bin/bash
-cd /Users/amarjeetsingh/Documents/CODING/python/kiosk
+cd /home/amarjeet/Documents/Code/kiosk
 sudo python3 main.py

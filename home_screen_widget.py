@@ -38,6 +38,7 @@ class HomeScreenWidget(QWidget):
         bottom_buttons = QHBoxLayout()
 
         about_button = QPushButton("About")
+        about_button.setEnabled(False)
         about_button.clicked.connect(self.go_to_about)
 
         admin_button = QPushButton("Admin")
