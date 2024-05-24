@@ -309,6 +309,9 @@ class HelpMessageBox(QDialog):
         self.layout.addWidget(self.help_title_label)
         self.layout.addWidget(self.help_text)
         self.layout.addLayout(button_layout)
+        
+        self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
+        self.setWindowModality(Qt.ApplicationModal)
 
     def how_to_print_form(self):
         self.hide_buttons(
