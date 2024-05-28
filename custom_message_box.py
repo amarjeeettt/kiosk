@@ -33,7 +33,7 @@ class CustomMessageBox(QDialog):
         )
 
         message_label = QLabel(message)
-        message_label.setStyleSheet("font-size: 14px; font-family: Roboto; ")
+        message_label.setStyleSheet("font-size: 16px; font-family: Roboto; ")
         layout.addWidget(message_label, alignment=Qt.AlignCenter)
 
         # Add a vertical spacer item

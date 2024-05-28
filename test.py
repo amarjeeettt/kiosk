@@ -7,7 +7,7 @@ while True:
     coinslotState = True
     counter = 0
     while coinslotState:
-            if coinslot.is_pressed:
-                counter+=1
-                time.sleep(.05)
-                print(counter)
+        if coinslot.is_pressed:
+            counter += 1
+            time.sleep(0.05)
+            print(counter)

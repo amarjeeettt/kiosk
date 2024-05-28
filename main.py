@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (
     QDesktopWidget,
 )
 from PyQt5.QtCore import Qt, pyqtSlot
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QPixmap, QMovie
 from home_screen_widget import HomeScreenWidget
 from admin_login import AdminLoginWidget
 from admin_window import AdminWindowWidget
@@ -17,6 +17,7 @@ from view_form import ViewFormWidget
 from print_preview import PrintPreviewWidget
 from view_process import ViewProcessWidget
 from print_form import PrintFormWidget
+from about import AboutWidget
 
 
 class MainWindow(QMainWindow):
@@ -28,28 +29,69 @@ class MainWindow(QMainWindow):
         self.centralWidget = QWidget(self)
         self.setCentralWidget(self.centralWidget)
 
-        self.home_screen_widget = HomeScreenWidget(self)
-
         self.setup_ui()
-
-    def setup_ui(self):
-        self.layout = QVBoxLayout(self.centralWidget)
-
-        self.layout.addWidget(self.home_screen_widget)
-        self.home_screen_widget.setVisible(True)
-        self.home_screen_widget.start_button_clicked.connect(self.show_form_list)
-        self.home_screen_widget.admin_button_clicked.connect(self.show_admin_login)
-        self.home_screen_widget.about_button_clicked.connect(self.show_about)
 
         self.printer_state = None
         self.is_printer_available()
 
-    def go_back_to_home(self):
-        self.home_screen_widget.setVisible(True)
+    def setup_ui(self):
+        self.layout = QVBoxLayout(self.centralWidget)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+
+        self.label = QLabel()
+        self.label.setAlignment(Qt.AlignCenter)
+
+        self.movie = QMovie("./img/slideshow.gif")
+        self.label.setMovie(self.movie)
+
+        self.movie.start()
+
+        self.movie.finished.connect(self.movie.start)
+
+        self.layout.addWidget(self.label)
+        self.setWindowFlag(Qt.FramelessWindowHint)
+
+        self.resizeEvent(None)
+
+    def mousePressEvent(self, event):
+        if self.label.isVisible():
+            self.label.hide()
+            self.movie.stop()
+            self.show_home_screen()
+
+    def resizeEvent(self, event):
+        screen_size = QApplication.primaryScreen().size()
+        self.label.setFixedSize(screen_size)
+        self.movie.setScaledSize(screen_size)
+        if event:
+            event.accept()
+
+    def go_back_to_slideshow(self):
+        self.label.show()
+        self.movie.start()
+        self.movie.finished.connect(self.movie.start)
         self.is_printer_available()
 
+    def show_home_screen(self):
+        self.home_screen_widget = HomeScreenWidget(self)
+        self.layout.addWidget(self.home_screen_widget)
+
+        self.home_screen_widget.show()
+
+        self.home_screen_widget.start_button_clicked.connect(self.show_form_list)
+        self.home_screen_widget.admin_button_clicked.connect(self.show_admin_login)
+        self.home_screen_widget.about_button_clicked.connect(self.show_about)
+        self.home_screen_widget.go_back_clicked.connect(self.go_back_to_slideshow)
+
     def show_about(self):
-        ...
+        self.about_widget = AboutWidget(self)
+        self.layout.addWidget(self.about_widget)
+
+        self.home_screen_widget.setVisible(False)
+
+        self.about_widget.show()
+
+        self.about_widget.backbt_clicked.connect(self.show_home_screen)
 
     def show_admin_login(self):
         self.admin_login = AdminLoginWidget(self)
@@ -60,25 +102,27 @@ class MainWindow(QMainWindow):
         self.admin_login.show()
 
         self.admin_login.login_clicked.connect(self.show_admin_window)
-        self.admin_login.home_screen_backbt_clicked.connect(self.go_back_to_home)
+        self.admin_login.home_screen_backbt_clicked.connect(self.show_home_screen)
 
     def show_admin_window(self):
-        self.admin_window = AdminWindowWidget(self)
+        self.admin_window = AdminWindowWidget(self, self.printer_state)
         self.layout.addWidget(self.admin_window)
 
         self.admin_login.setVisible(False)
 
         self.admin_window.show()
 
-        self.admin_window.home_screen_backbt_clicked.connect(self.go_back_to_home)
+        self.admin_window.home_screen_backbt_clicked.connect(self.show_home_screen)
 
     def show_form_list(self):
         self.view_form = ViewFormWidget(self, self.printer_state)
         self.layout.addWidget(self.view_form)
 
+        self.home_screen_widget.setVisible(False)
+
         self.view_form.show()
         self.view_form.view_button_clicked.connect(self.show_print_preview)
-        self.view_form.go_back_clicked.connect(self.go_back_to_home)
+        self.view_form.go_back_clicked.connect(self.show_home_screen)
 
     @pyqtSlot(str, int, bool, bool, bool)
     def show_print_preview(
@@ -95,7 +139,6 @@ class MainWindow(QMainWindow):
         self.print_preview.view_form_backbt_clicked.connect(self.show_form_list)
         self.print_preview.view_process_clicked.connect(self.show_view_process)
         self.print_preview.print_form_clicked.connect(self.show_print_form)
-        self.print_preview.timer_expired.connect(self.go_back_to_home)
 
     @pyqtSlot(str, int, int, int)
     def show_print_form(self, title, num_copy, num_pages, total):
@@ -107,7 +150,7 @@ class MainWindow(QMainWindow):
         self.print_form.show()
 
         self.print_form.cancel_clicked.connect(self.go_back_print_preview_print_form)
-        self.print_form.go_back_home.connect(self.go_back_to_home)
+        self.print_form.go_back_home.connect(self.go_back_to_slideshow)
 
     @pyqtSlot(str)
     def show_view_process(self, title):

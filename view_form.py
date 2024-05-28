@@ -68,6 +68,7 @@ class SmoothScrollArea(QScrollArea):
 
 
 class WarningMessageBox(QDialog):
+    continue_bt_clicked = pyqtSignal()
     return_bt_clicked = pyqtSignal()
 
     def __init__(self, message, parent=None):
@@ -87,7 +88,7 @@ class WarningMessageBox(QDialog):
         message_label = QLabel(message)
         message_label.setWordWrap(True)
         message_label.setStyleSheet(
-            "font-size: 14px; font-family: Roboto; margin-left: 15px; margin-right: 15px"
+            "font-size: 16px; font-family: Roboto; margin-left: 15px; margin-right: 15px"
         )
         layout.addWidget(message_label, alignment=Qt.AlignCenter)
 
@@ -120,7 +121,7 @@ class WarningMessageBox(QDialog):
         continue_button = QPushButton("Continue")
         continue_button.setFocusPolicy(Qt.NoFocus)
         continue_button.setFixedSize(100, 45)
-        continue_button.clicked.connect(lambda: self.accept())
+        continue_button.clicked.connect(self.continue_clicked)
         continue_button.setStyleSheet(
             """
             QPushButton {
@@ -140,6 +141,10 @@ class WarningMessageBox(QDialog):
         )
         button_layout.addWidget(continue_button, alignment=Qt.AlignCenter)
         button_layout.setContentsMargins(55, 0, 65, 0)
+
+    def continue_clicked(self):
+        self.continue_bt_clicked.emit()
+        self.accept()
 
     def return_clicked(self):
         self.return_bt_clicked.emit()
@@ -205,6 +210,9 @@ class HelpMessageBox(QDialog):
         self.setStyleSheet("background-color: #EBEBEB;")
         self.setup_ui()
 
+        self.setWindowModality(Qt.ApplicationModal)
+        self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
+
     def setup_ui(self):
         self.layout = QVBoxLayout(self)
 
@@ -213,6 +221,7 @@ class HelpMessageBox(QDialog):
         upper_layout.setSpacing(167)
 
         self.close_button = QPushButton()
+        self.close_button.setFocusPolicy(Qt.NoFocus)
         self.close_button.setStyleSheet(
             "QPushButton {background-color: transparent; border: none; image: url('img/static/close_img.png');}"
             "QPushButton:pressed {background-color: transparent; border: none; image: url('img/static/close_img_pressed.png');}"
@@ -237,6 +246,7 @@ class HelpMessageBox(QDialog):
         back_layout = QVBoxLayout()
 
         self.back_button = QPushButton()
+        self.back_button.setFocusPolicy(Qt.NoFocus)
         self.back_button.setFixedSize(30, 30)
         self.back_button.setStyleSheet(
             "QPushButton {background-color: transparent; border: none; image: url('img/static/back_img.png');}"
@@ -250,6 +260,7 @@ class HelpMessageBox(QDialog):
         back_layout.setContentsMargins(15, 20, 0, 20)
 
         self.help_title_label = QLabel("User Printing and Viewing Forms Guide")
+        self.help_title_label.setWordWrap(True)
         self.help_title_label.setStyleSheet(
             """
             font-family: Roboto;
@@ -282,6 +293,10 @@ class HelpMessageBox(QDialog):
         self.extra_coin = HelpMessageButton(
             "Can I Get Back the Extra Coin I Inserted?", self
         )
+        self.retrieve_coins = HelpMessageButton(
+            "If the kiosk encounters a printing failure or system shutdown after I have inserted coins, can I retrieve my coins?",
+            self,
+        )
         self.student_request = HelpMessageButton(
             "Can Students Request Specific Forms?", self
         )
@@ -292,6 +307,7 @@ class HelpMessageBox(QDialog):
         self.how_to_remove.clicked.connect(self.how_to_remove_copy)
         self.payment_method.clicked.connect(self.payment)
         self.extra_coin.clicked.connect(self.get_back_coins)
+        self.retrieve_coins.clicked.connect(self.retrieve_coins_inserted)
         self.student_request.clicked.connect(self.student_request_form)
 
         self.lines = []
@@ -301,6 +317,7 @@ class HelpMessageBox(QDialog):
         self.add_widget_with_line(button_layout, self.how_to_remove)
         self.add_widget_with_line(button_layout, self.payment_method)
         self.add_widget_with_line(button_layout, self.extra_coin)
+        self.add_widget_with_line(button_layout, self.retrieve_coins)
         button_layout.addWidget(self.student_request)
         button_layout.setContentsMargins(0, 0, 0, 135)
 
@@ -309,9 +326,6 @@ class HelpMessageBox(QDialog):
         self.layout.addWidget(self.help_title_label)
         self.layout.addWidget(self.help_text)
         self.layout.addLayout(button_layout)
-        
-        self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
-        self.setWindowModality(Qt.ApplicationModal)
 
     def how_to_print_form(self):
         self.hide_buttons(
@@ -321,6 +335,7 @@ class HelpMessageBox(QDialog):
             self.how_to_remove,
             self.payment_method,
             self.extra_coin,
+            self.retrieve_coins,
             self.student_request,
         )
 
@@ -360,6 +375,7 @@ class HelpMessageBox(QDialog):
             self.how_to_remove,
             self.payment_method,
             self.extra_coin,
+            self.retrieve_coins,
             self.student_request,
         )
 
@@ -393,6 +409,7 @@ class HelpMessageBox(QDialog):
             self.how_to_remove,
             self.payment_method,
             self.extra_coin,
+            self.retrieve_coins,
             self.student_request,
         )
 
@@ -419,6 +436,7 @@ class HelpMessageBox(QDialog):
             self.how_to_remove,
             self.payment_method,
             self.extra_coin,
+            self.retrieve_coins,
             self.student_request,
         )
 
@@ -444,6 +462,7 @@ class HelpMessageBox(QDialog):
             self.how_to_remove,
             self.payment_method,
             self.extra_coin,
+            self.retrieve_coins,
             self.student_request,
         )
 
@@ -471,6 +490,7 @@ class HelpMessageBox(QDialog):
             self.how_to_remove,
             self.payment_method,
             self.extra_coin,
+            self.retrieve_coins,
             self.student_request,
         )
 
@@ -489,6 +509,46 @@ class HelpMessageBox(QDialog):
         self.help_text.setHtml(html_content)
         self.help_text.show()
 
+    def retrieve_coins_inserted(self):
+        self.hide_buttons(
+            self.how_to_print,
+            self.how_to_view,
+            self.how_to_add,
+            self.how_to_remove,
+            self.payment_method,
+            self.extra_coin,
+            self.retrieve_coins,
+            self.student_request,
+        )
+
+        self.close_button.hide()
+        self.help_label.hide()
+
+        self.back_button.show()
+
+        self.help_title_label.setText(
+            "If the kiosk encounters a printing failure or system shutdown after I have inserted coins, can I retrieve my coins?"
+        )
+
+        html_content = """
+            <p style="font-size: 16px; margin-left: 8px;"><strong>Regarding the issue of whether you can retrieve coins inserted into the Pay-Per-Print kiosk when there is a printing failure, system shutdown, or other system errors, the answer is no, you cannot directly retrieve the coins.</strong>
+                However, the system does ensure that the value of the coins you've inserted is stored and can still be utilized. This means that even if there is a temporary disruption or failure, the amount you've paid is not lost.</p>
+            <ol>
+                <li style="font-size: 16px; margin-left: 8px;"><strong>Coin Insertion and Payment Capture</strong><br>
+                When you insert coins into the Pay-Per-Print kiosk, the system captures and stores the value of the amount paid, even if an error occurs immediately after.</li><br>
+                <li style="font-size: 16px; margin-left: 8px;"><strong>Error Handling</strong><br>
+                If there's an error like a shutdown or printing failure, the system retains the record of the amount paid.</li><br>
+                <li style="font-size: 16px; margin-left: 8px;"><strong>Utilizing Your Payment</strong><br>
+                You can use the stored value to print other forms once the system is back online or the error is resolved. This means the money you put into the machine is not lost; it remains credited to your session or account until you use it for printing.</li><br>
+                <li style="font-size: 16px; margin-left: 8px;"><strong>No Refunds</strong><br>
+                It’s important to note that the kiosk does not refund any coins inserted. This is likely a design choice to simplify the mechanics and security of the kiosk.</li><br>
+                <li style="font-size: 16px; margin-left: 8px;"><strong>Adjustments</strong><br>
+                If you overpay due to the system not providing change, you have the option to adjust the number of copies to match the amount you've inserted, effectively using up the balance.</li><br>
+            </ol>
+        """
+        self.help_text.setHtml(html_content)
+        self.help_text.show()
+
     def student_request_form(self):
         self.hide_buttons(
             self.how_to_print,
@@ -497,6 +557,7 @@ class HelpMessageBox(QDialog):
             self.how_to_remove,
             self.payment_method,
             self.extra_coin,
+            self.retrieve_coins,
             self.student_request,
         )
 
@@ -521,6 +582,7 @@ class HelpMessageBox(QDialog):
             self.how_to_remove,
             self.payment_method,
             self.extra_coin,
+            self.retrieve_coins,
             self.student_request,
         )
 
@@ -549,16 +611,16 @@ class HelpMessageBox(QDialog):
         line = QFrame()
         line.setFrameShape(QFrame.HLine)
         line.setFrameShadow(QFrame.Sunken)
+        line.setStyleSheet("QFrame { border: none; border-bottom: 1px solid #9D9D9D; }")
         layout.addWidget(line)
         self.lines.append(line)  # Store a reference to the line
 
     def close_message_box(self):
-        self.reject()
+        self.close()
         self.close_message_clicked.emit()
 
 
 class ButtonWidget(QWidget):
-    # Define a new signal
     buttonClicked = pyqtSignal(str, str)
 
     def __init__(self, title_label, page_number_label, description_label, category):
@@ -689,6 +751,7 @@ class ViewFormWidget(QWidget):
         self.nav_btn_category5.clicked.connect(self.filter_buttons_category5)
         self.nav_btn_category6.clicked.connect(self.filter_buttons_category6)
         self.nav_btn_category7.clicked.connect(self.filter_buttons_category7)
+        self.nav_btn_category8.clicked.connect(self.filter_buttons_category8)
 
         # Set the active button initially
         self.active_button = self.nav_btn_all
@@ -905,6 +968,8 @@ class ViewFormWidget(QWidget):
         self.nav_btn_category6.setFocusPolicy(Qt.NoFocus)
         self.nav_btn_category7 = QPushButton("Research")
         self.nav_btn_category7.setFocusPolicy(Qt.NoFocus)
+        self.nav_btn_category8 = QPushButton("Others")
+        self.nav_btn_category8.setFocusPolicy(Qt.NoFocus)
 
         # Set size policy for navigation buttons to Fixed
         self.nav_btn_all.setFixedSize(140, 65)
@@ -923,6 +988,8 @@ class ViewFormWidget(QWidget):
         self.nav_btn_category6.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.nav_btn_category7.setFixedHeight(65)
         self.nav_btn_category7.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.nav_btn_category8.setFixedHeight(65)
+        self.nav_btn_category8.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
         self.nav_layout = QHBoxLayout()
         self.nav_buttons = [
@@ -934,6 +1001,7 @@ class ViewFormWidget(QWidget):
             self.nav_btn_category5,
             self.nav_btn_category6,
             self.nav_btn_category7,
+            self.nav_btn_category8,
         ]
 
         for button in self.nav_buttons:
@@ -970,6 +1038,7 @@ class ViewFormWidget(QWidget):
         self.nav_btn_category5.setStyleSheet(nav_css)
         self.nav_btn_category6.setStyleSheet(nav_css)
         self.nav_btn_category7.setStyleSheet(nav_css)
+        self.nav_btn_category8.setStyleSheet(nav_css)
 
         # Align the navigation bar to the top
         self.nav_layout.setAlignment(Qt.AlignTop)
@@ -1075,41 +1144,55 @@ class ViewFormWidget(QWidget):
         self.active_button = self.nav_btn_all
         self.filter_buttons(None)  # Pass None to show all buttons
         self.update_button_styles()
+        self.reset_inactivity_timer()
 
     def filter_buttons_category1(self):
         self.active_button = self.nav_btn_category1
         self.filter_buttons("Academic Recognition")  # Filter by category
         self.update_button_styles()
+        self.reset_inactivity_timer()
 
     def filter_buttons_category2(self):
         self.active_button = self.nav_btn_category2
         self.filter_buttons("Accreditation")  # Filter by category
         self.update_button_styles()
+        self.reset_inactivity_timer()
 
     def filter_buttons_category3(self):
         self.active_button = self.nav_btn_category3
         self.filter_buttons("Clearance")  # Filter by category
         self.update_button_styles()
+        self.reset_inactivity_timer()
 
     def filter_buttons_category4(self):
         self.active_button = self.nav_btn_category4
         self.filter_buttons("Enrollment")  # Filter by category
         self.update_button_styles()
+        self.reset_inactivity_timer()
 
     def filter_buttons_category5(self):
         self.active_button = self.nav_btn_category5
         self.filter_buttons("Graduation")  # Filter by category
         self.update_button_styles()
+        self.reset_inactivity_timer()
 
     def filter_buttons_category6(self):
         self.active_button = self.nav_btn_category6
         self.filter_buttons("Petition")  # Filter by category
         self.update_button_styles()
+        self.reset_inactivity_timer()
 
     def filter_buttons_category7(self):
         self.active_button = self.nav_btn_category7
         self.filter_buttons("Research")  # Filter by category
         self.update_button_styles()
+        self.reset_inactivity_timer()
+
+    def filter_buttons_category8(self):
+        self.active_button = self.nav_btn_category8
+        self.filter_buttons("Other")  # Filter by category
+        self.update_button_styles()
+        self.reset_inactivity_timer()
 
     def filter_buttons(self, category):
         visible_widgets = []  # Maintain a list of visible widgets
@@ -1149,9 +1232,6 @@ class ViewFormWidget(QWidget):
 
     # Function to handle the emitted signal
     def handleButtonClicked(self, title, page_number):
-        print("Title:", title)
-        print("Page number:", int(page_number))
-
         self.inactivity_timer.stop()
 
         self.view_button_clicked.emit(
@@ -1164,7 +1244,6 @@ class ViewFormWidget(QWidget):
 
     def show_help(self):
         self.inactivity_timer.stop()
-
         help_message_box = HelpMessageBox(self)
         parent_pos = self.mapToGlobal(self.rect().center())
         help_message_box.move(parent_pos - help_message_box.rect().center())
@@ -1172,40 +1251,52 @@ class ViewFormWidget(QWidget):
         help_message_box.exec_()
 
     def printer_not_connected(self):
+        self.inactivity_timer.stop()
         self.printer_message_box = WarningMessageBox(
             "Uh-oh, it seems the printer is currently offline or not available. Please contact the admin staff for further assistance.\n\n\nWould you like to proceed or return to the menu?",
             parent=self,
+        )
+        self.printer_message_box.continue_bt_clicked.connect(
+            self.reset_inactivity_timer
         )
         self.printer_message_box.return_bt_clicked.connect(self.go_back)
         self.printer_message_box.exec_()
 
     def low_bondpaper(self):
+        self.inactivity_timer.stop()
         self.bondpaper_message_box = WarningMessageBox(
             "Uh-oh, it seems the bondpaper supply is low. Please contact the admin staff for further assistance.\n\n\nWould you like to proceed or return to the menu?",
             parent=self,
+        )
+        self.bondpaper_message_box.continue_bt_clicked.connect(
+            self.reset_inactivity_timer
         )
         self.bondpaper_message_box.return_bt_clicked.connect(self.go_back)
         self.bondpaper_message_box.exec_()
 
     def low_ink(self):
+        self.inactivity_timer.stop()
         self.ink_message_box = WarningMessageBox(
             "Uh-oh, it seems the ink supply is low. Please contact the admin staff for further assistance.\n\n\nWould you like to proceed or return to the menu?",
             parent=self,
         )
+        self.ink_message_box.continue_bt_clicked.connect(self.reset_inactivity_timer)
         self.ink_message_box.return_bt_clicked.connect(self.go_back)
         self.ink_message_box.exec_()
 
     def eventFilter(self, obj, event):
-        if event.type() in [QEvent.MouseButtonPress, QEvent.KeyPress]:
+        if event.type() in [QEvent.MouseButtonPress, QEvent.MouseMove, QEvent.KeyPress]:
             self.reset_inactivity_timer()
-        return super().eventFilter(obj, event)
+        return super(ViewFormWidget, self).eventFilter(obj, event)
 
     def reset_inactivity_timer(self):
+        if self.inactivity_timer.isActive():
+            self.inactivity_timer.stop()
         self.inactivity_timer.start()
 
     def go_back(self):
-        self.setVisible(False)
         self.inactivity_timer.stop()
+        self.setVisible(False)
         self.go_back_clicked.emit()
 
 

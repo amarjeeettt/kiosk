@@ -24,7 +24,7 @@ from PyQt5.QtCore import (
 class MessageBox(QDialog):
     def __init__(self, title, message, parent=None):
         super().__init__(parent)
-        self.setFixedSize(400, 200)
+        self.setFixedSize(400, 240)
 
         layout = QVBoxLayout()
         self.setLayout(layout)
@@ -43,7 +43,7 @@ class MessageBox(QDialog):
 
         message_label = QLabel(message)
         message_label.setWordWrap(True)
-        message_label.setStyleSheet("font-size: 14px; font-family: Roboto; ")
+        message_label.setStyleSheet("font-size: 16px; font-family: Roboto; ")
         layout.addWidget(message_label, alignment=Qt.AlignCenter)
 
         # Add a vertical spacer item
@@ -85,7 +85,6 @@ class MessageBox(QDialog):
 
 class PrintPreviewWidget(QWidget):
     view_form_backbt_clicked = pyqtSignal()
-    timer_expired = pyqtSignal()
     view_process_clicked = pyqtSignal(str)
     print_form_clicked = pyqtSignal(str, int, int, int)
 
@@ -593,7 +592,7 @@ class PrintPreviewWidget(QWidget):
         if self.value >= self.bondpaper_quantity:
             message_box = MessageBox(
                 "Error",
-                "Uh-oh, it appears the bondpaper is insufficient to add more.",
+                "It appears the bondpaper is insufficient to add more.",
                 parent=self,
             )
             message_box.exec_()

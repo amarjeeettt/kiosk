@@ -1,9 +1,9 @@
 import os
 import sys
 import cups
+import time
 import sqlite3
 import datetime
-import time
 from PyQt5.QtWidgets import (
     QApplication,
     QTableWidget,
@@ -32,9 +32,19 @@ from PyQt5.QtWidgets import (
     QAction,
     QStyledItemDelegate,
     QListView,
+    QTextBrowser,
+    QGridLayout,
 )
-from PyQt5.QtCore import Qt, QThread, pyqtSignal
-from PyQt5.QtGui import QPixmap, QColor
+from PyQt5.QtCore import (
+    Qt,
+    QTimer,
+    QThread,
+    QPropertyAnimation,
+    QEasingCurve,
+    pyqtSignal,
+    pyqtSlot,
+)
+from PyQt5.QtGui import QPixmap, QMovie, QColor
 from virtual_keyboard import AlphaNeumericVirtualKeyboard
 from helpers import (
     upload_form_file,
@@ -48,49 +58,6 @@ from helpers import (
 from custom_message_box import CustomMessageBox
 
 
-class PrinterStatus(QThread):
-    status_updated = pyqtSignal(bool)
-
-    def __init__(self):
-        super().__init__()
-        self.printer_state = None
-        self.running = True
-
-    def run(self):
-        while self.running:
-            self.is_printer_available()
-            time.sleep(10)
-
-    def is_printer_available(self):
-        try:
-            conn = cups.Connection()
-            printers = conn.getPrinters()
-
-            if not printers:
-                self.printer_state = False
-                raise Exception("No printers available.")
-
-            idle_printer_found = True
-            for printer_name, printer_attributes in printers.items():
-                if (
-                    "printer-state" in printer_attributes
-                    and printer_attributes["printer-state"] == 3
-                ):
-                    self.printer_state = True
-                    break
-
-            if not idle_printer_found:
-                self.printer_state = False
-                raise Exception("No idle printer found.")
-
-            self.status_updated.emit(self.printer_state)
-        except Exception as e:
-            print(e)
-
-    def stop(self):
-        self.running = False
-
-
 class SmoothScrollArea(QScrollArea):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -99,11 +66,15 @@ class SmoothScrollArea(QScrollArea):
         self.verticalScrollBar().setSingleStep(15)  # Set the scrolling step size
         self._mousePressPos = None
         self._scrollBarValueAtMousePress = None
+        self._animation = QPropertyAnimation(self.verticalScrollBar(), b"value")
+        self._animation.setEasingCurve(QEasingCurve.OutQuad)
+        self._animation.setDuration(500)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
             self._mousePressPos = event.globalPos()
             self._scrollBarValueAtMousePress = self.verticalScrollBar().value()
+            self._animation.stop()  # Stop any ongoing animation when the user interacts
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
@@ -115,15 +86,24 @@ class SmoothScrollArea(QScrollArea):
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
+        if self._mousePressPos:
+            delta = event.globalPos() - self._mousePressPos
+            target_value = self._scrollBarValueAtMousePress - delta.y()
+            self.smoothScrollTo(target_value)
         self._mousePressPos = None
         self._scrollBarValueAtMousePress = None
         super().mouseReleaseEvent(event)
+
+    def smoothScrollTo(self, target_value):
+        self._animation.setStartValue(self.verticalScrollBar().value())
+        self._animation.setEndValue(target_value)
+        self._animation.start()
 
 
 class MessageBox(QDialog):
     def __init__(self, title, message, parent=None):
         super().__init__(parent)
-        self.setFixedSize(400, 200)
+        self.setFixedSize(400, 240)
 
         layout = QVBoxLayout()
         self.setLayout(layout)
@@ -142,8 +122,13 @@ class MessageBox(QDialog):
 
         message_label = QLabel(message)
         message_label.setWordWrap(True)
-        message_label.setStyleSheet("font-size: 14px; font-family: Roboto; ")
+        message_label.setStyleSheet("font-size: 16px; font-family: Roboto; ")
         layout.addWidget(message_label, alignment=Qt.AlignCenter)
+
+        # Add a vertical spacer item
+        layout.addSpacerItem(
+            QSpacerItem(20, 10, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
 
         button_layout = QHBoxLayout()
         layout.addLayout(button_layout)
@@ -201,11 +186,11 @@ class EditMessageBox(QDialog):
             f"You're editing {form_name}.\n\nDo you want to continue making changes or discard."
         )
         message_label.setWordWrap(True)
-        message_label.setStyleSheet("font-size: 14px; font-family: Roboto; ")
+        message_label.setStyleSheet("font-size: 16px; font-family: Roboto; ")
         layout.addWidget(message_label, alignment=Qt.AlignCenter)
 
-        button_layout = QHBoxLayout()
-        layout.addLayout(button_layout)
+        scroll_layout = QHBoxLayout()
+        layout.addLayout(scroll_layout)
 
         file_button = QPushButton("Discard")
         file_button.setFocusPolicy(Qt.NoFocus)
@@ -228,7 +213,7 @@ class EditMessageBox(QDialog):
             }
             """
         )
-        button_layout.addWidget(file_button, alignment=Qt.AlignCenter)
+        scroll_layout.addWidget(file_button, alignment=Qt.AlignCenter)
 
         form_file_button = QPushButton("Continue")
         form_file_button.setFocusPolicy(Qt.NoFocus)
@@ -251,8 +236,8 @@ class EditMessageBox(QDialog):
             }
             """
         )
-        button_layout.addWidget(form_file_button, alignment=Qt.AlignCenter)
-        button_layout.setContentsMargins(45, 0, 65, 0)
+        scroll_layout.addWidget(form_file_button, alignment=Qt.AlignCenter)
+        scroll_layout.setContentsMargins(45, 0, 65, 0)
 
     def edit_form_clicked(self):
         self.edit_form_button_clicked.emit(5, self.index, self.form_name)
@@ -283,11 +268,11 @@ class DeleteMessageBox(QDialog):
             f"You're currrently deleting {form_name}.\n\nDo you want to continue or discard."
         )
         message_label.setWordWrap(True)
-        message_label.setStyleSheet("font-size: 14px; font-family: Roboto; ")
+        message_label.setStyleSheet("font-size: 16px; font-family: Roboto; ")
         layout.addWidget(message_label, alignment=Qt.AlignCenter)
 
-        button_layout = QHBoxLayout()
-        layout.addLayout(button_layout)
+        scroll_layout = QHBoxLayout()
+        layout.addLayout(scroll_layout)
 
         discard_button = QPushButton("Discard")
         discard_button.setFocusPolicy(Qt.NoFocus)
@@ -310,7 +295,7 @@ class DeleteMessageBox(QDialog):
             }
             """
         )
-        button_layout.addWidget(discard_button, alignment=Qt.AlignCenter)
+        scroll_layout.addWidget(discard_button, alignment=Qt.AlignCenter)
 
         continue_button = QPushButton("Continue")
         continue_button.setFocusPolicy(Qt.NoFocus)
@@ -333,8 +318,8 @@ class DeleteMessageBox(QDialog):
             }
             """
         )
-        button_layout.addWidget(continue_button, alignment=Qt.AlignCenter)
-        button_layout.setContentsMargins(55, 0, 65, 0)
+        scroll_layout.addWidget(continue_button, alignment=Qt.AlignCenter)
+        scroll_layout.setContentsMargins(55, 0, 65, 0)
 
     def continue_clicked(self):
         self.continue_button_clicked.emit(self.index, self.form_name)
@@ -2404,6 +2389,7 @@ class TotalAmountWidget(QWidget):
         button = TotalAmountDropButton()
         button.setFixedSize(120, 40)
 
+        button.daily_selected.connect(self.change_total_label)
         button.weekly_selected.connect(self.change_total_label)
         button.monthly_selected.connect(self.change_total_label)
         button.yearly_selected.connect(self.change_total_label)
@@ -2475,6 +2461,7 @@ class TotalFormWidget(QWidget):
         button = TotalFormDropButton()
         button.setFixedSize(120, 40)
 
+        button.daily_selected.connect(self.change_total_label)
         button.weekly_selected.connect(self.change_total_label)
         button.monthly_selected.connect(self.change_total_label)
         button.yearly_selected.connect(self.change_total_label)
@@ -2543,6 +2530,7 @@ class TotalSuccessWidget(QWidget):
         button = TotalSuccessDropButton()
         button.setFixedSize(120, 40)
 
+        button.daily_selected.connect(self.change_total_label)
         button.weekly_selected.connect(self.change_total_label)
         button.monthly_selected.connect(self.change_total_label)
         button.yearly_selected.connect(self.change_total_label)
@@ -2610,6 +2598,7 @@ class TotalFailedWidget(QWidget):
         button = TotalFailedDropButton()
         button.setFixedSize(120, 40)
 
+        button.daily_selected.connect(self.change_total_label)
         button.weekly_selected.connect(self.change_total_label)
         button.monthly_selected.connect(self.change_total_label)
         button.yearly_selected.connect(self.change_total_label)
@@ -2657,13 +2646,693 @@ class TotalFailedWidget(QWidget):
         self.total_label.setText(f"{total_amount}")
 
 
+class HelpMessageButton(QPushButton):
+    def __init__(self, title, parent=None):
+        super().__init__(parent)
+
+        layout = QVBoxLayout(self)
+
+        scroll_layout = QHBoxLayout()
+
+        self.label = QLabel(title)
+        self.label.setWordWrap(True)
+        self.label.setStyleSheet(
+            """
+            font-family: Roboto;
+            font-size: 15px;
+            background-color: transparent;
+            color: #19323C;
+            margin-left: 15px;         
+            """
+        )
+
+        pixmap = QPixmap("./img/static/next_arrow_img.png")
+        scaled_pixmap = pixmap.scaled(
+            15, 35, Qt.KeepAspectRatio, Qt.SmoothTransformation
+        )
+
+        self.image_label = QLabel()
+        self.image_label.setPixmap(scaled_pixmap)
+        self.image_label.setStyleSheet(
+            "margin-right: 15px; background-color: transparent"
+        )
+
+        scroll_layout.addWidget(self.label)
+        scroll_layout.addWidget(self.image_label, alignment=Qt.AlignRight)
+
+        layout.addLayout(scroll_layout)  # Add scroll_layout to the existing layout
+
+        self.setStyleSheet(
+            """
+            QPushButton {
+                background-color: transparent;
+                border: none;
+            }
+            QPushButton:pressed {
+                background-color: #FDFDFD;
+            }
+            """
+        )
+        self.setFocusPolicy(Qt.NoFocus)
+        self.setFixedHeight(65)
+
+
+class HelpMessageBox(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(600, 900)
+        self.setStyleSheet("background-color: #EBEBEB;")
+        self.setup_ui()
+
+        self.setWindowModality(Qt.ApplicationModal)
+        self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
+
+    def setup_ui(self):
+        self.layout = QVBoxLayout(self)
+
+        upper_layout = QHBoxLayout()
+        upper_layout.setAlignment(Qt.AlignCenter | Qt.AlignTop)
+        upper_layout.setSpacing(167)
+
+        self.close_button = QPushButton()
+        self.close_button.setStyleSheet(
+            "QPushButton {background-color: transparent; border: none; image: url('img/static/close_img.png');}"
+            "QPushButton:pressed {background-color: transparent; border: none; image: url('img/static/close_img_pressed.png');}"
+        )
+        self.close_button.setFixedSize(45, 45)
+        self.close_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.close_button.clicked.connect(self.close_message_box)
+
+        self.help_label = QLabel("Get Help")
+        self.help_label.setStyleSheet(
+            """
+            font-family: Montserrat;
+            font-size: 22px;
+            color: #19323C;
+            """
+        )
+
+        upper_layout.addWidget(self.close_button, Qt.AlignLeft)
+        upper_layout.addWidget(self.help_label)
+        upper_layout.setContentsMargins(8, 15, 0, 0)
+
+        back_layout = QVBoxLayout()
+
+        self.back_button = QPushButton()
+        self.back_button.setFixedSize(30, 30)
+        self.back_button.setStyleSheet(
+            "QPushButton {background-color: transparent; border: none; image: url('img/static/back_img.png');}"
+            "QPushButton:pressed {background-color: transparent; border: none; image: url('img/static/back_img_pressed.png');}"
+        )
+        self.back_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.back_button.clicked.connect(self.go_back)
+        self.back_button.hide()
+
+        back_layout.addWidget(self.back_button)
+        back_layout.setContentsMargins(15, 20, 0, 20)
+
+        self.help_title_label = QLabel(
+            "Admin Guide for Form Handling and System Maintenance"
+        )
+        self.help_title_label.setWordWrap(True)
+        self.help_title_label.setStyleSheet(
+            """
+            font-family: Roboto;
+            font-weight: bold;
+            font-size: 24px;
+            margin-left: 8px;
+            color: #7C2F3E;
+            margin-bottom: 15px;
+            """
+        )
+
+        self.help_text = QTextBrowser()
+        self.help_text.setStyleSheet(
+            "QTextBrowser { border: none; background: transparent; margin-right: 30px; }"
+        )
+        self.help_text.setFixedHeight(700)
+        self.help_text.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.help_text.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.help_text.hide()
+
+        # Scroll area setup
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setStyleSheet("border: none")
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll_content = QWidget()
+        scroll_layout = QVBoxLayout(scroll_content)
+
+        self.how_to_add = HelpMessageButton("How to add form/s?", self)
+        self.how_to_edit = HelpMessageButton("How to edit form/s?", self)
+        self.how_to_delete = HelpMessageButton("How to delete form/s?", self)
+        self.how_to_refill = HelpMessageButton(
+            "How to refill the bond paper quantity?", self
+        )
+        self.how_to_change_price = HelpMessageButton(
+            "How to change the base price?", self
+        )
+        self.total_amount_collected = HelpMessageButton(
+            "Where can I see the total amount of collected coins?", self
+        )
+        self.total_number_forms = HelpMessageButton(
+            "Where can I see the total number of printed forms successful and unsuccessful?",
+            self,
+        )
+        self.total_remaining_paper = HelpMessageButton(
+            "Where can I see the total of the remaining paper?", self
+        )
+        self.printer_active = HelpMessageButton(
+            "Where can I see to know if the printer is active/connected?", self
+        )
+        self.track_ink = HelpMessageButton(
+            "Where can I see the tracking of the ink of the printer?", self
+        )
+        self.printer_status_checker = HelpMessageButton(
+            "How can I check the printer status using the warning button?", self
+        )
+        self.go_back_to_interface = HelpMessageButton(
+            "How can I go back to the user interface?", self
+        )
+        self.restart_shutdown = HelpMessageButton(
+            "How can I restart or shutdown the kiosk?", self
+        )
+
+        self.how_to_add.clicked.connect(self.how_to_add_form)
+        self.how_to_edit.clicked.connect(self.how_to_edit_form)
+        self.how_to_delete.clicked.connect(self.how_to_delete_form)
+        self.how_to_refill.clicked.connect(self.how_to_refill_bondpaper)
+        self.how_to_change_price.clicked.connect(self.how_to_change_base_price)
+        self.total_amount_collected.clicked.connect(self.total_amount_collected_coins)
+        self.total_number_forms.clicked.connect(
+            self.total_number_forms_success_unsuccessful
+        )
+        self.total_remaining_paper.clicked.connect(self.remaining_paper)
+        self.printer_active.clicked.connect(self.printer_active_connected)
+        self.track_ink.clicked.connect(self.track_ink_printer)
+        self.printer_status_checker.clicked.connect(self.status_checker)
+        self.go_back_to_interface.clicked.connect(self.go_to_interface)
+        self.restart_shutdown.clicked.connect(self.restart_shutdown_kiosk)
+
+        self.lines = []
+        self.add_widget_with_line(scroll_layout, self.how_to_add)
+        self.add_widget_with_line(scroll_layout, self.how_to_edit)
+        self.add_widget_with_line(scroll_layout, self.how_to_delete)
+        self.add_widget_with_line(scroll_layout, self.how_to_refill)
+        self.add_widget_with_line(scroll_layout, self.how_to_change_price)
+        self.add_widget_with_line(scroll_layout, self.total_amount_collected)
+        self.add_widget_with_line(scroll_layout, self.total_number_forms)
+        self.add_widget_with_line(scroll_layout, self.total_remaining_paper)
+        self.add_widget_with_line(scroll_layout, self.printer_active)
+        self.add_widget_with_line(scroll_layout, self.track_ink)
+        self.add_widget_with_line(scroll_layout, self.printer_status_checker)
+        self.add_widget_with_line(scroll_layout, self.go_back_to_interface)
+        scroll_layout.addWidget(self.restart_shutdown)
+        scroll_layout.setContentsMargins(0, 0, 0, 135)
+
+        scroll_content.setLayout(scroll_layout)
+        self.scroll_area.setWidget(scroll_content)
+
+        self.layout.addLayout(upper_layout)
+        self.layout.addLayout(back_layout)
+        self.layout.addWidget(self.help_title_label)
+        self.layout.addWidget(self.help_text)
+        self.layout.addWidget(self.scroll_area)
+
+    def how_to_add_form(self):
+        self.scroll_area.hide()
+        self.close_button.hide()
+        self.help_label.hide()
+
+        self.back_button.show()
+        self.help_title_label.setText("How to add form/s?")
+
+        html_content = """
+        <ol>
+            <li style="font-size: 16px; margin-left: 8px;"><strong>Plug in a USB Flash Drive</strong><br>
+            Plug in a USB flash drive containing your file of the form or process to be uploaded.</li><br>
+            <li style="font-size: 16px; margin-left: 8px;"><strong>Click the "Add Forms" Button</strong><br>
+            To add form(s), click the "Add Forms" button.</li><br>
+            <li style="font-size: 16px; margin-left: 8px;"><strong>Fill Out the Form Information</strong><br>
+            Fill out the form information text boxes: [Form Title, Form Category, Number of Pages, Form Description]</li><br>
+            <li style="font-size: 16px; margin-left: 8px;"><strong>Upload Form File</strong><br>
+            To upload form file(s) should be in PDF format. Click the "Browse" button to upload the form. Select the form file from your plugged-in USB flash drive.</li><br>
+            <li style="font-size: 16px; margin-left: 8px;"><strong>Upload Process File</strong><br>
+            To upload a process file. Click the "Browse" button for process upload. Select the file from your plugged-in USB flash drive.</li><br>
+            <li style="font-size: 16px; margin-left: 8px;"><strong>Confirm or Discard Changes</strong><br>
+            To successfully confirm the changes you've made, click the "Add" button. To discard the changes, click the "Clear" button.</li><br>
+        </ol>
+        """
+        self.help_text.setHtml(html_content)
+        self.help_text.show()
+
+    def how_to_edit_form(self):
+        self.scroll_area.hide()
+        self.close_button.hide()
+        self.help_label.hide()
+
+        self.back_button.show()
+        self.help_title_label.setText("How to edit form/s?")
+
+        html_content = """
+        <ol>
+            <li style="font-size: 16px; margin-left: 8px;"><strong>Plug in a USB Flash Drive</strong><br>
+            Plug in a USB flash drive containing your file of the form or process to be uploaded.</li><br>
+            <li style="font-size: 16px; margin-left: 8px;"><strong>Select the Form to Edit</strong><br>
+            Select the form you need or want to edit from the list of forms by scrolling through the list.</li><br>
+            <li style="font-size: 16px; margin-left: 8px;"><strong>Click the "Edit" Button</strong><br>
+            Click the "Edit" button to start editing the form. Click the "Continue" button to proceed with making changes. Click the "Discard" button if you do not want to continue with the changes.</li><br>
+            <li style="font-size: 16px; margin-left: 8px;"><strong>Proceed to the Editing Interface</strong><br>
+            After clicking the "Continue" button, you will be taken to the same interface as when adding forms.</li><br>
+            <li style="font-size: 16px; margin-left: 8px;"><strong>Fill Out the Form Information</strong><br>
+            Fill out the form information text boxes: [Form Title, Form Category, Number of Pages, Form Description]</li><br>
+            <li style="font-size: 16px; margin-left: 8px;"><strong>Upload Form File</strong><br>
+            To upload the form file(s) it should be in PDF format. Click the "Browse" button to upload the form. Select the form file from your plugged-in USB flash drive.</li><br>
+            <li style="font-size: 16px; margin-left: 8px;"><strong>Upload Process File</strong><br>
+            To upload a process file. Click the "Browse" button for process upload. Select the file from your plugged-in USB flash drive.</li><br>
+            <li style="font-size: 16px; margin-left: 8px;"><strong>Confirm or Discard Changes</strong><br>
+            To successfully confirm the changes you've made, click the "Edit" button. To discard the changes, click the "Clear" button.</li><br>
+        </ol>
+        """
+        self.help_text.setHtml(html_content)
+        self.help_text.show()
+
+    def how_to_delete_form(self):
+        self.scroll_area.hide()
+        self.close_button.hide()
+        self.help_label.hide()
+
+        self.back_button.show()
+        self.help_title_label.setText("How to delete form/s?")
+
+        html_content = """
+        <ol>
+            <li style="font-size: 16px; margin-left: 8px;"><strong>Select the Form to Delete</strong><br>
+            Select the form you need or want to delete from the list of forms by scrolling through the list.</li><br>
+            <li style="font-size: 16px; margin-left: 8px;"><strong>Click the "Delete" Button</strong><br>
+            Click the "Delete" button to delete the form. Click the "Continue" button to proceed with deleting the form. Click the "Discard" button if you do not want to delete the form.</li><br>
+        </ol>
+        """
+        self.help_text.setHtml(html_content)
+        self.help_text.show()
+
+    def how_to_refill_bondpaper(self):
+        self.scroll_area.hide()
+        self.close_button.hide()
+        self.help_label.hide()
+
+        self.back_button.show()
+        self.help_title_label.setText("How to refill the bond paper quantity?")
+
+        html_content = """
+        <ol>
+            <li style="font-size: 16px; margin-left: 8px;"><strong>Click the Settings Button</strong><br>
+            Start by clicking the settings button in the system interface.</li><br>
+            <li style="font-size: 16px; margin-left: 8px;"><strong>Add Quantity</strong><br>
+            Click the plus sign (+) button to add the quantity of bond paper.</li><br>
+            <li style="font-size: 16px; margin-left: 8px;"><strong>Save Changes</strong><br>
+            Click the refill button to save the changes.</li><br>
+        </ol>
+        """
+        self.help_text.setHtml(html_content)
+        self.help_text.show()
+
+    def how_to_change_base_price(self):
+        self.scroll_area.hide()
+        self.close_button.hide()
+        self.help_label.hide()
+
+        self.back_button.show()
+        self.help_title_label.setText("How to change the base price?")
+
+        html_content = """
+        <ol>
+            <li style="font-size: 16px; margin-left: 8px;"><strong>Increase Base Price:</strong><br>
+                <ol style="list-style-type: decimal;">
+                    <li style="font-size: 16px; margin-left: 8px;"><strong>Click the plus sign (+) button</strong><br>
+                    Click the plus sign (+) button to increase the base price of the form per page.</li><br>
+                    <li style="font-size: 16px; margin-left: 8px;"><strong>Click the change price button</strong><br>
+                    Click the change price button to save the new price.</li><br>
+                </ol>
+            </li><br>
+            <li style="font-size: 16px; margin-left: 8px;"><strong>Decrease Base Price:</strong><br>
+                <ol style="list-style-type: decimal;">
+                    <li style="font-size: 16px; margin-left: 8px;"><strong>Click the minus sign (-) button</strong><br>
+                    Click the minus sign (-) button to decrease the base price of the form per page.</li><br>
+                    <li style="font-size: 16px; margin-left: 8px;"><strong>Click the change price button</strong><br>
+                    Click the change price button to save the new price.</li><br>
+                </ol>
+            </li><br>
+        </ol>
+        """
+        self.help_text.setHtml(html_content)
+        self.help_text.show()
+
+    def total_amount_collected_coins(self):
+        self.scroll_area.hide()
+        self.close_button.hide()
+        self.help_label.hide()
+
+        self.back_button.show()
+        self.help_title_label.setText(
+            "Where can I see the total amount of collected coins?"
+        )
+
+        html_content = """
+        <p style="font-size: 16px; margin-left: 8px;">You can see the total amount of collected 
+        coins on the dashboard at the top part of the screen. The dashboard provides a comprehensive view 
+        of the total amount of collected coins in various time frames:</p>
+        <ul>
+            <li style="font-size: 16px; margin-left: 8px;">Daily</li>
+            <li style="font-size: 16px; margin-left: 8px;">Weekly</li>
+            <li style="font-size: 16px; margin-left: 8px;">Monthly</li>
+            <li style="font-size: 16px; margin-left: 8px;">Yearly</li>
+        </ul>
+        """
+        self.help_text.setHtml(html_content)
+        self.help_text.show()
+
+    def total_number_forms_success_unsuccessful(self):
+        self.scroll_area.hide()
+        self.close_button.hide()
+        self.help_label.hide()
+
+        self.back_button.show()
+        self.help_title_label.setText(
+            "Where can I see the total number of printed forms successful and unsuccessful?"
+        )
+
+        html_content = """
+        <p style="font-size: 16px; margin-left: 8px;">You can see the total number of successful and unsuccessful printed 
+        forms on the dashboard at the top part of the screen. The dashboard provides a comprehensive view of the total number 
+        of printed forms in various time frames:</p>
+        <ul>
+            <li style="font-size: 16px; margin-left: 8px;">Daily</li>
+            <li style="font-size: 16px; margin-left: 8px;">Weekly</li>
+            <li style="font-size: 16px; margin-left: 8px;">Monthly</li>
+            <li style="font-size: 16px; margin-left: 8px;">Yearly</li>
+        </ul>
+        """
+        self.help_text.setHtml(html_content)
+        self.help_text.show()
+
+    def remaining_paper(self):
+        self.scroll_area.hide()
+        self.close_button.hide()
+        self.help_label.hide()
+
+        self.back_button.show()
+        self.help_title_label.setText(
+            "Where can I see the total of the remaining paper?"
+        )
+
+        html_content = """
+        <p style="font-size: 16px; margin-left: 8px;">You can see the total amount of remaining paper at
+        the top right part of the screen. The paper icon serves as the indicator of the remaining paper.</p>
+        """
+        self.help_text.setHtml(html_content)
+        self.help_text.show()
+
+    def printer_active_connected(self):
+        self.scroll_area.hide()
+        self.close_button.hide()
+        self.help_label.hide()
+
+        self.back_button.show()
+        self.help_title_label.setText(
+            "Where can I see to know if the printer is active/connected?"
+        )
+
+        html_content = """
+        <p style="font-size: 16px; margin-left: 8px;">To know if the printer is active, you can check the printer icon at the top right part of the screen.</p>
+        <ul>
+            <li style="font-size: 16px; margin-left: 8px;">A check (✓) sign indicates that the printer is active or connected.</li>
+            <li style="font-size: 16px; margin-left: 8px;">A cross (✕) sign indicates that the printer is not active or not connected.</li>
+        </ul>
+        """
+        self.help_text.setHtml(html_content)
+        self.help_text.show()
+
+    def track_ink_printer(self):
+        self.scroll_area.hide()
+        self.close_button.hide()
+        self.help_label.hide()
+
+        self.back_button.show()
+        self.help_title_label.setText(
+            "Where can I see the tracking of the ink of the printer?"
+        )
+
+        html_content = """
+        <p style="font-size: 16px; margin-left: 8px;">You can track the printer ink levels using the indicator at the top right part of the screen.</p>
+        <ul>
+            <li style="font-size: 16px; margin-left: 8px;">A check (✓) sign indicates that the ink level is good.</li>
+            <li style="font-size: 16px; margin-left: 8px;">A cross (✕) sign indicates that the ink level is low or not good.</li>
+        </ul>
+        """
+        self.help_text.setHtml(html_content)
+        self.help_text.show()
+
+    def status_checker(self):
+        self.scroll_area.hide()
+        self.close_button.hide()
+        self.help_label.hide()
+
+        self.back_button.show()
+        self.help_title_label.setText(
+            "How can I check the printer status using the warning button?"
+        )
+
+        html_content = """
+        <p style="font-size: 16px; margin-left: 8px;">
+            <strong>To check the printer status using the warning button on the admin panel, follow these steps:</strong>
+        </p>
+        <ol style="font-size: 16px; margin-left: 20px;">
+            <li><strong>Locate the Warning Button:</strong><br>
+                Navigate to the top right of the screen. Here, you will find the warning button alongside other indicators. The presence of the warning button indicates that the printer is currently not connected.</li>
+            <li><strong>Activate the Status Check:</strong><br>
+                Click on the warning button. This action will initiate a continuous status check for the printer. The system will automatically refresh the status every 3 seconds.</li>
+            <li><strong>Monitor the Status:</strong><br>
+                The diagnostic window will provide real-time updates on the printer’s connectivity. Continuously monitor the window until the printer's status changes.</li>
+            <li><strong>Status Update:</strong><br>
+                When the printer becomes available, the status window will display "Printer is available." At this point, you can close the printer status window, and the warning indicator for the printer at the top right of the screen will disappear.</li>
+            <li><strong>Resolve or Restart:</strong><br>
+                If the printer status does not resolve or if the issue persists, the administrator has the option to restart or shutdown the kiosk. To do so, the admin can access the appropriate controls, usually located at the bottom left part of the panel. Restarting or shutting down the kiosk can often resolve underlying software issues affecting the printer.</li>
+        </ol>
+        """
+        self.help_text.setHtml(html_content)
+        self.help_text.show()
+
+    def go_to_interface(self):
+        self.scroll_area.hide()
+        self.close_button.hide()
+        self.help_label.hide()
+
+        self.back_button.show()
+        self.help_title_label.setText("How can I go back to the user interface?")
+
+        html_content = """
+        <p style="font-size: 16px; margin-left:8px;">To go back to the user interface, click the "Power" button at the lower part of the scree and click the "Logout" button.</p>
+        """
+        self.help_text.setHtml(html_content)
+        self.help_text.show()
+
+    def restart_shutdown_kiosk(self):
+        self.scroll_area.hide()
+        self.close_button.hide()
+        self.help_label.hide()
+
+        self.back_button.show()
+        self.help_title_label.setText("How can I restart or shutdown the kiosk?")
+
+        html_content = """
+        <p style="font-size: 16px; margin-left: 8px;">To restart or shutdown the kiosk, click the “Power” button at the lower left part of the screen.</p>
+        """
+        self.help_text.setHtml(html_content)
+        self.help_text.show()
+
+    def go_back(self):
+        self.scroll_area.show()
+
+        self.close_button.show()
+        self.help_label.show()
+
+        self.back_button.hide()
+
+        self.help_title_label.setText(
+            "Admin Guide for Form Handling and System Maintenance"
+        )
+        self.help_text.hide()
+
+    def add_widget_with_line(self, layout, widget):
+        layout.addWidget(widget)
+        line = QFrame()
+        line.setFrameShape(QFrame.HLine)
+        line.setFrameShadow(QFrame.Sunken)
+        line.setStyleSheet("QFrame { border: none; border-bottom: 1px solid #9D9D9D; }")
+        layout.addWidget(line)
+        self.lines.append(line)  # Store a reference to the line
+
+    def close_message_box(self):
+        self.reject()
+
+
+class PrinterStatus(QThread):
+    status_updated = pyqtSignal(bool)
+
+    def __init__(self):
+        super().__init__()
+        self.printer_state = None
+        self.running = True
+
+    def run(self):
+        while self.running:
+            self.is_printer_available()
+            time.sleep(3)
+
+    def is_printer_available(self):
+        try:
+            conn = cups.Connection()
+            printers = conn.getPrinters()
+
+            if not printers:
+                self.printer_state = False
+            else:
+                idle_printer_found = False
+                for printer_name, printer_attributes in printers.items():
+                    if (
+                        "printer-state" in printer_attributes
+                        and printer_attributes["printer-state"] == 3
+                    ):
+                        idle_printer_found = True
+                        break
+                self.printer_state = idle_printer_found
+
+            self.status_updated.emit(self.printer_state)
+        except Exception as e:
+            print(e)
+            self.status_updated.emit(False)
+
+    def stop(self):
+        self.running = False
+
+
+class CheckPrinterStatusWindow(QDialog):
+    printer_status_updated = pyqtSignal(bool)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(600, 900)
+        self.setStyleSheet("background-color: #EBEBEB;")
+        self.setup_ui()
+
+        self.setWindowModality(Qt.ApplicationModal)
+        self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
+
+        self.printer_status_thread = PrinterStatus()
+        self.printer_status_thread.status_updated.connect(self.update_status)
+        self.printer_status_thread.start()
+
+    def setup_ui(self):
+        self.layout = QVBoxLayout(self)
+
+        upper_layout = QHBoxLayout()
+        upper_layout.setAlignment(Qt.AlignCenter | Qt.AlignTop)
+        upper_layout.setSpacing(167)
+
+        self.close_button = QPushButton()
+        self.close_button.setFocusPolicy(Qt.NoFocus)
+        self.close_button.setStyleSheet(
+            "QPushButton {background-color: transparent; border: none; image: url('img/static/close_img.png');}"
+            "QPushButton:pressed {background-color: transparent; border: none; image: url('img/static/close_img_pressed.png');}"
+        )
+        self.close_button.setFixedSize(45, 45)
+        self.close_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.close_button.clicked.connect(self.close_window)
+
+        self.help_label = QLabel("Printer Status")
+        self.help_label.setStyleSheet(
+            """
+            font-family: Montserrat;
+            font-size: 22px;
+            color: #19323C;
+            """
+        )
+
+        status_layout = QVBoxLayout()
+
+        self.gif_label = QLabel()
+        self.gif_label.setStyleSheet("margin-left: 18px; margin-top: 95px;")
+        self.movie = QMovie("./img/animated_printer.gif")
+        self.gif_label.setMovie(self.movie)
+        self.movie.start()
+
+        self.status_label = QLabel()
+        self.status_label.setStyleSheet(
+            """
+            font-family: Montserrat;
+            font-size: 38px;
+            """
+        )
+        self.status_label.setAlignment(Qt.AlignCenter)
+
+        self.status_checker_label = QLabel("Checking Printer Status.")
+        self.status_checker_label.setStyleSheet(
+            """
+            font-family: Open Sans;
+            font-size: 16px;
+            margin-bottom: 180px;
+            """
+        )
+        self.status_checker_label.setAlignment(Qt.AlignCenter)
+
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.update_label)
+        self.timer.start(500)
+
+        status_layout.addWidget(self.status_label)
+        status_layout.addWidget(self.status_checker_label)
+
+        upper_layout.addWidget(self.close_button, Qt.AlignLeft)
+        upper_layout.addWidget(self.help_label)
+        upper_layout.setContentsMargins(8, 15, 0, 0)
+
+        self.layout.addLayout(upper_layout)
+        self.layout.addWidget(self.gif_label)
+        self.layout.addLayout(status_layout)
+
+    @pyqtSlot(bool)
+    def update_status(self, is_available):
+        self.is_available = is_available
+
+        if self.is_available:
+            self.status_label.setText("Printer is Available")
+        else:
+            self.status_label.setText("Printer is Offline")
+
+    def update_label(self):
+        text = self.status_checker_label.text()
+        if text.endswith("...."):
+            text = text[:-4]
+        else:
+            text += "."
+        self.status_checker_label.setText(text)
+
+    def close_window(self):
+        self.close()
+        self.printer_status_thread.stop()
+        self.printer_status_thread.wait()
+        self.printer_status_updated.emit(self.is_available)
+
+
 class RefillButton(QPushButton):
     def __init__(self, parent=None):
         super().__init__(parent)
 
         layout = QVBoxLayout()
 
-        pixmap = QPixmap("./img/static/ink_img.png")
+        pixmap = QPixmap("./img/static/ink_level_img.png")
         scaled_pixmap = pixmap.scaled(
             65, 65, Qt.KeepAspectRatio, Qt.SmoothTransformation
         )
@@ -2689,11 +3358,232 @@ class RefillButton(QPushButton):
         self.setLayout(layout)
 
 
+class ChangePasswordButton(QPushButton):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        layout = QVBoxLayout()
+
+        pixmap = QPixmap("./img/static/password_img.png")
+        scaled_pixmap = pixmap.scaled(
+            65, 65, Qt.KeepAspectRatio, Qt.SmoothTransformation
+        )
+
+        self.image_label = QLabel()
+        self.image_label.setPixmap(scaled_pixmap)
+        self.image_label.setStyleSheet("margin-top: 15px;")
+
+        self.label = QLabel("Change Password")
+        self.label.setWordWrap(True)
+        self.label.setStyleSheet(
+            """
+            font-family: Roboto; 
+            font-size: 14px;
+            font-weight: bold;
+            color: #19323C;
+            """
+        )
+
+        layout.addWidget(self.image_label, alignment=Qt.AlignCenter)
+        layout.addWidget(self.label, alignment=Qt.AlignCenter)
+
+        self.setFocusPolicy(Qt.NoFocus)
+        self.setLayout(layout)
+
+
+class ChangePasswordWindow(QDialog):
+    close_message_clicked = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(600, 900)
+        self.setStyleSheet("background-color: #EBEBEB;")
+        self.setup_ui()
+
+        # Connect database
+        conn = sqlite3.connect("./database/kiosk.db")
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT admin_password FROM kiosk_settings LIMIT 1")
+        self.admin_password = cursor.fetchone()[0]
+
+        conn.close()
+
+        self.setWindowModality(Qt.ApplicationModal)
+        self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
+
+    def setup_ui(self):
+        self.layout = QVBoxLayout(self)
+
+        upper_layout = QHBoxLayout()
+        upper_layout.setAlignment(Qt.AlignCenter | Qt.AlignTop)
+        upper_layout.setSpacing(157)
+
+        self.close_button = QPushButton()
+        self.close_button.setFocusPolicy(Qt.NoFocus)
+        self.close_button.setStyleSheet(
+            "QPushButton {background-color: transparent; border: none; image: url('img/static/close_img.png');}"
+            "QPushButton:pressed {background-color: transparent; border: none; image: url('img/static/close_img_pressed.png');}"
+        )
+        self.close_button.setFixedSize(45, 45)
+        self.close_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.close_button.clicked.connect(lambda: self.close())
+
+        self.help_label = QLabel("Change Password")
+        self.help_label.setStyleSheet(
+            """
+            font-family: Montserrat;
+            font-size: 22px;
+            color: #19323C;
+            """
+        )
+
+        upper_layout.addWidget(self.close_button, Qt.AlignLeft)
+        upper_layout.addWidget(self.help_label)
+        upper_layout.setContentsMargins(8, 15, 0, 0)
+
+        self.input_edit = QLineEdit()
+        self.input_edit.setFixedWidth(480)
+        self.input_edit.setAlignment(Qt.AlignCenter)
+        self.input_edit.setEchoMode(QLineEdit.Password)
+        self.input_edit.setMaxLength(4)
+        self.input_edit.setStyleSheet(
+            """
+            QLineEdit {
+                background-color: #FFFFFF;
+                color: #333333;  /* Dark gray color */
+                border-radius: 10px;
+                border: 3px solid #7C2F3E;  /* Light gray border */
+                padding: 10px 20px;
+                font-size: 48px;
+                margin-top: 65px;
+            }
+            """
+        )
+
+        self.keypad_layout = QGridLayout()
+        self.create_number_buttons()
+
+        # Login button
+        self.change_button = QPushButton("Change")
+        self.change_button.setFocusPolicy(Qt.NoFocus)
+        self.change_button.clicked.connect(self.on_change_click)
+
+        # Apply minimalist style to buttons
+        self.apply_minimalist_style(self.change_button)
+
+        # Add input field and login button to the keypad layout
+        self.keypad_layout.addWidget(self.input_edit, 0, 0, 1, 3)
+        self.keypad_layout.addWidget(self.change_button, 5, 1)
+        self.keypad_layout.setContentsMargins(0, 0, 0, 150)
+
+        self.layout.addLayout(upper_layout)
+        self.layout.addWidget(self.input_edit, alignment=Qt.AlignCenter)
+        self.layout.addLayout(self.keypad_layout)
+
+    def create_number_buttons(self):
+        numbers = [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "Clear",
+            "0",
+            "Backspace",
+        ]
+
+        positions = [(i, j) for i in range(4) for j in range(3)]
+
+        for position, number in zip(positions, numbers):
+            row, col = position
+            button = QPushButton(number)
+            button.setFocusPolicy(Qt.NoFocus)
+            button.clicked.connect(self.on_button_click)
+            self.keypad_layout.addWidget(button, row + 1, col)
+            self.apply_minimalist_style(button)
+
+    def apply_minimalist_style(self, button):
+        button.setStyleSheet(
+            "QPushButton {"
+            "background-color: #7C2F3E;"  # Blue color
+            "color: #FFFFFF;"  # White text color
+            "border-radius: 10px;"
+            "padding: 20px 40px;"
+            "font-size: 24px;"
+            "}"
+            "QPushButton:pressed {"
+            "background-color: #D8973C;"  # Even darker blue color when pressed
+            "}"
+        )
+
+    def on_button_click(self):
+        clicked_button = self.sender()
+        clicked_text = clicked_button.text()
+
+        if clicked_text == "Clear":
+            self.input_edit.clear()
+        elif clicked_text == "Backspace":
+            current_text = self.input_edit.text()
+            self.input_edit.setText(current_text[:-1])
+        else:
+            current_text = self.input_edit.text()
+            self.input_edit.setText(current_text + clicked_text)
+
+    def on_change_click(self):
+        input_password = self.input_edit.text()
+
+        try:
+            conn = sqlite3.connect("./database/kiosk.db")
+            cursor = conn.cursor()
+
+            cursor.execute("BEGIN TRANSACTION")
+
+            cursor.execute(
+                """
+                UPDATE kiosk_settings
+                SET admin_password = ?
+                WHERE ROWID = (
+                    SELECT ROWID
+                    FROM kiosk_settings
+                    ORDER BY ROWID
+                    LIMIT 1
+                )
+            """,
+                (input_password,),
+            )
+
+            cursor.execute("COMMIT")
+
+            # Display dialog box indicating success
+            message_box = CustomMessageBox(
+                "Success", "Password changed successfully.", parent=self
+            )
+            message_box.ok_button_clicked.connect(self.close_message)
+            message_box.exec_()
+
+        except sqlite3.Error as error:
+            conn.rollback()
+            print("Error changing price:", error)
+
+        finally:
+            if conn:
+                conn.close()
+
+    def close_message(self):
+        self.input_edit.clear()
+
+
 class AdminWindowWidget(QWidget):
     home_screen_backbt_clicked = pyqtSignal()
     bondpaper_quantity_updated = pyqtSignal(int)
+    printer_updated = pyqtSignal(bool)
 
-    def __init__(self, parent):
+    def __init__(self, parent, is_printer_available):
         super().__init__(parent)
 
         # Define instance variables for temporary values
@@ -2713,6 +3603,9 @@ class AdminWindowWidget(QWidget):
         cursor.execute("SELECT ink_level FROM kiosk_settings LIMIT 1")
         self.ink_level = cursor.fetchone()[0]
 
+        cursor.execute("SELECT base_price FROM kiosk_settings LIMIT 1")
+        self.base_price = cursor.fetchone()[0]
+
         conn.close()
 
         # Create and position the virtual keyboard
@@ -2728,29 +3621,34 @@ class AdminWindowWidget(QWidget):
         self.tab3 = self.ui3()
         self.tab4 = self.ui4()
         self.tab5 = self.ui5()
-        self.tab6 = self.ui6()
 
-        self.setup_ui()
+        self.setup_ui(is_printer_available)
 
         self.btn_1.clicked.connect(self.button1)
         self.btn_2.clicked.connect(self.button2)
         self.btn_3.clicked.connect(self.button3)
         self.btn_4.clicked.connect(self.button4)
         self.btn_5.clicked.connect(self.button5)
-        self.btn_6.clicked.connect(self.logout)
 
         self.active_button = self.btn_1
         self.update_button_styles()
 
-        # self.printer_status = PrinterStatus()
-        # self.printer_status.status_updated.connect(self.update_print_status)
-        # self.printer_status.start()
-
-    def setup_ui(self):
+    def setup_ui(self, is_printer_available):
         layout = QVBoxLayout(self)
 
         # Adding labels in top right corner
         rectangle_layout = QHBoxLayout()
+
+        help_button = QPushButton()
+        help_button.setStyleSheet(
+            "QPushButton {background-color: transparent; border: none; image: url('img/static/help_img.png');}"
+            "QPushButton:pressed {background-color: transparent; border: none; image: url('img/static/help_img_pressed.png');}"
+        )
+        help_button.setFixedSize(65, 65)
+        help_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        help_button.clicked.connect(self.show_help)
+
+        rectangle_layout.addWidget(help_button, alignment=Qt.AlignRight)
 
         rectangle = QFrame()
         rectangle.setFrameShape(QFrame.StyledPanel)
@@ -2770,7 +3668,7 @@ class AdminWindowWidget(QWidget):
         rectangle.setGraphicsEffect(shadow_effect)
 
         rectangle_layout.addWidget(rectangle, alignment=Qt.AlignTop | Qt.AlignRight)
-        rectangle_layout.setContentsMargins(0, 25, 60, 0)
+        rectangle_layout.setContentsMargins(475, 25, 60, 0)
 
         rectangle_inner_layout = QHBoxLayout()
         rectangle_inner_layout.setContentsMargins(25, 0, 15, 0)
@@ -2783,12 +3681,6 @@ class AdminWindowWidget(QWidget):
         ink_layout = QHBoxLayout()
 
         coins_layout.setContentsMargins(20, 0, 15, 0)
-
-        # Set contents margins for each layout if needed
-        bondpaper_layout.setContentsMargins(30, 0, 30, 0)
-        bondpaper_layout.setContentsMargins(30, 0, 30, 0)
-        coins_layout.setContentsMargins(30, 0, 30, 0)
-        printer_layout.setContentsMargins(30, 0, 30, 0)
 
         # Bondpaper widgets
         self.bondpaper_warning = QPushButton("!")
@@ -2814,11 +3706,11 @@ class AdminWindowWidget(QWidget):
         bondpaper_img = QLabel()
         pixmap = QPixmap("./img/static/bondpaper_quantity.png")
         bondpaper_img.setPixmap(pixmap)
-        bondpaper_label = QLabel(str(self.bondpaper_quantity))
+        self.bondpaper_label = QLabel(str(self.bondpaper_quantity))
         self.bondpaper_quantity_updated.connect(self.update_label_slot)
         bondpaper_layout.addWidget(self.bondpaper_warning)
         bondpaper_layout.addWidget(bondpaper_img)
-        bondpaper_layout.addWidget(bondpaper_label, alignment=Qt.AlignLeft)
+        bondpaper_layout.addWidget(self.bondpaper_label, alignment=Qt.AlignLeft)
 
         # Coins widgets
         coins_img = QLabel()
@@ -2847,12 +3739,13 @@ class AdminWindowWidget(QWidget):
             }
             """
         )
-        # self.printer_warning.clicked.connect(self.printer_not_connected)
+        self.printer_warning.clicked.connect(self.printer_not_connected)
         self.printer_warning.hide()
         printer_img = QLabel()
         pixmap = QPixmap("./img/static/printer_img.png")
         printer_img.setPixmap(pixmap)
         self.printer_status_symbol = QLabel("✓")
+        self.printer_updated.connect(self.update_printer_status)
         printer_layout.addWidget(self.printer_warning)
         printer_layout.addWidget(printer_img)
         printer_layout.addWidget(self.printer_status_symbol)
@@ -2876,7 +3769,7 @@ class AdminWindowWidget(QWidget):
             }
             """
         )
-        # self.ink_warning.clicked.connect(self.low_ink)
+        self.ink_warning.clicked.connect(self.low_ink)
         self.ink_warning.hide()
         ink_img = QLabel()
         pixmap = QPixmap("./img/static/ink_img.png")
@@ -2894,11 +3787,26 @@ class AdminWindowWidget(QWidget):
 
         layout.addLayout(rectangle_layout)
 
+        self.is_printer_available = is_printer_available
+        self.bondpaper_supply = True
+        self.ink_supply = True
+
+        if self.bondpaper_quantity <= 0:
+            self.bondpaper_supply = False
+
+        if self.ink_level <= 0:
+            self.ink_supply = False
+            self.printer_status_symol.setText("✕")
+
         if self.bondpaper_quantity <= 5:
             self.bondpaper_warning.show()
 
         if self.ink_level <= 75:
             self.ink_warning.show()
+
+        if not is_printer_available:
+            self.printer_warning.show()
+            self.printer_status_symbol.setText("✕")
 
         self.btn_1 = CustomButton("Dashboard", "./img/static/dashboard.png", self)
         self.btn_1.setFixedHeight(80)
@@ -2910,8 +3818,6 @@ class AdminWindowWidget(QWidget):
         self.btn_4.setFixedHeight(80)
         self.btn_5 = CustomButton("Settings", "./img/static/settings.png", self)
         self.btn_5.setFixedHeight(80)
-        self.btn_6 = CustomButton("Logout", "./img/static/logout.png", self)
-        self.btn_6.setFixedHeight(80)
 
         self.btn_1.setStyleSheet(
             """
@@ -2935,7 +3841,6 @@ class AdminWindowWidget(QWidget):
         self.btn_3.setStyleSheet(default_btn_css)
         self.btn_4.setStyleSheet(default_btn_css)
         self.btn_5.setStyleSheet(default_btn_css)
-        self.btn_6.setStyleSheet(default_btn_css)
 
         self.left_layout = QVBoxLayout()
         self.sidebar_buttons = [
@@ -2944,7 +3849,6 @@ class AdminWindowWidget(QWidget):
             self.btn_3,
             self.btn_4,
             self.btn_5,
-            self.btn_6,
         ]
 
         for button in self.sidebar_buttons:
@@ -2953,7 +3857,7 @@ class AdminWindowWidget(QWidget):
         self.left_layout.addStretch(5)
         self.left_layout.setSpacing(20)
 
-        system_layout = QHBoxLayout()
+        system_layout = QVBoxLayout()
 
         system_bt = QPushButton()
         system_bt.setFocusPolicy(Qt.NoFocus)
@@ -2967,6 +3871,30 @@ class AdminWindowWidget(QWidget):
         frame = QFrame()
 
         frame_layout = QVBoxLayout()
+
+        self.logout_bt = QPushButton("Logout")
+        self.logout_bt.setFocusPolicy(Qt.NoFocus)
+        self.logout_bt.setFixedHeight(70)
+        self.logout_bt.setStyleSheet(
+            """
+            QPushButton {
+                border: 2px solid #555555;
+                background-color: #A9A9A9;
+                border-radius: 15px;
+                color: #19323C;
+                padding: 8px 16px;
+                font-size: 14px;
+                font-weight: bold;
+                font-family: Montserrat;
+            }
+            QPushButton::pressed {
+                background-color: #555555;
+                color: #FDFDFD;
+            }
+            """
+        )
+        self.logout_bt.clicked.connect(self.logout)
+        self.logout_bt.hide()
 
         self.restart_bt = QPushButton("Restart")
         self.restart_bt.setFocusPolicy(Qt.NoFocus)
@@ -3018,6 +3946,7 @@ class AdminWindowWidget(QWidget):
 
         self.buttons_visible = False
 
+        frame_layout.addWidget(self.logout_bt)
         frame_layout.addWidget(self.restart_bt)
         frame_layout.addWidget(self.shutdown_bt)
         frame_layout.setSpacing(10)
@@ -3026,6 +3955,7 @@ class AdminWindowWidget(QWidget):
 
         system_layout.addWidget(frame, alignment=Qt.AlignTop)
         system_layout.addWidget(system_bt, alignment=Qt.AlignRight)
+        system_layout.setContentsMargins(0, 0, 0, 60)
 
         self.left_layout.addLayout(system_layout)
 
@@ -3041,7 +3971,6 @@ class AdminWindowWidget(QWidget):
         self.right_widget.addTab(self.tab3, "")
         self.right_widget.addTab(self.tab4, "")
         self.right_widget.addTab(self.tab5, "")
-        self.right_widget.addTab(self.tab6, "")
 
         self.right_widget.setCurrentIndex(0)
         self.right_widget.setStyleSheet(
@@ -3595,6 +4524,8 @@ class AdminWindowWidget(QWidget):
         # Add the first frame to the frames layout
         frames_layout.addWidget(frame1)
 
+        button_center_layout = QVBoxLayout()
+
         ink_refill = RefillButton()
         ink_refill.setStyleSheet(
             """
@@ -3602,10 +4533,32 @@ class AdminWindowWidget(QWidget):
                 border-radius: 25px;
                 background-color: #D8C995;
             }
+            QPushButton::pressed {
+                background-color: #FDFDFD;
+            }
             """
         )
         ink_refill.setFixedSize(150, 150)
-        frames_layout.addWidget(ink_refill)
+        ink_refill.clicked.connect(self.refill_ink)
+        button_center_layout.addWidget(ink_refill)
+
+        change_password_button = ChangePasswordButton()
+        change_password_button.setStyleSheet(
+            """
+            QPushButton {
+                border-radius: 25px;
+                background-color: #D8C995;
+            }
+            QPushButton::pressed {
+                background-color: #FDFDFD;
+            }
+            """
+        )
+        change_password_button.setFixedSize(150, 150)
+        change_password_button.clicked.connect(self.change_password)
+        button_center_layout.addWidget(change_password_button)
+
+        frames_layout.addLayout(button_center_layout)
 
         # Create the second frame
         frame2 = QFrame()
@@ -3632,7 +4585,7 @@ class AdminWindowWidget(QWidget):
         )
         frame2_layout.addWidget(price_label, alignment=Qt.AlignCenter)
 
-        self.price_value = 2
+        self.price_value = self.base_price
         self.quantity_value_label = QLabel(f"₱{self.price_value:0.2f}")
         self.quantity_value_label.setStyleSheet(
             """
@@ -3926,6 +4879,42 @@ class AdminWindowWidget(QWidget):
             except sqlite3.Error as error:
                 print("Error changing price:", error)
 
+    def refill_ink(self):
+        try:
+            with sqlite3.connect("./database/kiosk.db") as connection:
+                connection.execute("BEGIN TRANSACTION")
+
+                connection.execute(
+                    """
+                    UPDATE kiosk_settings
+                    SET ink_level = 1500
+                    WHERE ROWID = (
+                        SELECT ROWID
+                        FROM kiosk_settings
+                        ORDER BY ROWID
+                        LIMIT 1
+                    )
+                    """
+                )
+
+                connection.execute("COMMIT")
+
+                # Display dialog box indicating success
+                message_box = CustomMessageBox(
+                    "Success", "Ink refilled successfully.", parent=self
+                )
+                message_box.ok_button_clicked.connect(self.re_init)
+                message_box.exec_()
+
+        except sqlite3.Error as error:
+            print("Error changing price:", error)
+
+    def change_password(self):
+        password_message_box = ChangePasswordWindow(self)
+        parent_pos = self.mapToGlobal(self.rect().center())
+        password_message_box.move(parent_pos - password_message_box.rect().center())
+        password_message_box.exec_()
+
     # Slot to update the bondpaper label
     def update_label_slot(self, new_quantity):
         self.bondpaper_label.setText(str(new_quantity))
@@ -4061,13 +5050,46 @@ class AdminWindowWidget(QWidget):
         self.edit_message_box.edit_form_button_clicked.connect(self.switch_ui)
         self.edit_message_box.exec_()
 
+    def show_help(self):
+        help_message_box = HelpMessageBox(self)
+        parent_pos = self.mapToGlobal(self.rect().center())
+        help_message_box.move(parent_pos - help_message_box.rect().center())
+        help_message_box.exec_()
+
+    def printer_not_connected(self):
+        printer_status_window = CheckPrinterStatusWindow(self)
+        parent_pos = self.mapToGlobal(self.rect().center())
+        printer_status_window.move(parent_pos - printer_status_window.rect().center())
+        printer_status_window.printer_status_updated.connect(self.send_printer_status)
+        printer_status_window.exec_()
+
+    @pyqtSlot(bool)
+    def send_printer_status(self, is_available):
+        self.printer_updated.emit(is_available)
+
+    @pyqtSlot(bool)
+    def update_printer_status(self, is_available):
+        if is_available:
+            self.printer_warning.hide()
+            self.printer_status_symbol.setText("✓")
+        else:
+            self.printer_warning.show()
+            self.printer_status_symbol.setText("✕")
+
     def low_bondpaper(self):
         self.delete_message_box = MessageBox(
             "Error",
             "Uh-oh, it seems the bond paper supply is low. Please refill immediately the bondpaper tray.",
             parent=self,
         )
-        self.delete_message_box.return_bt_clicked.connect(self.go_back)
+        self.delete_message_box.exec_()
+
+    def low_ink(self):
+        self.delete_message_box = MessageBox(
+            "Error",
+            "Uh-oh, it seems the ink supply is low. Please refill immediately the ink tank.",
+            parent=self,
+        )
         self.delete_message_box.exec_()
 
     def update_temp_values(self, index, form_name):
@@ -4108,6 +5130,32 @@ class AdminWindowWidget(QWidget):
         self.active_button = self.btn_1
         self.update_button_styles()
 
+    def is_printer_available(self):
+        try:
+            conn = cups.Connection()
+            printers = conn.getPrinters()
+
+            if not printers:
+                self.printer_state = False
+                raise Exception("No printers available.")
+
+            idle_printer_found = False
+            for printer_name, printer_attributes in printers.items():
+                if (
+                    "printer-state" in printer_attributes
+                    and printer_attributes["printer-state"] == 3
+                ):
+                    idle_printer_found = True
+                    self.printer_state = True
+                    break
+
+            if not idle_printer_found:
+                self.printer_state = False
+                raise Exception("No idle printer available")
+
+        except Exception as e:
+            print("Error during printing:", e)
+
     def update_print_status(self, status):
         if status:
             self.printer_status_symbol.setText("✓")
@@ -4121,9 +5169,11 @@ class AdminWindowWidget(QWidget):
 
     def show_system_button(self):
         if self.buttons_visible:
+            self.logout_bt.hide()
             self.restart_bt.hide()
             self.shutdown_bt.hide()
         else:
+            self.logout_bt.show()
             self.restart_bt.show()
             self.shutdown_bt.show()
 

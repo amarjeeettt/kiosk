@@ -81,6 +81,9 @@ class PrintMessageBox(QDialog):
 
         self.setup_ui(title, num_copy, num_pages, total, is_total_equal)
 
+        self.setWindowModality(Qt.ApplicationModal)
+        self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
+
     def setup_ui(self, title, num_copy, num_pages, total, is_total_equal):
         self.layout = QVBoxLayout(self)
 
@@ -226,6 +229,8 @@ class PrintInProgress(QWidget):
             self.print_result = "Failed"
             self.print_status = False
 
+            self.update_database_and_ui(self.print_result)
+
     def on_status_checked(self, print_result):
         if print_result:
             self.print_result = "Success"
@@ -278,23 +283,23 @@ class PrintInProgress(QWidget):
         self.message_title.setText("Printed Successfully")
         self.setStyleSheet(
             """
-            font-size: 18px; 
+            font-size: 24px; 
             font-family: Open Sans; 
             font-weight: bold; 
             color: #19323C; 
-            margin-bottom: 10px; 
+            margin-bottom: 5px; 
             """
         )
         self.loading_widget.hide()
         self.message_label.setText("Returning to home screen.")
         self.message_label.setStyleSheet(
             """
-            font-size: 14px; 
+            font-size: 16px; 
             font-family: Open Sans; 
             text-align: center; 
             padding-left: 30px; 
             padding-right: 30px; 
-            margin-bottom: 240px;
+            margin-bottom: 220px;
             """
         )
 
@@ -311,11 +316,11 @@ class PrintInProgress(QWidget):
         self.message_title.setText("Failed to Print")
         self.setStyleSheet(
             """
-            font-size: 18px; 
+            font-size: 20px; 
             font-family: Open Sans; 
             font-weight: bold; 
             color: #19323C; 
-            margin-bottom: 10px; 
+            margin-bottom: 5px; 
             """
         )
         self.loading_widget.hide()
@@ -324,12 +329,12 @@ class PrintInProgress(QWidget):
         )
         self.message_label.setStyleSheet(
             """
-            font-size: 14px; 
+            font-size: 16px; 
             font-family: Open Sans; 
             text-align: center; 
             padding-left: 30px; 
             padding-right: 30px; 
-            margin-bottom: 240px;
+            margin-bottom: 220px;
             """
         )
 
@@ -388,7 +393,7 @@ class WarningPrint(QWidget):
         self.message_title.setAlignment(Qt.AlignCenter)
         self.message_title.setStyleSheet(
             """
-            font-size: 18px; 
+            font-size: 20px; 
             font-family: Open Sans; 
             font-weight: bold; 
             color: #19323C; 
@@ -403,7 +408,7 @@ class WarningPrint(QWidget):
         self.message_label.setWordWrap(True)
         self.message_label.setStyleSheet(
             """
-            font-size: 14px; 
+            font-size: 16px; 
             font-family: Open Sans; 
             text-align: center; 
             padding-left: 30px; 

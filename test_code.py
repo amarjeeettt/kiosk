@@ -1,48 +1,88 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QFrame
-from PyQt5.QtGui import QPixmap, QTransform, QPainter
-from PyQt5.QtCore import Qt, QEvent
+import shutil
+import os
+import time
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QPushButton
+from PyQt5.QtCore import QThread, pyqtSignal
 
-class PinchZoomGraphicsView(QGraphicsView):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setRenderHint(QPainter.Antialiasing)
-        self.setRenderHint(QPainter.SmoothPixmapTransform)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setDragMode(QGraphicsView.ScrollHandDrag)
-        self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
-        self.viewport().setAttribute(Qt.WA_AcceptTouchEvents, True)
-        self.setFrameShape(QFrame.NoFrame)
-        self.scale_factor = 1.0
+class CopyFileThread(QThread):
+    file_copied = pyqtSignal()
 
-    def event(self, event):
-        if event.type() == QEvent.TouchBegin or event.type() == QEvent.TouchUpdate:
-            if len(event.touchPoints()) == 2:
-                pinch = event.touchPoints()
-                touch1 = pinch[0]
-                touch2 = pinch[1]
-                if touch1.state() == Qt.TouchPointPressed or touch2.state() == Qt.TouchPointPressed:
-                    self.start_dist = (touch1.pos() - touch2.pos()).manhattanLength()
-                    self.scale_factor = self.transform().m11()
-                elif touch1.state() == Qt.TouchPointMoved or touch2.state() == Qt.TouchPointMoved:
-                    current_dist = (touch1.pos() - touch2.pos()).manhattanLength()
-                    scale = current_dist / self.start_dist
-                    self.setTransform(QTransform().scale(self.scale_factor * scale, self.scale_factor * scale))
-            return True
-        return super().event(event)
+    def __init__(self, source, destination):
+        super().__init__()
+        self.source = source
+        self.destination = destination
 
-class ImageZoomApp(QApplication):
-    def __init__(self, sys_argv):
-        super().__init__(sys_argv)
-        self.main_view = PinchZoomGraphicsView()
-        self.scene = QGraphicsScene(self.main_view)
-        self.main_view.setScene(self.scene)
-        self.pixmap_item = QGraphicsPixmapItem(QPixmap('./img/process/map.jpg'))  # Replace with your image path
-        self.scene.addItem(self.pixmap_item)
-        self.main_view.setSceneRect(self.pixmap_item.boundingRect())
-        self.main_view.showFullScreen()
+    def run(self):
+        shutil.copy(self.source, self.destination)
+        self.file_copied.emit()
+
+class CheckFileExistsThread(QThread):
+    file_exists = pyqtSignal()
+    file_not_found = pyqtSignal()
+
+    def __init__(self, destination):
+        super().__init__()
+        self.destination = destination
+        self.running = True
+
+    def run(self):
+        while self.running:
+            if os.path.exists(self.destination):
+                self.file_exists.emit()
+                self.running = False
+            else:
+                self.file_not_found.emit()
+            time.sleep(3)
+
+    def stop(self):
+        self.running = False
+
+class FileCopyApp(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+
+    def initUI(self):
+        self.layout = QVBoxLayout()
+        
+        self.status_label = QLabel("Press the button to start copying the file.")
+        self.layout.addWidget(self.status_label)
+
+        self.copy_button = QPushButton("Start Copy")
+        self.copy_button.clicked.connect(self.start_copy)
+        self.layout.addWidget(self.copy_button)
+
+        self.setLayout(self.layout)
+        self.setWindowTitle('File Copy Status')
+        self.show()
+
+    def start_copy(self):
+        self.status_label.setText("File uploading currently...")
+        
+        source_path = '/Users/amarjeetsingh/Downloads/slideshow.gif'
+        destination_path = '/Users/amarjeetsingh/Desktop'
+
+        self.copy_thread = CopyFileThread(source_path, destination_path)
+        self.copy_thread.file_copied.connect(self.on_file_copied)
+        self.copy_thread.start()
+
+        self.check_thread = CheckFileExistsThread(destination_path)
+        self.check_thread.file_exists.connect(self.on_file_exists)
+        self.check_thread.file_not_found.connect(self.on_file_not_found)
+        self.check_thread.start()
+
+    def on_file_copied(self):
+        self.status_label.setText("File copied finished.")
+
+    def on_file_exists(self):
+        self.status_label.setText("File is now at the destination.")
+        self.check_thread.stop()
+
+    def on_file_not_found(self):
+        self.status_label.setText("File uploading currently...")
 
 if __name__ == '__main__':
-    app = ImageZoomApp(sys.argv)
+    app = QApplication(sys.argv)
+    ex = FileCopyApp()
     sys.exit(app.exec_())
