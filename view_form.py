@@ -940,7 +940,7 @@ class ViewFormWidget(QWidget):
 
         if self.ink_level <= 0:
             self.ink_supply = False
-            self.printer_status_symol.setText("✕")
+            self.printer_status_symbol.setText("✕")
 
         if self.bondpaper_quantity <= 5:
             self.bondpaper_warning.show()
