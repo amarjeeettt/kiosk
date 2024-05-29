@@ -70,11 +70,11 @@ class MainWindow(QMainWindow):
         self.label.show()
         self.movie.start()
         self.movie.finished.connect(self.movie.start)
-        self.is_printer_available()
 
     def show_home_screen(self):
         self.home_screen_widget = HomeScreenWidget(self)
         self.layout.addWidget(self.home_screen_widget)
+        self.is_printer_available()
 
         self.home_screen_widget.show()
 
