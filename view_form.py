@@ -736,6 +736,7 @@ class ButtonWidget(QWidget):
 
 class ViewFormWidget(QWidget):
     view_button_clicked = pyqtSignal(str, int, bool, bool, bool)
+    view_process_button_clicked = pyqtSignal(str)
     go_back_clicked = pyqtSignal()
 
     def __init__(self, parent, is_printer_available):
@@ -954,19 +955,19 @@ class ViewFormWidget(QWidget):
 
         self.nav_btn_all = QPushButton("All")
         self.nav_btn_all.setFocusPolicy(Qt.NoFocus)
-        self.nav_btn_category1 = QPushButton("Academic Recognition")
+        self.nav_btn_category1 = QPushButton("Accreditation")
         self.nav_btn_category1.setFocusPolicy(Qt.NoFocus)
-        self.nav_btn_category2 = QPushButton("Accreditation")
+        self.nav_btn_category2 = QPushButton("Clearance")
         self.nav_btn_category2.setFocusPolicy(Qt.NoFocus)
-        self.nav_btn_category3 = QPushButton("Clearance")
+        self.nav_btn_category3 = QPushButton("Enrollment")
         self.nav_btn_category3.setFocusPolicy(Qt.NoFocus)
-        self.nav_btn_category4 = QPushButton("Enrollment")
+        self.nav_btn_category4 = QPushButton("Graduation")
         self.nav_btn_category4.setFocusPolicy(Qt.NoFocus)
-        self.nav_btn_category5 = QPushButton("Graduation")
+        self.nav_btn_category5 = QPushButton("Petition")
         self.nav_btn_category5.setFocusPolicy(Qt.NoFocus)
-        self.nav_btn_category6 = QPushButton("Petition")
+        self.nav_btn_category6 = QPushButton("Research")
         self.nav_btn_category6.setFocusPolicy(Qt.NoFocus)
-        self.nav_btn_category7 = QPushButton("Research")
+        self.nav_btn_category7 = QPushButton("Controlled Forms")
         self.nav_btn_category7.setFocusPolicy(Qt.NoFocus)
         self.nav_btn_category8 = QPushButton("Others")
         self.nav_btn_category8.setFocusPolicy(Qt.NoFocus)
@@ -1148,43 +1149,43 @@ class ViewFormWidget(QWidget):
 
     def filter_buttons_category1(self):
         self.active_button = self.nav_btn_category1
-        self.filter_buttons("Academic Recognition")  # Filter by category
+        self.filter_buttons("Accreditation")  # Filter by category
         self.update_button_styles()
         self.reset_inactivity_timer()
 
     def filter_buttons_category2(self):
         self.active_button = self.nav_btn_category2
-        self.filter_buttons("Accreditation")  # Filter by category
+        self.filter_buttons("Clearance")  # Filter by category
         self.update_button_styles()
         self.reset_inactivity_timer()
 
     def filter_buttons_category3(self):
         self.active_button = self.nav_btn_category3
-        self.filter_buttons("Clearance")  # Filter by category
+        self.filter_buttons("Enrollment")  # Filter by category
         self.update_button_styles()
         self.reset_inactivity_timer()
 
     def filter_buttons_category4(self):
         self.active_button = self.nav_btn_category4
-        self.filter_buttons("Enrollment")  # Filter by category
+        self.filter_buttons("Graduation")  # Filter by category
         self.update_button_styles()
         self.reset_inactivity_timer()
 
     def filter_buttons_category5(self):
         self.active_button = self.nav_btn_category5
-        self.filter_buttons("Graduation")  # Filter by category
+        self.filter_buttons("Petition")  # Filter by category
         self.update_button_styles()
         self.reset_inactivity_timer()
 
     def filter_buttons_category6(self):
         self.active_button = self.nav_btn_category6
-        self.filter_buttons("Petition")  # Filter by category
+        self.filter_buttons("Research")  # Filter by category
         self.update_button_styles()
         self.reset_inactivity_timer()
 
     def filter_buttons_category7(self):
         self.active_button = self.nav_btn_category7
-        self.filter_buttons("Research")  # Filter by category
+        self.filter_buttons("Controlled Forms")  # Filter by category
         self.update_button_styles()
         self.reset_inactivity_timer()
 
@@ -1233,14 +1234,22 @@ class ViewFormWidget(QWidget):
     # Function to handle the emitted signal
     def handleButtonClicked(self, title, page_number):
         self.inactivity_timer.stop()
+        controlled_form = [
+            "Completion Form for Incomplete Grades",
+            "Removal Form",
+            "Dropping Form",
+        ]
 
-        self.view_button_clicked.emit(
-            title,
-            int(page_number),
-            self.is_printer_available,
-            self.bondpaper_supply,
-            self.ink_supply,
-        )
+        if title in controlled_form:
+            self.view_process_button_clicked.emit(title)
+        else:
+            self.view_button_clicked.emit(
+                title,
+                int(page_number),
+                self.is_printer_available,
+                self.bondpaper_supply,
+                self.ink_supply,
+            )
 
     def show_help(self):
         self.inactivity_timer.stop()

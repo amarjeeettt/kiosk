@@ -24,29 +24,34 @@ from PyQt5.QtCore import (
 class MessageBox(QDialog):
     def __init__(self, title, message, parent=None):
         super().__init__(parent)
+        # Set fixed size for the message box
         self.setFixedSize(400, 240)
 
         layout = QVBoxLayout()
         self.setLayout(layout)
+        # Set background color for the message box
         self.setStyleSheet("background-color: #EBEBEB;")
 
         title_label = QLabel(title)
+        # Styling for the title label
         title_label.setStyleSheet(
             "font-size: 24px; font-family: Montserrat; font-weight: bold; color: #7C2F3E;"
         )
         layout.addWidget(title_label, alignment=Qt.AlignCenter)
 
-        # Add a vertical spacer item
+        # Add a vertical spacer item to separate title and message
         layout.addSpacerItem(
             QSpacerItem(20, 20, QSizePolicy.Minimum, QSizePolicy.Fixed)
         )
 
         message_label = QLabel(message)
+        # Set word wrap for the message label
         message_label.setWordWrap(True)
+        # Styling for the message label
         message_label.setStyleSheet("font-size: 16px; font-family: Roboto; ")
         layout.addWidget(message_label, alignment=Qt.AlignCenter)
 
-        # Add a vertical spacer item
+        # Add a vertical spacer item to separate message and buttons
         layout.addSpacerItem(
             QSpacerItem(20, 10, QSizePolicy.Minimum, QSizePolicy.Fixed)
         )
@@ -54,15 +59,19 @@ class MessageBox(QDialog):
         button_layout = QHBoxLayout()
         layout.addLayout(button_layout)
 
-        # Add a vertical spacer item
+        # Add a vertical spacer item to separate buttons from bottom
         layout.addSpacerItem(
             QSpacerItem(20, 20, QSizePolicy.Minimum, QSizePolicy.Fixed)
         )
 
         ok_button = QPushButton("OK")
+        # Set focus policy for the OK button
         ok_button.setFocusPolicy(Qt.NoFocus)
+        # Set fixed size for the OK button
         ok_button.setFixedSize(125, 45)
+        # Connect OK button clicked signal to slot
         ok_button.clicked.connect(self.on_ok_button_clicked)
+        # Styling for the OK button
         ok_button.setStyleSheet(
             """
             QPushButton {
@@ -80,6 +89,7 @@ class MessageBox(QDialog):
         button_layout.addWidget(ok_button, alignment=Qt.AlignCenter)
 
     def on_ok_button_clicked(self):
+        # Close the message box when OK button is clicked
         self.accept()
 
 
@@ -508,16 +518,21 @@ class PrintPreviewWidget(QWidget):
             self.center_image.mouseReleaseEvent = lambda event: None
 
     def mousePressEvent(self, event):
+        # Check if the left mouse button is pressed and if it's over the center image
         if event.button() == Qt.LeftButton:
             if self.center_image.underMouse():
+                # Record the starting position of the mouse click
                 self.start_pos = event.pos()
                 self.swiping = True
 
     def mouseReleaseEvent(self, event):
+        # Check if the left mouse button is released and if swiping was in progress
         if event.button() == Qt.LeftButton and self.swiping:
+            # Record the ending position of the mouse release
             self.end_pos = event.pos()
             delta = self.end_pos - self.start_pos
 
+            # Determine the direction of the swipe based on the horizontal movement
             if delta.x() > 50:  # Swipe right
                 self.slide_left()
             elif delta.x() < -50:  # Swipe left
@@ -526,48 +541,60 @@ class PrintPreviewWidget(QWidget):
             self.swiping = False
 
     def detect_swipe(self):
+        # Calculate the horizontal delta between the start and end positions
         delta_x = self.end_pos.x() - self.start_pos.x()
+        # Check if the swipe distance exceeds a threshold for a left or right swipe
         if delta_x > 100:
             self.slide_left()
         elif delta_x < -100:
             self.slide_right()
 
     def slide_left(self):
+        # Animate the center image to slide left
         animation = QPropertyAnimation(self.center_image, b"geometry")
         animation.setDuration(500)
         animation.setStartValue(self.center_image.geometry())
         new_geometry = self.center_image.geometry()
-        new_geometry.moveLeft(-self.width())
+        new_geometry.moveLeft(-self.width())  # Move left by the width of the widget
         animation.setEndValue(new_geometry)
         animation.start()
 
+        # Update the displayed image and bottom label to show the previous image
         self.previous_image()
 
     def slide_right(self):
+        # Animate the center image to slide right
         animation = QPropertyAnimation(self.center_image, b"geometry")
         animation.setDuration(500)
         animation.setStartValue(self.center_image.geometry())
         new_geometry = self.center_image.geometry()
-        new_geometry.moveLeft(self.width())
+        new_geometry.moveLeft(self.width())  # Move right by the width of the widget
         animation.setEndValue(new_geometry)
         animation.start()
 
+        # Update the displayed image and bottom label to show the next image
         self.next_image()
 
     def next_image(self):
+        # Check if there's a next image available
         if self.index < self.page_number:
+            # Increment the index to move to the next image
             self.index += 1
+            # Update the displayed image and bottom label
             self.update_image()
             self.update_bottom_label()
 
     def previous_image(self):
+        # Check if there's a previous image available
         if self.index > 0:
+            # Decrement the index to move to the previous image
             self.index -= 1
+            # Update the displayed image and bottom label
             self.update_image()
             self.update_bottom_label()
 
     def update_image(self):
-        # Load the image corresponding to the new index
+        # Load and display the image corresponding to the current index
         self.image = (
             QImage(f"./img/form-preview/{self.title}-{self.index}.jpg")
             .scaledToWidth(700, Qt.SmoothTransformation)
@@ -576,35 +603,45 @@ class PrintPreviewWidget(QWidget):
         # Apply border radius to the image
         self.apply_border_radius()
 
-        # Create a pixmap from the updated image
+        # Create a pixmap from the updated image and set it to the center image label
         pixmap = QPixmap.fromImage(self.image)
         self.center_image.setPixmap(pixmap)
 
     def update_bottom_label(self):
+        # Update the bottom label to display the current image index and total number of images
         self.bottom_label.setText(f"{self.index}/{self.page_number}")
 
     def increment_value(self):
+        # Increase the value if it's less than the available bond paper quantity
         if self.value < self.bondpaper_quantity:
             self.value += 1
+            # Update the display label between buttons
             self.label_between_buttons.setText(str(self.value))
+            # Update the total label based on the updated value
             self.update_total_label()
 
+        # If the value exceeds or equals the available bond paper quantity, display an error message
         if self.value >= self.bondpaper_quantity:
             message_box = MessageBox(
                 "Error",
-                "It appears the bondpaper is insufficient to add more.",
+                "It appears the bond paper is insufficient to add more.",
                 parent=self,
             )
             message_box.exec_()
 
     def decrement_value(self):
+        # Decrease the value if it's greater than 1
         if self.value > 1:
             self.value -= 1
+            # Update the display label between buttons
             self.label_between_buttons.setText(str(self.value))
+            # Update the total label based on the updated value
             self.update_total_label()
 
     def update_total_label(self):
+        # Calculate the total price based on base price, page number, and quantity value
         self.total = (self.base_price * self.page_number) * self.value
+        # Update the total label to display the calculated total price
         self.total_label.setText(f"₱{self.total:0.2f}")
 
     def apply_border_radius(self):
@@ -617,13 +654,16 @@ class PrintPreviewWidget(QWidget):
         painter.setRenderHint(QPainter.Antialiasing, True)
         painter.setBrush(QBrush(QColor(Qt.white)))
         painter.setPen(Qt.NoPen)
-        painter.drawRoundedRect(self.image.rect(), 20, 20)
+        painter.drawRoundedRect(
+            self.image.rect(), 20, 20
+        )  # Customize border radius as needed
         painter.end()
 
         # Apply the mask to the image
         self.image.setAlphaChannel(mask)
 
     def disable_print_button(self):
+        # Disable the print button and update its appearance
         self.print_bt.setEnabled(False)
         disabled_icon = QIcon("./img/print_forms_icon_disabled.svg")
         pixmap = disabled_icon.pixmap(QSize(200, 200))
@@ -644,13 +684,16 @@ class PrintPreviewWidget(QWidget):
         )
 
     def process_bt_clicked(self, title):
+        # Emit a signal indicating the process button was clicked, along with its title
         self.view_process_clicked.emit(title)
 
     def print_form_bt_clicked(self, title, page_number):
+        # Emit a signal indicating the print form button was clicked, along with form details
         self.print_form_clicked.emit(
             title, int(self.value), page_number, int(self.total)
         )
 
     def go_back(self):
+        # Hide the current widget and emit a signal to go back to the previous view
         self.setVisible(False)
         self.view_form_backbt_clicked.emit()

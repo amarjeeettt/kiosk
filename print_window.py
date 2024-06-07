@@ -92,7 +92,7 @@ class PrintMessageBox(QDialog):
         self.num_pages = num_pages
         self.total = total
 
-        if is_total_equal == True:
+        if is_total_equal:
             self.create_print_widget()
         else:
             self.warning_print_widget = WarningPrint(self)

@@ -18,6 +18,10 @@ from print_window import PrintMessageBox
 
 
 class PrintFormWidget(QWidget):
+    """
+    Widget for printing forms.
+    """
+
     go_back_home = pyqtSignal()
     cancel_clicked = pyqtSignal()
 
@@ -274,6 +278,9 @@ class PrintFormWidget(QWidget):
         self.check_total_counter_match()
 
     def connect_db(self):
+        """
+        Connects to the database and retrieves the initial counter value.
+        """
         conn = sqlite3.connect("./database/kiosk.db")
         cursor = conn.cursor()
 
@@ -286,6 +293,9 @@ class PrintFormWidget(QWidget):
         # self.counter = 10
 
     def update_counter(self, counter):
+        """
+        Updates the counter value and corresponding label.
+        """
         self.counter = counter
         self.amount_label.setText(f"₱{self.counter:0.2f}")
 
@@ -293,6 +303,9 @@ class PrintFormWidget(QWidget):
         self.check_total_counter_match()
 
     def update_db_counter(self, counter):
+        """
+        Updates the counter value in the database.
+        """
         conn = sqlite3.connect("./database/kiosk.db")
         cursor = conn.cursor()
         cursor.execute(
@@ -308,12 +321,18 @@ class PrintFormWidget(QWidget):
         print(coins)
 
     def check_total_counter_match(self):
+        """
+        Checks if the counter matches the total amount and enables/disables the print button accordingly.
+        """
         if self.counter >= self.total:
             self.print_bt.setEnabled(True)
         else:
             self.print_bt.setEnabled(False)
 
     def open_print_window(self):
+        """
+        Opens the print window based on the payment status.
+        """
         self.counter_thread.stop()
         if self.counter > self.total:
             message_box = PrintMessageBox(
@@ -344,17 +363,27 @@ class PrintFormWidget(QWidget):
             message_box.exec_()
 
     def go_back(self):
+        """
+        Handles the 'Cancel' button click event.
+        """
         self.counter_thread.stop()
         self.setVisible(False)
         self.cancel_clicked.emit()
 
     def go_back_home_screen(self):
+        """
+        Closes the current widget and emits a signal to go back to the home screen.
+        """
         self.counter_thread.stop()
         self.close()
         self.go_back_home.emit()
 
 
 class CounterThread(QThread):
+    """
+    Thread to continuously monitor the counter using a hardware button.
+    """
+
     counter_changed = pyqtSignal(int)
 
     def __init__(self, initial_counter):
@@ -364,6 +393,9 @@ class CounterThread(QThread):
         self.counter = initial_counter
 
     def run(self):
+        """
+        Runs the thread and continuously increments the counter when the button is pressed.
+        """
         while not self.stop_event.is_set():
             try:
                 if self.coinslot.is_pressed:
@@ -374,5 +406,8 @@ class CounterThread(QThread):
                 print(f"Error reading button state: {e}")
 
     def stop(self):
+        """
+        Stops the thread.
+        """
         self.stop_event.set()
         self.coinslot.close()

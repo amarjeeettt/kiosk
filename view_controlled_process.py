@@ -344,8 +344,8 @@ class MapWidget(QWidget):
         self.close_bt_clicked.emit()
 
 
-class ViewProcessWidget(QWidget):
-    print_preview_backbt_clicked = pyqtSignal()
+class ViewControlledProcessWidget(QWidget):
+    backbt_clicked = pyqtSignal()
 
     def __init__(self, parent, title):
         super().__init__(parent)
@@ -418,4 +418,4 @@ class ViewProcessWidget(QWidget):
     def go_back(self):
         # Emit signal when back button is clicked
         self.setVisible(False)
-        self.print_preview_backbt_clicked.emit()
+        self.backbt_clicked.emit()

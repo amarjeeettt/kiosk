@@ -12,6 +12,9 @@ def rename_file(destination_path, new_form_name):
 
 
 def delete_form_file(form_name):
+    """
+    Deletes a form file from the 'forms' directory.
+    """
     destination_path = os.path.join("./forms", f"{form_name}.pdf")
 
     if os.path.exists(destination_path):
@@ -25,14 +28,15 @@ def delete_form_file(form_name):
 
 
 def delete_process_file(form_name):
-    # Find files matching the pattern
+    """
+    Deletes process files related to a form.
+    """
     process_files = glob.glob(f"./img/process/{form_name}.*")
 
     if not process_files:
         print("No file found to delete.")
         return
 
-    # Loop through the matched files and delete each one
     for file_path in process_files:
         if os.path.exists(file_path):
             try:
@@ -43,13 +47,15 @@ def delete_process_file(form_name):
 
 
 def delete_form_preview(form_name):
+    """
+    Deletes form preview images.
+    """
     form_preview_files = glob.glob(f"./img/form-preview/{form_name}-*.jpg")
 
     if not form_preview_files:
         print("No file found to delete.")
         return
 
-    # Loop through the matched files and delete each one
     for file_path in form_preview_files:
         if os.path.exists(file_path):
             try:
@@ -60,28 +66,24 @@ def delete_form_preview(form_name):
 
 
 def upload_form_file(filepath, form_title):
+    """
+    Uploads a form file to the 'forms' directory and converts it to JPEG.
+    """
     destination_directory = "./forms"
     try:
-        # Check if filepath is a valid path
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"File '{filepath}' does not exist.")
 
-        # Check if filepath is a file
         if not os.path.isfile(filepath):
             raise ValueError(f"'{filepath}' is not a file.")
 
-        # Get the filename from the filepath
         filename = os.path.basename(filepath)
         file_extension = os.path.splitext(filename)[1]
-
-        # Construct the destination path
         destination_path = os.path.join(destination_directory, filename)
 
-        # Remove the existing file if it exists
         if os.path.exists(destination_path):
             os.remove(destination_path)
 
-        # Copy the file to the destination directory
         shutil.copy(filepath, destination_path)
         print(f"File '{filename}' uploaded to '{destination_path}'")
 
@@ -96,27 +98,24 @@ def upload_form_file(filepath, form_title):
 
 
 def edit_form_file(filepath, form_title, form_name):
+    """
+    Edits a form file by deleting old versions and uploading a new one.
+    """
     destination_directory = "./forms"
     try:
-        # Check if filepath is a valid path
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"File '{filepath}' does not exist.")
 
-        # Check if filepath is a file
         if not os.path.isfile(filepath):
             raise ValueError(f"'{filepath}' is not a file.")
 
-        # Get the filename from the filepath
         filename = os.path.basename(filepath)
         file_extension = os.path.splitext(filename)[1]
-
-        # Construct the destination path
         destination_path = os.path.join(destination_directory, filename)
 
         delete_form_file(form_name)
         delete_form_preview(form_name)
 
-        # Copy the file to the destination directory
         shutil.copy(filepath, destination_path)
         print(f"File '{filename}' uploaded to '{destination_path}'")
 
@@ -131,27 +130,24 @@ def edit_form_file(filepath, form_title, form_name):
 
 
 def upload_process_file(filepath, form_title):
+    """
+    Uploads a process file and renames it.
+    """
     destination_directory = "./img/process"
     try:
-        # Check if filepath is a valid path
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"File '{filepath}' does not exist.")
 
-        # Check if filepath is a file
         if not os.path.isfile(filepath):
             raise ValueError(f"'{filepath}' is not a file.")
 
-        # Get the filename from the filepath
         filename = os.path.basename(filepath)
         file_extension = os.path.splitext(filename)[1]
-
-        # Construct the destination path
         destination_path = os.path.join(destination_directory, filename)
 
         if os.path.exists(destination_path):
             os.remove(destination_path)
 
-        # Copy the file to the destination directory
         shutil.copy(filepath, destination_path)
         print(f"File '{filename}' uploaded to '{destination_path}'")
 
@@ -165,26 +161,23 @@ def upload_process_file(filepath, form_title):
 
 
 def edit_process_file(filepath, form_title, form_name):
+    """
+    Edits a process file by deleting old versions and uploading a new one.
+    """
     destination_directory = "./img/process"
     try:
-        # Check if filepath is a valid path
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"File '{filepath}' does not exist.")
 
-        # Check if filepath is a file
         if not os.path.isfile(filepath):
             raise ValueError(f"'{filepath}' is not a file.")
 
-        # Get the filename from the filepath
         filename = os.path.basename(filepath)
         file_extension = os.path.splitext(filename)[1]
-
-        # Construct the destination path
         destination_path = os.path.join(destination_directory, filename)
 
         delete_process_file(form_name)
 
-        # Copy the file to the destination directory
         shutil.copy(filepath, destination_path)
         print(f"File '{filename}' uploaded to '{destination_path}'")
 
@@ -198,6 +191,9 @@ def edit_process_file(filepath, form_title, form_name):
 
 
 def convert_pdf_to_jpg(pdf_path, form_title):
+    """
+    Converts a PDF file to JPEG images.
+    """
     destination_folder = "./img/form-preview"
 
     pages = convert_from_path(pdf_path)

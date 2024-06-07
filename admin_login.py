@@ -13,6 +13,7 @@ from custom_message_box import CustomMessageBox
 
 
 class AdminLoginWidget(QWidget):
+    # Signals for back button and login button clicks
     home_screen_backbt_clicked = pyqtSignal()
     login_clicked = pyqtSignal()
 
@@ -21,6 +22,7 @@ class AdminLoginWidget(QWidget):
         self.setup_ui()
 
     def setup_ui(self):
+        # Set up the main layout
         layout = QVBoxLayout(self)
 
         # Add back button to the layout
@@ -51,16 +53,14 @@ class AdminLoginWidget(QWidget):
         back_button_layout.addWidget(self.back_bt, alignment=Qt.AlignLeft)
         layout.addLayout(back_button_layout)
 
-        # Connect database
+        # Connect to the database to retrieve the admin password
         conn = sqlite3.connect("./database/kiosk.db")
         cursor = conn.cursor()
-
         cursor.execute("SELECT admin_password FROM kiosk_settings LIMIT 1")
         self.admin_password = cursor.fetchone()[0]
-
         conn.close()
 
-        # Create a white background square layout
+        # Create a white background square layout for the keypad and input field
         self.square_layout = QWidget()
         self.square_layout.setStyleSheet(
             """     
@@ -68,20 +68,18 @@ class AdminLoginWidget(QWidget):
             border: 1px solid #CCCCCC;
             border-radius: 30px;
             """
-        )  # Updated styling
+        )
         self.square_layout.setContentsMargins(50, 0, 50, 0)
         self.square_layout.setFixedSize(800, 800)
 
-        # Create a QGraphicsDropShadowEffect
+        # Add a drop shadow effect to the square layout
         shadow_effect = QGraphicsDropShadowEffect()
         shadow_effect.setBlurRadius(50)
         shadow_effect.setColor(Qt.gray)
         shadow_effect.setOffset(0, 12)
-
-        # Apply the shadow effect to the square_frame
         self.square_layout.setGraphicsEffect(shadow_effect)
 
-        # Create widgets
+        # Create the input field for the password
         self.input_edit = QLineEdit()
         self.input_edit.setAlignment(Qt.AlignCenter)
         self.input_edit.setEchoMode(QLineEdit.Password)
@@ -99,38 +97,39 @@ class AdminLoginWidget(QWidget):
             """
         )
 
+        # Create the keypad layout
         self.keypad_layout = QGridLayout(self.square_layout)
         self.create_number_buttons()
 
-        # Login button
+        # Create the login button
         self.login_button = QPushButton("Login")
         self.login_button.setFocusPolicy(Qt.NoFocus)
         self.login_button.clicked.connect(self.on_login_click)
-
-        # Apply minimalist style to buttons
         self.apply_minimalist_style(self.login_button)
 
-        # Add input field and login button to the keypad layout
+        # Add the input field and login button to the keypad layout
         self.keypad_layout.addWidget(self.input_edit, 0, 0, 1, 3)
         self.keypad_layout.addWidget(self.login_button, 5, 1)
 
         layout.addWidget(self.square_layout, alignment=Qt.AlignCenter)
 
     def apply_minimalist_style(self, button):
+        # Apply a minimalist style to buttons
         button.setStyleSheet(
             "QPushButton {"
-            "background-color: #7C2F3E;"  # Blue color
-            "color: #FFFFFF;"  # White text color
+            "background-color: #7C2F3E;"  # Button color
+            "color: #FFFFFF;"  # Text color
             "border-radius: 10px;"
             "padding: 20px 40px;"
             "font-size: 24px;"
             "}"
             "QPushButton:pressed {"
-            "background-color: #D8973C;"  # Even darker blue color when pressed
+            "background-color: #D8973C;"  # Button color when pressed
             "}"
         )
 
     def create_number_buttons(self):
+        # Create number buttons and add them to the keypad layout
         numbers = [
             "1",
             "2",
@@ -157,6 +156,7 @@ class AdminLoginWidget(QWidget):
             self.apply_minimalist_style(button)
 
     def on_button_click(self):
+        # Handle button clicks on the keypad
         clicked_button = self.sender()
         clicked_text = clicked_button.text()
 
@@ -170,26 +170,25 @@ class AdminLoginWidget(QWidget):
             self.input_edit.setText(current_text + clicked_text)
 
     def go_back(self):
+        # Emit signal and clear the input field when back button is clicked
         self.setVisible(False)
         self.input_edit.clear()
-
         self.home_screen_backbt_clicked.emit()
 
     def on_login_click(self):
+        # Handle login button click and validate the password
         input_password = self.input_edit.text()
 
         if input_password == self.admin_password:
             self.setVisible(False)
             self.input_edit.clear()
-
             self.login_clicked.emit()
-
         else:
+            # Show an error message if the password is incorrect
             message_box = CustomMessageBox(
                 "Error",
-                f"Incorrect password. Please try again.",
+                "Incorrect password. Please try again.",
                 parent=self,
             )
             message_box.exec_()
-
             self.input_edit.clear()

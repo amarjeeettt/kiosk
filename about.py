@@ -16,13 +16,18 @@ class SmoothScrollArea(QScrollArea):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.verticalScrollBar().setSingleStep(15)  # Set the scrolling step size
+
+        # Variables for mouse-based scrolling
         self._mousePressPos = None
         self._scrollBarValueAtMousePress = None
+
+        # Animation setup for smooth scrolling
         self._animation = QPropertyAnimation(self.verticalScrollBar(), b"value")
         self._animation.setEasingCurve(QEasingCurve.OutQuad)
         self._animation.setDuration(500)
 
     def mousePressEvent(self, event):
+        # Handle mouse press for scrolling
         if event.button() == Qt.LeftButton:
             self._mousePressPos = event.globalPos()
             self._scrollBarValueAtMousePress = self.verticalScrollBar().value()
@@ -30,6 +35,7 @@ class SmoothScrollArea(QScrollArea):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
+        # Handle mouse movement for scrolling
         if self._mousePressPos:
             delta = event.globalPos() - self._mousePressPos
             self.verticalScrollBar().setValue(
@@ -38,6 +44,7 @@ class SmoothScrollArea(QScrollArea):
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
+        # Handle mouse release and trigger smooth scrolling
         if self._mousePressPos:
             delta = event.globalPos() - self._mousePressPos
             target_value = self._scrollBarValueAtMousePress - delta.y()
@@ -47,13 +54,14 @@ class SmoothScrollArea(QScrollArea):
         super().mouseReleaseEvent(event)
 
     def smoothScrollTo(self, target_value):
+        # Animate scrolling to the target value
         self._animation.setStartValue(self.verticalScrollBar().value())
         self._animation.setEndValue(target_value)
         self._animation.start()
 
 
 class AboutWidget(QWidget):
-    backbt_clicked = pyqtSignal()
+    backbt_clicked = pyqtSignal()  # Signal for the back button click
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -62,6 +70,7 @@ class AboutWidget(QWidget):
         self.setup_ui()
 
     def setup_ui(self):
+        # Set up the layout and back button
         self.layout = QVBoxLayout(self)
 
         back_button_layout = QHBoxLayout()
@@ -94,13 +103,16 @@ class AboutWidget(QWidget):
 
         self.layout.addLayout(back_button_layout)
 
+        # Set up the smooth scrolling area
         scroll_area = SmoothScrollArea(self)
         scroll_area.setStyleSheet("background-color: transparent; border: none;")
         scroll_area.setWidgetResizable(True)
 
+        # Create a widget for holding the images
         scroll_widget = QWidget()
         scroll_layout = QVBoxLayout(scroll_widget)
 
+        # Add images to the scrolling widget
         for image_file in self.image_files:
             image_label = QLabel()
             pixmap = QPixmap(image_file)
@@ -114,9 +126,11 @@ class AboutWidget(QWidget):
         self.layout.addWidget(scroll_area)
 
     def go_back_button(self):
+        # Show the back button
         self.buttons_widget.show()
         self.back_bt.show()
 
     def go_back(self):
+        # Emit signal and hide the widget when back button is clicked
         self.setVisible(False)
         self.backbt_clicked.emit()
