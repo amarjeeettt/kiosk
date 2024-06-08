@@ -683,7 +683,6 @@ class FormWidget(QWidget):
         )
         self.form_category = [
             "Accreditation",
-            "Academic Recognition",
             "Clearance",
             "Enrollment",
             "Graduation",
@@ -1095,7 +1094,6 @@ class EditFormWidget(QWidget):
         )
         self.form_category = [
             "Accreditation",
-            "Academic Recognition",
             "Clearance",
             "Enrollment",
             "Graduation",
